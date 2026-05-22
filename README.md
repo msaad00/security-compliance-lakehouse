@@ -1,8 +1,19 @@
 # Security Compliance Lakehouse
 
-End-to-end security and compliance analytics project:
+Open-source continuous risk and compliance assessment layer for security teams,
+platform teams, and coding agents.
 
-- ingest raw security evidence as JSONL
+The project is built around one principle: **assessment is the product;
+ingestion is an input**. It can evaluate evidence from an existing security data
+lake, or create the normalized lake objects a smaller company needs to get
+started.
+
+End-to-end capabilities:
+
+- evaluate current compliance and risk posture from evidence
+- create point-in-time assessment snapshots for audits and just-in-time reviews
+- expose violations, controls, assets, and snapshots for humans and agents
+- ingest raw security evidence as JSONL when a company does not already have a lake
 - validate and normalize events into bronze, silver, and gold lake zones
 - map findings and evidence to SOC 2, ISO 27001, NIST AI RMF, CIS, and PCI controls
 - compute executive, security-engineering, and auditor-facing metrics
@@ -18,8 +29,8 @@ and an auditor-ready evidence room. See
 
 This is intentionally self-contained. It runs locally with Python 3.11 and the
 standard library, while modeling the same layers used in real security data
-lakes: raw evidence, normalized events, dimensional marts, control mappings,
-metrics, visualization, and audit-ready exports.
+lakes: evidence, normalized facts, controls-as-code, continuous evaluations,
+violations, snapshots, APIs, and audit-ready exports.
 
 ## Quick Start
 
@@ -42,20 +53,21 @@ internal TrustOps console, not just a static report.
 
 ## What It Proves
 
-The project demonstrates the full analytics path employers expect from a
-security data engineer or security analytics engineer:
+The project demonstrates the full product path employers expect from a security
+platform engineer, security data engineer, or AI-era governance engineer:
 
-1. **Ingestion**: raw security events from scanners, cloud posture, identity,
-   runtime policy, ticketing, and audit systems.
-2. **Transformation**: deterministic normalization into canonical entities.
-3. **Mapping logic**: evidence-to-control joins with severity and status rules.
-4. **Metrics**: control coverage, evidence freshness, open critical risk,
+1. **Assessment engine**: current posture, violations, stale evidence, framework
+   scores, and immutable snapshots.
+2. **Interoperability**: existing lake mode or managed lake-object mode.
+3. **Evidence model**: deterministic normalization into canonical entities.
+4. **Mapping logic**: evidence-to-control joins with severity and status rules.
+5. **Metrics**: control coverage, evidence freshness, open critical risk,
    runtime block rate, SLA posture, and asset risk concentration.
-5. **Visualization**: static dashboard generated from the gold metrics.
-6. **Evidence app**: SQLite mart and JSON artifacts for queries and audits.
-7. **Agent skill**: repeatable instructions for an AI agent to answer posture,
+6. **Human experience**: TrustOps console for controls, evidence, assets, and risk.
+7. **Agent experience**: JSON CLI/API surfaces for posture, violations, and snapshots.
+8. **Agent skill**: repeatable instructions for an AI agent to answer posture,
    audit, and remediation questions using the produced artifacts.
-8. **Hero data lakes**: Snowflake schema/views for governed audit evidence and
+9. **Hero data lakes**: Snowflake schema/views for governed audit evidence and
    ClickHouse tables/views for fast telemetry analytics.
 
 ## Internal Compliance Tool Scope
@@ -90,11 +102,25 @@ See [Hero Security Data Lakes](docs/HERO_DATA_LAKES.md) and the
 ```bash
 security-lakehouse validate --raw data/raw/security_events.jsonl
 security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
-security-lakehouse query --lake build/lakehouse "select * from control_posture order by risk_score desc"
 security-lakehouse assessment status --lake build/lakehouse
+security-lakehouse assessment violations --lake build/lakehouse
 security-lakehouse assessment snapshot --lake build/lakehouse --reason vendor_due_diligence
+security-lakehouse serve --lake build/lakehouse --port 8787
+security-lakehouse query --lake build/lakehouse "select * from control_posture order by risk_score desc"
 security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
 ```
+
+## Human And Agent API
+
+The local server exposes assessment-first routes:
+
+| Route | Consumer | Purpose |
+|---|---|---|
+| `GET /api/posture/current` | agents, dashboards, humans | current posture and framework scores |
+| `GET /api/violations` | agents, owners, security engineers | open control and asset violations |
+| `POST /api/snapshots` | auditors, vendor reviews, incidents | point-in-time assessment snapshot |
+| `GET /api/controls` | UI, reporting, agents | control workbench data |
+| `GET /api/assets` | UI, remediation owners | asset risk queue |
 
 ## Repo Structure
 

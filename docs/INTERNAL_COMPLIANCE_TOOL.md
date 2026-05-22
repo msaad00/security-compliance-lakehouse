@@ -1,12 +1,38 @@
 # Internal Compliance Tool Vision
 
 The product vision is a small internal trust automation platform for one
-company. It should feel closer to a continuous compliance operating system than
-an HTML report.
+company. It should feel like an assessment and enablement layer for security
+evidence, not a reporting wrapper.
+
+The public category is:
+
+> Open-source continuous risk and compliance assessment layer for existing
+> security data lakes, internal evidence stores, humans, and coding agents.
+
+The tool should be able to run in two modes:
+
+| Mode | Best fit |
+|---|---|
+| Existing lake mode | read from a company's Snowflake, ClickHouse, object storage, SIEM, scanner, or ticketing data |
+| Managed lake objects mode | create normalized tables, views, snapshots, and evidence objects when the company does not have a clean model yet |
 
 ## Core Jobs
 
-1. **Inventory evidence sources**
+1. **Assess posture continuously**
+   - current framework scores
+   - current control state
+   - current violations
+   - stale and missing evidence
+   - owner and asset impact
+
+2. **Freeze point-in-time snapshots**
+   - audit evidence snapshots
+   - vendor due-diligence snapshots
+   - incident snapshots
+   - board or executive snapshots
+   - assessment hashes
+
+3. **Inventory evidence sources**
    - cloud posture
    - vulnerability scanners
    - identity provider exports
@@ -15,31 +41,31 @@ an HTML report.
    - remediation tickets
    - model registry and AI governance records
 
-2. **Normalize evidence**
+4. **Normalize evidence**
    - one event schema
    - one asset model
    - one control mapping model
    - evidence hashes and retained evidence references
 
-3. **Map controls**
+5. **Map controls**
    - SOC 2, ISO 27001, CIS, PCI, and NIST AI RMF
    - owner, risk domain, evidence requirement, test logic, status, exceptions
 
-4. **Continuously test controls**
+6. **Continuously test controls**
    - pass/fail status
    - evidence freshness
    - open-risk count
    - owner queue
    - stale evidence and missing evidence alerts
 
-5. **Operate remediation**
+7. **Operate remediation**
    - control owners
    - asset owners
    - SLA due dates
    - ticket references
    - exception state and expiry
 
-6. **Prepare audits**
+8. **Prepare audits**
    - auditor evidence room
    - control-to-evidence traceability
    - immutable raw hashes
@@ -55,6 +81,7 @@ The first version should ship these product surfaces:
 | Current Posture API/CLI | continuously refreshed answer to "are we compliant right now?" |
 | Snapshot API/CLI | point-in-time assessment for audits, incidents, and just-in-time vendor reviews |
 | Violations API/CLI | open framework/control violations with owner, asset, evidence, and raw hash |
+| Agent API | JSON routes for posture, violations, controls, assets, and snapshots |
 | TrustOps Overview | executive posture, control gaps, evidence coverage, top risk asset |
 | Control Workbench | risk-ranked controls, owners, pass/fail, evidence count |
 | Evidence Room | source event, asset, control, evidence reference, raw hash |
@@ -82,6 +109,17 @@ security-lakehouse assessment violations --lake build/lakehouse --framework "SOC
 security-lakehouse assessment snapshot \
   --lake build/lakehouse \
   --reason vendor_due_diligence
+security-lakehouse serve --lake build/lakehouse --port 8787
+```
+
+Agent-friendly routes:
+
+```text
+GET  /api/posture/current
+GET  /api/violations
+GET  /api/controls
+GET  /api/assets
+POST /api/snapshots
 ```
 
 ## Data Model Additions To Build Next

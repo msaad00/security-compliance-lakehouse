@@ -1,9 +1,10 @@
 ---
 name: security-compliance-analytics
 description: >-
-  Use the local security compliance lakehouse artifacts to answer audit,
-  control, evidence, vulnerability, runtime, and executive-risk questions.
-  The skill is read-only and evidence-backed.
+  Use the local continuous compliance assessment artifacts and API to answer
+  audit, control, evidence, vulnerability, runtime, posture, snapshot, and
+  executive-risk questions. The skill is read-only unless the user explicitly
+  requests a point-in-time snapshot.
 version: 0.1.0
 license: MIT
 metadata:
@@ -12,6 +13,7 @@ metadata:
     Reads generated lakehouse JSON and SQLite artifacts from the local repo.
     Does not call external services and does not modify production systems.
   file_reads:
+    - build/lakehouse/gold/current_posture.json
     - build/lakehouse/gold/metrics.json
     - build/lakehouse/gold/control_posture.jsonl
     - build/lakehouse/gold/asset_risk.jsonl
@@ -33,6 +35,8 @@ Use this skill when the user asks:
 - "Which assets concentrate critical risk?"
 - "What changed in runtime or AI governance posture?"
 - "How would this land in Snowflake or ClickHouse?"
+- "Create a point-in-time assessment snapshot for vendor diligence"
+- "What does the current posture API say?"
 
 ## Required Artifacts
 
@@ -51,6 +55,20 @@ security-lakehouse dashboard \
   --lake build/lakehouse \
   --out build/dashboard/index.html
 ```
+
+For the human and agent API:
+
+```bash
+security-lakehouse serve --lake build/lakehouse --port 8787
+```
+
+Agent routes:
+
+- `GET /api/posture/current`
+- `GET /api/violations`
+- `GET /api/controls`
+- `GET /api/assets`
+- `POST /api/snapshots`
 
 ## Query Patterns
 
@@ -84,6 +102,18 @@ Backend architecture evidence:
 - Snowflake governed evidence lake: `deploy/snowflake/schema.sql`
 - ClickHouse telemetry analytics lake: `deploy/clickhouse/schema.sql`
 - Dual-backend diagram: `docs/diagrams/dual-lakehouse.md`
+
+Current posture:
+
+```bash
+security-lakehouse assessment status --lake build/lakehouse
+```
+
+Open violations:
+
+```bash
+security-lakehouse assessment violations --lake build/lakehouse
+```
 
 ## Response Rules
 
