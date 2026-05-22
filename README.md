@@ -1,4 +1,4 @@
-# Security Compliance Lakehouse
+# Security Data Lake Compliance Assessment
 
 Open-source continuous risk and compliance assessment layer for security teams,
 platform teams, and coding agents.
@@ -96,6 +96,18 @@ This repo uses two production data-lake stories:
 
 See [Hero Security Data Lakes](docs/HERO_DATA_LAKES.md) and the
 [Dual Lakehouse Architecture](docs/diagrams/dual-lakehouse.md).
+
+## Product Artifacts
+
+Start here for the product surface:
+
+- [Product Artifacts](docs/PRODUCT_ARTIFACTS.md)
+- [Data Flow](docs/DATA_FLOW.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Data Model](docs/DATA_MODEL.md)
+- [Visual System](docs/VISUAL_SYSTEM.md)
+- [Human and Agent API](docs/api/AGENT_API.md)
+- [Framework Analyst Skills](agent-skills/FRAMEWORK_SKILLS.md)
 
 ## Core Commands
 

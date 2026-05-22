@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">TrustOps assessment architecture</title>
+  <desc id="desc">Modular continuous compliance assessment architecture with evidence inputs, assessment core, lake adapters, API, UI, and agent skills.</desc>
+  <rect width="1280" height="720" rx="0" fill="#eef2f6"/>
+  <rect x="42" y="40" width="1196" height="640" rx="18" fill="#ffffff" stroke="#d6dee9"/>
+  <text x="82" y="92" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800" fill="#111827">TrustOps Continuous Assessment Architecture</text>
+  <text x="82" y="122" font-family="Inter, Arial, sans-serif" font-size="16" fill="#607086">Modular evidence, evaluation, snapshots, lake adapters, and human/agent experience layers</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="82" y="170" width="220" height="340" rx="12" fill="#f8fafc" stroke="#cfd8e6"/>
+    <text x="108" y="208" font-size="18" font-weight="800" fill="#111827">Evidence Inputs</text>
+    <text x="108" y="246" font-size="14" fill="#607086">Cloud posture</text>
+    <text x="108" y="276" font-size="14" fill="#607086">Vulnerability scans</text>
+    <text x="108" y="306" font-size="14" fill="#607086">Identity reviews</text>
+    <text x="108" y="336" font-size="14" fill="#607086">Runtime policy</text>
+    <text x="108" y="366" font-size="14" fill="#607086">SIEM alerts</text>
+    <text x="108" y="396" font-size="14" fill="#607086">Tickets</text>
+    <text x="108" y="426" font-size="14" fill="#607086">Model registry</text>
+
+    <rect x="382" y="170" width="260" height="340" rx="12" fill="#111827"/>
+    <text x="412" y="208" font-size="18" font-weight="800" fill="#ffffff">Assessment Core</text>
+    <rect x="412" y="236" width="200" height="42" rx="8" fill="#1f2937"/>
+    <text x="432" y="263" font-size="14" fill="#dbeafe">Evidence model</text>
+    <rect x="412" y="292" width="200" height="42" rx="8" fill="#1f2937"/>
+    <text x="432" y="319" font-size="14" fill="#dbeafe">Control catalog</text>
+    <rect x="412" y="348" width="200" height="42" rx="8" fill="#1f2937"/>
+    <text x="432" y="375" font-size="14" fill="#dbeafe">Evaluation engine</text>
+    <rect x="412" y="404" width="200" height="42" rx="8" fill="#1f2937"/>
+    <text x="432" y="431" font-size="14" fill="#dbeafe">Snapshot service</text>
+
+    <rect x="722" y="170" width="220" height="150" rx="12" fill="#f8fafc" stroke="#cfd8e6"/>
+    <text x="752" y="208" font-size="18" font-weight="800" fill="#1d6fdc">Snowflake</text>
+    <text x="752" y="238" font-size="14" fill="#607086">Governed evidence</text>
+    <text x="752" y="266" font-size="14" fill="#607086">Audit views</text>
+    <text x="752" y="294" font-size="14" fill="#607086">RBAC + retention</text>
+
+    <rect x="722" y="360" width="220" height="150" rx="12" fill="#f8fafc" stroke="#cfd8e6"/>
+    <text x="752" y="398" font-size="18" font-weight="800" fill="#c99a00">ClickHouse</text>
+    <text x="752" y="428" font-size="14" fill="#607086">Telemetry analytics</text>
+    <text x="752" y="456" font-size="14" fill="#607086">Trends + detections</text>
+    <text x="752" y="484" font-size="14" fill="#607086">Fast aggregations</text>
+
+    <rect x="1022" y="170" width="160" height="340" rx="12" fill="#f8fafc" stroke="#cfd8e6"/>
+    <text x="1050" y="208" font-size="18" font-weight="800" fill="#111827">Experience</text>
+    <text x="1050" y="246" font-size="14" fill="#607086">API</text>
+    <text x="1050" y="276" font-size="14" fill="#607086">CLI</text>
+    <text x="1050" y="306" font-size="14" fill="#607086">UI</text>
+    <text x="1050" y="336" font-size="14" fill="#607086">Skills</text>
+    <text x="1050" y="366" font-size="14" fill="#607086">Snapshots</text>
+  </g>
+
+  <g stroke="#607086" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#607086"/>
+      </marker>
+    </defs>
+    <path d="M302 340 C330 340 348 340 382 340"/>
+    <path d="M642 300 C675 265 690 245 722 245"/>
+    <path d="M642 390 C675 425 690 435 722 435"/>
+    <path d="M942 245 C975 245 990 245 1022 245"/>
+    <path d="M942 435 C975 435 990 435 1022 435"/>
+  </g>
+
+  <rect x="82" y="562" width="1100" height="70" rx="12" fill="#ecfdf5" stroke="#b7e4cf"/>
+  <text x="108" y="604" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#0f766e">Principle:</text>
+  <text x="198" y="604" font-family="Inter, Arial, sans-serif" font-size="18" fill="#111827">assessment is the product; ingestion and lake materialization are interchangeable adapters.</text>
+</svg>
