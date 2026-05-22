@@ -1,0 +1,58 @@
+{
+  "catalog_version": "2026-05-22",
+  "scope": "limited_internal_assessment_seed",
+  "controls": [
+    {
+      "control_id": "SOC2-CC6.1",
+      "framework_id": "soc2",
+      "framework": "SOC 2",
+      "title": "Logical access controls are evaluated from identity and authorization evidence",
+      "risk_domain": "identity",
+      "owner": "security-platform",
+      "evidence_requirement": "Current identity, access review, privileged access, or authorization policy evidence exists and has no open high-risk failure.",
+      "evaluation_rule": "fail_when_open_violation_or_stale_evidence",
+      "frequency": "continuous",
+      "implementation_status": "implemented",
+      "official_source_ref": "soc2"
+    },
+    {
+      "control_id": "SOC2-CC7.2",
+      "framework_id": "soc2",
+      "framework": "SOC 2",
+      "title": "Security monitoring controls are evaluated from runtime, audit, and detection evidence",
+      "risk_domain": "monitoring",
+      "owner": "detection-engineering",
+      "evidence_requirement": "Current monitoring, runtime policy, audit, or alert evidence exists and unresolved high-risk monitoring failures are tracked.",
+      "evaluation_rule": "fail_when_open_violation_or_stale_evidence",
+      "frequency": "continuous",
+      "implementation_status": "implemented",
+      "official_source_ref": "soc2"
+    },
+    {
+      "control_id": "NIST-AI-RMF-MAP-1.5",
+      "framework_id": "nist-ai-rmf",
+      "framework": "NIST AI RMF",
+      "title": "AI system context and dependencies are represented in inventory evidence",
+      "risk_domain": "ai-governance",
+      "owner": "ai-security",
+      "evidence_requirement": "Model, agent, cloud, dependency, or AI system inventory evidence exists for production AI systems.",
+      "evaluation_rule": "fail_when_open_violation_or_stale_evidence",
+      "frequency": "continuous",
+      "implementation_status": "implemented",
+      "official_source_ref": "nist-ai-rmf"
+    },
+    {
+      "control_id": "NIST-AI-RMF-MEASURE-2.7",
+      "framework_id": "nist-ai-rmf",
+      "framework": "NIST AI RMF",
+      "title": "AI risk indicators are measured from runtime and detection evidence",
+      "risk_domain": "ai-risk",
+      "owner": "ai-security",
+      "evidence_requirement": "Runtime policy, AI detection, or AI risk telemetry exists and unresolved high-risk events are tracked.",
+      "evaluation_rule": "fail_when_open_violation_or_stale_evidence",
+      "frequency": "continuous",
+      "implementation_status": "implemented",
+      "official_source_ref": "nist-ai-rmf"
+    }
+  ]
+}

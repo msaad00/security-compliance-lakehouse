@@ -56,6 +56,8 @@ See [Human and Agent API](api/AGENT_API.md).
 | Normalized event schema | `data/schemas/normalized-event.schema.json` |
 | Current posture schema | `data/schemas/current-posture.schema.json` |
 | Violation schema | `data/schemas/violation.schema.json` |
+| Framework registry | `frameworks/registry.json` |
+| Implemented control catalog | `controls/catalog.json` |
 | Control mapping | `mappings/control_map.json` |
 
 ## Security Data Lake Backends
@@ -78,3 +80,7 @@ See [Human and Agent API](api/AGENT_API.md).
 
 Each framework-specific skill is guardrailed to use local evidence and official
 source references, and to avoid invented controls or certification claims.
+
+Implemented control scope is currently limited to SOC 2-oriented controls and
+NIST AI RMF. PCI DSS and ISO/IEC 27001 are skill expansion surfaces until their
+versioned catalogs and validation tests are added.

@@ -82,6 +82,8 @@ erDiagram
 | Gold | `assessment_snapshots` | point-in-time assessment exports |
 | API | `/api/posture/current` | current posture contract |
 | API | `/api/violations` | open violation contract |
+| Catalog | `frameworks/registry.json` | official framework source registry |
+| Catalog | `controls/catalog.json` | implemented controls with evidence requirements |
 
 ## Schema Contracts
 

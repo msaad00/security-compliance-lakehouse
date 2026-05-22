@@ -1,0 +1,22 @@
+{
+  "frameworks": [
+    {
+      "framework_id": "soc2",
+      "name": "SOC 2 Trust Services Criteria",
+      "version": "2017 TSC with revised points of focus 2022",
+      "official_source_name": "AICPA & CIMA 2017 Trust Services Criteria (With Revised Points of Focus - 2022)",
+      "official_source_url": "https://www.aicpa.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022",
+      "implementation_status": "implemented_limited_mapping",
+      "copyright_guardrail": "Do not reproduce licensed criteria text. Store local control IDs, short internal titles, evidence requirements, and official source references only."
+    },
+    {
+      "framework_id": "nist-ai-rmf",
+      "name": "NIST AI Risk Management Framework",
+      "version": "AI RMF 1.0, NIST AI 100-1",
+      "official_source_name": "NIST Artificial Intelligence Risk Management Framework (AI RMF 1.0)",
+      "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+      "implementation_status": "implemented_limited_mapping",
+      "copyright_guardrail": "NIST AI RMF is public NIST guidance. Prefer citations to the official NIST publication page and avoid implying certification."
+    }
+  ]
+}

@@ -77,13 +77,18 @@ The project is shaped like a compact trust operations product:
 | Capability | Small-company version |
 |---|---|
 | Connector inventory | JSONL evidence from cloud, vuln, identity, runtime, SIEM, ticketing, and model registry sources |
-| Control library | SOC 2, ISO 27001, CIS, PCI, and NIST AI RMF mappings with owner and risk domain |
+| Control library | implemented seed mappings for SOC 2-oriented controls and NIST AI RMF controls with owner and risk domain |
 | Continuous testing | pass/fail control posture, evidence coverage, runtime block rate, open risk events |
 | Current posture | continuously refreshed `current_posture.json` with framework scores and violations |
 | Point-in-time snapshots | immutable assessment exports for audits, incidents, and just-in-time vendor reviews |
 | Owner workflows | asset risk queue and control workbench for remediation ownership |
 | Audit room | evidence table with retained artifact references and raw hashes |
 | Data lakes | Snowflake for governed evidence, ClickHouse for high-volume telemetry |
+
+Current implemented framework scope is intentionally small: SOC 2-oriented
+controls and NIST AI RMF. PCI DSS and ISO/IEC 27001 analyst skills are present
+as guardrailed expansion surfaces, but their controls are not marked implemented
+until a versioned catalog and validation tests are added.
 
 ## Hero Security Data Lakes
 

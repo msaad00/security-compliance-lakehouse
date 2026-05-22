@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
+from security_lakehouse.catalog import load_control_catalog, load_framework_registry, validate_catalog, validate_evidence_controls
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.io import read_json, read_jsonl
 from security_lakehouse.pipeline import run_pipeline
@@ -22,12 +23,30 @@ def test_sample_raw_events_are_valid() -> None:
     assert len(rows) == 10
 
 
+def test_framework_registry_and_catalog_are_official_source_linked() -> None:
+    registry = load_framework_registry()
+    catalog = load_control_catalog()
+
+    assert validate_catalog() == []
+    assert set(registry) == {"soc2", "nist-ai-rmf"}
+    assert {control["framework_id"] for control in catalog.values()} == {"soc2", "nist-ai-rmf"}
+    assert registry["soc2"]["official_source_url"].startswith("https://www.aicpa.com/")
+    assert registry["nist-ai-rmf"]["official_source_url"].startswith("https://www.nist.gov/")
+
+
+def test_sample_evidence_references_only_implemented_controls() -> None:
+    rows = read_jsonl(RAW)
+    referenced = {control for row in rows for control in row.get("controls", [])}
+
+    assert validate_evidence_controls(referenced) == []
+
+
 def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
     result = run_pipeline(RAW, tmp_path / "lake")
 
     assert result.raw_count == 10
     assert result.silver_count == 10
-    assert result.control_count >= 8
+    assert result.control_count == 4
     assert Path(result.mart_path).exists()
 
     bronze = read_jsonl(tmp_path / "lake" / "bronze" / "raw_events.jsonl")
