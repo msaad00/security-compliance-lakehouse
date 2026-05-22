@@ -1,0 +1,95 @@
+---
+name: security-compliance-analytics
+description: >-
+  Use the local security compliance lakehouse artifacts to answer audit,
+  control, evidence, vulnerability, runtime, and executive-risk questions.
+  The skill is read-only and evidence-backed.
+version: 0.1.0
+license: MIT
+metadata:
+  author: Mohamed Saad
+  data_flow: >-
+    Reads generated lakehouse JSON and SQLite artifacts from the local repo.
+    Does not call external services and does not modify production systems.
+  file_reads:
+    - build/lakehouse/gold/metrics.json
+    - build/lakehouse/gold/control_posture.jsonl
+    - build/lakehouse/gold/asset_risk.jsonl
+    - build/lakehouse/mart/security_lakehouse.sqlite
+    - deploy/snowflake/schema.sql
+    - deploy/clickhouse/schema.sql
+  file_writes: []
+  network: false
+  autonomous_invocation: read_only
+---
+
+# Security Compliance Analytics
+
+Use this skill when the user asks:
+
+- "What are our top security risks?"
+- "Which controls are failing?"
+- "What evidence can I show an auditor?"
+- "Which assets concentrate critical risk?"
+- "What changed in runtime or AI governance posture?"
+- "How would this land in Snowflake or ClickHouse?"
+
+## Required Artifacts
+
+If the lakehouse has not been built, run:
+
+```bash
+security-lakehouse pipeline run \
+  --raw data/raw/security_events.jsonl \
+  --out build/lakehouse
+```
+
+For dashboard review:
+
+```bash
+security-lakehouse dashboard \
+  --lake build/lakehouse \
+  --out build/dashboard/index.html
+```
+
+## Query Patterns
+
+Top failing controls:
+
+```sql
+select control_id, framework, status, risk_score, evidence_count, event_count
+from control_posture
+order by risk_score desc, open_event_count desc;
+```
+
+Highest-risk assets:
+
+```sql
+select asset_id, asset_type, asset_owner, environment, risk_score, critical_open, high_open
+from asset_risk
+order by risk_score desc;
+```
+
+Evidence behind one control:
+
+```sql
+select event_time, source, event_type, asset_id, severity, status, evidence_ref
+from normalized_events
+where control_ids_json like '%SOC2-CC6.1%'
+order by event_time desc;
+```
+
+Backend architecture evidence:
+
+- Snowflake governed evidence lake: `deploy/snowflake/schema.sql`
+- ClickHouse telemetry analytics lake: `deploy/clickhouse/schema.sql`
+- Dual-backend diagram: `docs/diagrams/dual-lakehouse.md`
+
+## Response Rules
+
+- Cite generated artifacts or SQL results for every material claim.
+- Separate observed evidence from recommended next actions.
+- Do not claim certification, compliance, or remediation completion unless the
+  generated control posture says `pass`.
+- Treat `evidence_ref` as a pointer; do not invent contents that are not in the
+  lakehouse artifacts.

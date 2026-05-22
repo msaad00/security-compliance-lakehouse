@@ -1,0 +1,43 @@
+"""Control mapping helpers."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from security_lakehouse.io import read_json
+
+
+DEFAULT_MAPPING_PATH = Path(__file__).resolve().parents[2] / "mappings" / "control_map.json"
+
+
+def load_control_map(path: str | Path | None = None) -> dict[str, dict[str, Any]]:
+    raw = read_json(path or DEFAULT_MAPPING_PATH)
+    controls = raw.get("controls") if isinstance(raw, dict) else None
+    if not isinstance(controls, list):
+        raise ValueError("control map must contain a controls list")
+    mapped: dict[str, dict[str, Any]] = {}
+    for control in controls:
+        if not isinstance(control, dict) or not str(control.get("control_id", "")).strip():
+            raise ValueError("every control mapping must include control_id")
+        mapped[str(control["control_id"])] = control
+    return mapped
+
+
+def expand_controls(control_ids: list[str], control_map: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    expanded: list[dict[str, Any]] = []
+    for control_id in control_ids:
+        control = control_map.get(control_id)
+        if control is None:
+            expanded.append(
+                {
+                    "control_id": control_id,
+                    "framework": "unmapped",
+                    "title": "Unmapped control",
+                    "risk_domain": "unknown",
+                    "owner": "security",
+                }
+            )
+        else:
+            expanded.append(control)
+    return expanded

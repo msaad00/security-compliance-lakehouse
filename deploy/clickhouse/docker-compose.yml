@@ -1,0 +1,16 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: security
+      CLICKHOUSE_USER: security_lakehouse
+      CLICKHOUSE_PASSWORD: security_lakehouse_dev
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+volumes:
+  clickhouse-data:

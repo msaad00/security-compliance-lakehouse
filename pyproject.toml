@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "security-compliance-lakehouse"
+version = "0.1.0"
+description = "End-to-end security and compliance analytics lakehouse demo."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Mohamed Saad" }]
+dependencies = []
+
+[project.scripts]
+security-lakehouse = "security_lakehouse.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

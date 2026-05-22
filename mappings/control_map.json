@@ -1,0 +1,67 @@
+{
+  "controls": [
+    {
+      "control_id": "SOC2-CC6.1",
+      "framework": "SOC 2",
+      "title": "Logical access security controls are implemented",
+      "risk_domain": "identity",
+      "owner": "security-platform"
+    },
+    {
+      "control_id": "SOC2-CC7.2",
+      "framework": "SOC 2",
+      "title": "Security events are monitored and evaluated",
+      "risk_domain": "monitoring",
+      "owner": "detection-engineering"
+    },
+    {
+      "control_id": "ISO27001-A.8.8",
+      "framework": "ISO 27001",
+      "title": "Technical vulnerabilities are managed",
+      "risk_domain": "vulnerability-management",
+      "owner": "appsec"
+    },
+    {
+      "control_id": "ISO27001-A.8.15",
+      "framework": "ISO 27001",
+      "title": "Logs are produced, protected, analyzed, and retained",
+      "risk_domain": "logging",
+      "owner": "security-platform"
+    },
+    {
+      "control_id": "NIST-AI-RMF-MAP-1.5",
+      "framework": "NIST AI RMF",
+      "title": "AI system dependencies and operating context are mapped",
+      "risk_domain": "ai-governance",
+      "owner": "ai-security"
+    },
+    {
+      "control_id": "NIST-AI-RMF-MEASURE-2.7",
+      "framework": "NIST AI RMF",
+      "title": "AI system risk indicators are measured and tracked",
+      "risk_domain": "ai-risk",
+      "owner": "ai-security"
+    },
+    {
+      "control_id": "CIS-07",
+      "framework": "CIS Controls v8",
+      "title": "Continuous vulnerability management",
+      "risk_domain": "vulnerability-management",
+      "owner": "appsec"
+    },
+    {
+      "control_id": "CIS-08",
+      "framework": "CIS Controls v8",
+      "title": "Audit log management",
+      "risk_domain": "logging",
+      "owner": "security-platform"
+    },
+    {
+      "control_id": "PCI-DSS-11.3",
+      "framework": "PCI DSS",
+      "title": "External and internal vulnerabilities are identified and remediated",
+      "risk_domain": "vulnerability-management",
+      "owner": "appsec"
+    }
+  ]
+}

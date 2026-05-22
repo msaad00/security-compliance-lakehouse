@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install package
+        run: python -m pip install -e .
+      - name: Validate sample evidence
+        run: security-lakehouse validate --raw data/raw/security_events.jsonl
+      - name: Run pipeline smoke
+        run: security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
+      - name: Render dashboard
+        run: security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
+      - name: Run tests
+        run: python -m pytest -q
