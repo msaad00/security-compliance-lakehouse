@@ -107,6 +107,7 @@ See [Hero Security Data Lakes](docs/HERO_DATA_LAKES.md) and the
 Start here for the product surface:
 
 - [Product Artifacts](docs/PRODUCT_ARTIFACTS.md)
+- [Vendor Diligence Use Case](docs/USE_CASE_VENDOR_DILIGENCE.md)
 - [Data Flow](docs/DATA_FLOW.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Data Model](docs/DATA_MODEL.md)
