@@ -1,4 +1,4 @@
-"""Command line interface for the security compliance lakehouse."""
+"""Command line interface for TrustOps Security Data Lake."""
 
 from __future__ import annotations
 
@@ -36,22 +36,22 @@ def _parser() -> argparse.ArgumentParser:
     pipeline_sub = pipeline.add_subparsers(dest="pipeline_command", required=True)
     run = pipeline_sub.add_parser("run", help="run bronze/silver/gold pipeline")
     run.add_argument("--raw", required=True, help="raw security events JSONL")
-    run.add_argument("--out", required=True, help="lakehouse output directory")
+    run.add_argument("--out", required=True, help="security data lake output directory")
     run.add_argument("--mapping", default=None, help="optional control mapping JSON")
     run.set_defaults(func=_run_pipeline)
 
     dashboard = sub.add_parser("dashboard", help="render static dashboard HTML")
-    dashboard.add_argument("--lake", required=True, help="lakehouse output directory")
+    dashboard.add_argument("--lake", required=True, help="security data lake output directory")
     dashboard.add_argument("--out", required=True, help="dashboard HTML output path")
     dashboard.set_defaults(func=_dashboard)
 
     query = sub.add_parser("query", help="run read-only SQL against the analytics mart")
-    query.add_argument("--lake", required=True, help="lakehouse output directory")
+    query.add_argument("--lake", required=True, help="security data lake output directory")
     query.add_argument("sql", help="SQL SELECT statement")
     query.set_defaults(func=_query)
 
     serve = sub.add_parser("serve", help="serve the interactive console and assessment API")
-    serve.add_argument("--lake", required=True, help="lakehouse output directory")
+    serve.add_argument("--lake", required=True, help="security data lake output directory")
     serve.add_argument("--host", default="127.0.0.1", help="bind host")
     serve.add_argument("--port", type=int, default=8787, help="bind port")
     serve.set_defaults(func=_serve)
@@ -59,17 +59,17 @@ def _parser() -> argparse.ArgumentParser:
     assessment = sub.add_parser("assessment", help="continuous compliance assessment commands")
     assessment_sub = assessment.add_subparsers(dest="assessment_command", required=True)
     status = assessment_sub.add_parser("status", help="print current posture")
-    status.add_argument("--lake", required=True, help="lakehouse output directory")
+    status.add_argument("--lake", required=True, help="security data lake output directory")
     status.add_argument("--freshness-days", type=int, default=7, help="evidence freshness window")
     status.set_defaults(func=_assessment_status)
     snapshot = assessment_sub.add_parser("snapshot", help="write point-in-time assessment snapshot")
-    snapshot.add_argument("--lake", required=True, help="lakehouse output directory")
+    snapshot.add_argument("--lake", required=True, help="security data lake output directory")
     snapshot.add_argument("--out", default=None, help="snapshot output path")
     snapshot.add_argument("--freshness-days", type=int, default=7, help="evidence freshness window")
     snapshot.add_argument("--reason", default="manual", help="snapshot reason")
     snapshot.set_defaults(func=_assessment_snapshot)
     violations = assessment_sub.add_parser("violations", help="list open framework/control violations")
-    violations.add_argument("--lake", required=True, help="lakehouse output directory")
+    violations.add_argument("--lake", required=True, help="security data lake output directory")
     violations.add_argument("--framework", default=None, help="optional framework filter")
     violations.set_defaults(func=_assessment_violations)
     return parser

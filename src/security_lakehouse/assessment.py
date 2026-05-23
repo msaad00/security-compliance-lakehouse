@@ -1,6 +1,6 @@
 """Continuous compliance assessment engine.
 
-The lakehouse pipeline creates evidence and analytics tables. This module turns
+The security data lake pipeline creates evidence and analytics tables. This module turns
 those artifacts into product-level assessment state:
 
 - current posture: continuously refreshed answer to "are we compliant now?"
