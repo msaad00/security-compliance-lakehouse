@@ -82,6 +82,10 @@ def _parser() -> argparse.ArgumentParser:
     violations.add_argument("--lake", required=True, help="security data lake output directory")
     violations.add_argument("--framework", default=None, help="optional framework filter")
     violations.set_defaults(func=_assessment_violations)
+    tests = assessment_sub.add_parser("tests", help="list continuous control tests")
+    tests.add_argument("--lake", required=True, help="security data lake output directory")
+    tests.add_argument("--result", default=None, choices=["pass", "fail", "needs_evidence"], help="optional result filter")
+    tests.set_defaults(func=_assessment_tests)
     return parser
 
 
@@ -208,6 +212,14 @@ def _assessment_violations(args: argparse.Namespace) -> int:
         if args.framework is None or framework_controls.get(violation["control_id"]) == args.framework
     ]
     print(json.dumps({"count": len(rows), "violations": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _assessment_tests(args: argparse.Namespace) -> int:
+    rows = read_jsonl(Path(args.lake) / "gold" / "control_tests.jsonl")
+    if args.result:
+        rows = [row for row in rows if row["result"] == args.result]
+    print(json.dumps({"count": len(rows), "control_tests": rows}, indent=2, sort_keys=True))
     return 0
 
 

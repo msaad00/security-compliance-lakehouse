@@ -10,6 +10,7 @@ from security_lakehouse.connectors import load_connector_catalog, validate_conne
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.io import read_json, read_jsonl
 from security_lakehouse.pipeline import run_pipeline
+from security_lakehouse.programs import validate_program_catalog
 from security_lakehouse.validation import validate_raw_events
 
 
@@ -42,6 +43,10 @@ def test_sample_evidence_references_only_implemented_controls() -> None:
     assert validate_evidence_controls(referenced) == []
 
 
+def test_program_catalog_maps_to_implemented_controls() -> None:
+    assert validate_program_catalog() == []
+
+
 def test_connector_catalog_uses_least_privilege_access_boundaries() -> None:
     connectors = load_connector_catalog()
 
@@ -65,6 +70,7 @@ def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
     metrics = read_json(result.metrics_path)
     dashboard_data = read_json(result.dashboard_data_path)
     current_posture = read_json(tmp_path / "lake" / "gold" / "current_posture.json")
+    control_tests = read_jsonl(tmp_path / "lake" / "gold" / "control_tests.jsonl")
     manifest = read_json(tmp_path / "lake" / "manifest.json")
 
     assert len(bronze[0]["raw_sha256"]) == 64
@@ -72,11 +78,18 @@ def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
     assert metrics["critical_open"] == 2
     assert metrics["runtime_block_rate"] == 1.0
     assert metrics["top_risk_asset"] == "container:rag-api@sha256:91ab"
+    assert metrics["control_test_count"] == 4
+    assert metrics["failing_control_tests"] >= 1
     assert [backend["name"] for backend in dashboard_data["lake_backends"]] == ["Snowflake", "ClickHouse"]
+    assert len(dashboard_data["control_tests"]) == 4
+    assert {row["program_id"] for row in control_tests} == {"acme-continuous-trust"}
+    assert all(row["confidence_score"] > 0 for row in control_tests)
+    assert any(row["result"] == "fail" and row["status"] == "failing" for row in control_tests)
     assert current_posture["assessment_type"] == "current_posture"
     assert current_posture["posture"]["state"] == "critical"
     assert current_posture["posture"]["open_violation_count"] > 0
     assert manifest["marts"]["sqlite"].endswith("security_lakehouse.sqlite")
+    assert manifest["zones"]["gold_control_tests"].endswith("control_tests.jsonl")
     assert manifest["storage_roles"]["duckdb"] == "optional local analytical mart for columnar datasets"
     if result.duckdb_mart_path is not None:
         assert Path(result.duckdb_mart_path).exists()
@@ -85,9 +98,11 @@ def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
 
     with sqlite3.connect(result.mart_path) as conn:
         failing = conn.execute("select count(*) from control_posture where status = 'fail'").fetchone()[0]
+        failing_tests = conn.execute("select count(*) from control_tests where result = 'fail'").fetchone()[0]
         top_asset = conn.execute("select asset_id from asset_risk order by risk_score desc limit 1").fetchone()[0]
 
     assert failing >= 1
+    assert failing_tests >= 1
     assert top_asset == "container:rag-api@sha256:91ab"
 
 
@@ -98,10 +113,13 @@ def test_dashboard_render_uses_gold_data(tmp_path: Path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "TrustOps Assessment Console" in html
-    assert "Single pane of glass for continuous trust" in html
+    assert "Trust dashboard" in html
+    assert "Acme Continuous Trust Program" in html
     assert "Posture confidence" in html
     assert "Continuous Control Monitoring" in html
     assert "Control workbench" in html
+    assert "AI Control Test Summary" in html
+    assert "GET /api/control-tests" in html
     assert "Violation queue" in html
     assert "Agent API" in html
     assert "SOC2-CC6.1" in html

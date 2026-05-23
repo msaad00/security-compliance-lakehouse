@@ -51,6 +51,7 @@ class _Handler(BaseHTTPRequestHandler):
             posture = build_current_posture(self.lake_dir)
             filters = parse_qs(parsed.query)
             framework = (filters.get("framework") or [None])[0]
+            control_id = (filters.get("control_id") or [None])[0]
             violations = posture["violations"]
             if framework:
                 control_frameworks = {
@@ -58,10 +59,36 @@ class _Handler(BaseHTTPRequestHandler):
                     for row in read_jsonl(self.lake_dir / "gold" / "control_posture.jsonl")
                 }
                 violations = [row for row in violations if control_frameworks.get(row["control_id"]) == framework]
+            if control_id:
+                violations = [row for row in violations if row["control_id"] == control_id]
             self._send_json({"count": len(violations), "violations": violations})
             return
         if parsed.path == "/api/controls":
-            self._send_json({"controls": read_jsonl(self.lake_dir / "gold" / "control_posture.jsonl")})
+            filters = parse_qs(parsed.query)
+            control_id = (filters.get("control_id") or [None])[0]
+            controls = read_jsonl(self.lake_dir / "gold" / "control_posture.jsonl")
+            if control_id:
+                controls = [row for row in controls if row["control_id"] == control_id]
+            self._send_json({"controls": controls})
+            return
+        if parsed.path == "/api/control-tests":
+            filters = parse_qs(parsed.query)
+            result = (filters.get("result") or [None])[0]
+            control_id = (filters.get("control_id") or [None])[0]
+            rows = read_jsonl(self.lake_dir / "gold" / "control_tests.jsonl")
+            if result:
+                rows = [row for row in rows if row["result"] == result]
+            if control_id:
+                rows = [row for row in rows if row["control_id"] == control_id]
+            self._send_json({"count": len(rows), "control_tests": rows})
+            return
+        if parsed.path == "/api/evidence":
+            filters = parse_qs(parsed.query)
+            control_id = (filters.get("control_id") or [None])[0]
+            rows = read_jsonl(self.lake_dir / "silver" / "normalized_events.jsonl")
+            if control_id:
+                rows = [row for row in rows if control_id in row["control_ids"]]
+            self._send_json({"count": len(rows), "evidence": rows})
             return
         if parsed.path == "/api/assets":
             self._send_json({"assets": read_jsonl(self.lake_dir / "gold" / "asset_risk.jsonl")})
