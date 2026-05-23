@@ -31,6 +31,28 @@ It can run in two modes:
 | Snapshot engine | freeze point-in-time posture for audit or vendor review | `POST /api/snapshots` |
 | Analyst skills | SOC analyst, SOC 2, AI governance, PCI/ISO expansion guards | skill-pack instructions |
 
+## Connector Access Model
+
+TrustOps uses the smallest viable access boundary:
+
+```mermaid
+flowchart LR
+  Lake[Existing security data lake] -->|read-only role| Assess[TrustOps assessment engine]
+  Tool[Source tool API] -->|scoped token| Assess
+  Managed[Managed evidence objects] -->|dedicated schema| Assess
+  Assess --> Posture[Current posture]
+  Assess --> Violations[Violation queue]
+  Assess --> Snapshots[Point-in-time snapshots]
+```
+
+Preferred order:
+
+1. Read from existing Snowflake, ClickHouse, object storage, SIEM, or scanner evidence.
+2. Create managed evidence objects only when the company does not have normalized evidence yet.
+3. Use direct tool tokens only when the source system is the evidence authority.
+
+See [Connector And Access Model](docs/CONNECTORS.md).
+
 ## Live Demo
 
 ```bash
@@ -53,6 +75,13 @@ Optional local analytical mart:
 pip install -e ".[dev,analytics]"
 security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
 security-lakehouse query --engine duckdb --lake build/lakehouse "select * from control_posture"
+```
+
+Validate connector access contracts:
+
+```bash
+security-lakehouse connectors validate
+security-lakehouse connectors list
 ```
 
 Open:
@@ -170,6 +199,7 @@ security-lakehouse query --lake build/lakehouse "select * from control_posture o
 src/security_lakehouse/     CLI, pipeline, assessment engine, API, dashboard
 data/raw/                   sample security evidence
 data/schemas/               raw and normalized JSON schemas
+connectors/                 source connector and access-boundary catalog
 controls/                   versioned implemented control catalog
 frameworks/                 source-linked framework registry
 deploy/snowflake/           governed evidence lake schema
