@@ -1,7 +1,6 @@
-# TrustOps Continuous Compliance Assessment
+# TrustOps Security Data Lake
 
-Open-source continuous risk and compliance assessment for internal security,
-platform, and AI governance teams.
+Continuous compliance assessment for security data lakes.
 
 It reports near realtime posture with confidence from security evidence,
 control tests, owner workflows, snapshots, and agent-readable APIs.
@@ -182,16 +181,17 @@ and executes the regression suite.
 
 ## Name
 
-The product should lead with assessment, trust operations, or continuous
-compliance. The lakehouse/data lake language belongs in the architecture story.
+Public positioning:
 
-Good product/repo names:
+```text
+TrustOps Security Data Lake
+```
 
-- `trustops`
-- `trustops-assessment`
-- `continuous-compliance-assessment`
-- `security-compliance-assessment`
-- `open-trustops`
+Repository name:
 
-`security-compliance-lakehouse` is accurate for the data architecture, but it
-undersells the product experience.
+```text
+trustops-security-data-lake
+```
+
+The product is TrustOps. The architecture is a security data lake assessment
+layer with Snowflake and ClickHouse as production storage paths.

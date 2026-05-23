@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "security-compliance-lakehouse"
+name = "trustops-security-data-lake"
 version = "0.1.0"
-description = "End-to-end security and compliance analytics lakehouse demo."
+description = "Continuous compliance assessment for security data lakes."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Mohamed Saad" }]

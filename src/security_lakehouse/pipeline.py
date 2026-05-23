@@ -1,4 +1,4 @@
-"""End-to-end lakehouse pipeline."""
+"""End-to-end security data lake pipeline."""
 
 from __future__ import annotations
 

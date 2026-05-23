@@ -1,3 +1,3 @@
-"""Security compliance lakehouse package."""
+"""TrustOps Security Data Lake package."""
 
 __version__ = "0.1.0"
