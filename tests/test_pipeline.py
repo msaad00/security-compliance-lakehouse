@@ -80,7 +80,9 @@ def test_dashboard_render_uses_gold_data(tmp_path: Path) -> None:
 
     html = output.read_text(encoding="utf-8")
     assert "TrustOps Assessment Console" in html
-    assert "Current compliance and risk assessment" in html
+    assert "Single pane of glass for continuous trust" in html
+    assert "Posture confidence" in html
+    assert "Continuous Control Monitoring" in html
     assert "Control workbench" in html
     assert "Violation queue" in html
     assert "Agent API" in html

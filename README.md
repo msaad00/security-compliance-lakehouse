@@ -1,121 +1,133 @@
-# Security Data Lake Compliance Assessment
+# TrustOps Continuous Compliance Assessment
 
-Open-source continuous risk and compliance assessment layer for security teams,
-platform teams, and coding agents.
+Open-source continuous risk and compliance assessment for internal security,
+platform, and AI governance teams.
 
-The project is built around one principle: **assessment is the product;
-ingestion is an input**. It can evaluate evidence from an existing security data
-lake, or create the normalized lake objects a smaller company needs to get
-started.
+It reports near realtime posture with confidence from security evidence,
+control tests, owner workflows, snapshots, and agent-readable APIs.
 
-End-to-end capabilities:
+![TrustOps console](docs/images/trustops-console.png)
 
-- evaluate current compliance and risk posture from evidence
-- create point-in-time assessment snapshots for audits and just-in-time reviews
-- expose violations, controls, assets, and snapshots for humans and agents
-- ingest raw security evidence as JSONL when a company does not already have a lake
-- validate and normalize events into bronze, silver, and gold lake zones
-- map findings and evidence to SOC 2, ISO 27001, NIST AI RMF, CIS, and PCI controls
-- compute executive, security-engineering, and auditor-facing metrics
-- build an SQLite analytics mart and static dashboard artifact
-- model Snowflake as a governed evidence lake
-- model ClickHouse as a high-volume telemetry analytics lake
-- provide an agent skill for repeatable evidence questions
+## What This Is
 
-The product vision is a smaller internal trust automation platform for one
-company: continuous control monitoring, evidence collection, owner workflows,
-and an auditor-ready evidence room. See
-[Internal Compliance Tool Vision](docs/INTERNAL_COMPLIANCE_TOOL.md).
+TrustOps is an assessment layer, not just an ingestion demo.
 
-This is intentionally self-contained. It runs locally with Python 3.11 and the
-standard library, while modeling the same layers used in real security data
-lakes: evidence, normalized facts, controls-as-code, continuous evaluations,
-violations, snapshots, APIs, and audit-ready exports.
+It can run in two modes:
 
-## Quick Start
+| Mode | Use when | What it does |
+|---|---|---|
+| Existing lake mode | You already have Snowflake, ClickHouse, object storage, SIEM, scanners, or GRC exports | Reads normalized evidence and evaluates posture |
+| Managed evidence mode | You need a local proof-of-value first | Creates bronze, silver, gold, mart, API, dashboard, and snapshots |
+
+## Product Surface
+
+| Surface | Human workflow | Agent workflow |
+|---|---|---|
+| Trust dashboard | report current posture, freshness, confidence, and risk | `GET /api/posture/current` |
+| Control workbench | inspect tests, owners, evidence, and failures | `GET /api/controls` |
+| Violation queue | assign remediation from failing evidence | `GET /api/violations` |
+| Evidence room | trace source records, hashes, artifacts, and mappings | normalized JSONL + SQLite mart |
+| Snapshot engine | freeze point-in-time posture for audit or vendor review | `POST /api/snapshots` |
+| Analyst skills | SOC analyst, SOC 2, AI governance, PCI/ISO expansion guards | skill-pack instructions |
+
+## Live Demo
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e ".[dev]"
 
 security-lakehouse pipeline run \
   --raw data/raw/security_events.jsonl \
   --out build/lakehouse
 
-security-lakehouse dashboard \
+security-lakehouse serve \
   --lake build/lakehouse \
-  --out build/dashboard/index.html
+  --port 8787
 ```
 
-Open `build/dashboard/index.html` in a browser. The generated page is an
-internal TrustOps console, not just a static report.
+Open:
 
-## What It Proves
+```text
+http://127.0.0.1:8787/
+```
 
-The project demonstrates the full product path employers expect from a security
-platform engineer, security data engineer, or AI-era governance engineer:
+## Assessment Workflow
 
-1. **Assessment engine**: current posture, violations, stale evidence, framework
-   scores, and immutable snapshots.
-2. **Interoperability**: existing lake mode or managed lake-object mode.
-3. **Evidence model**: deterministic normalization into canonical entities.
-4. **Mapping logic**: evidence-to-control joins with severity and status rules.
-5. **Metrics**: control coverage, evidence freshness, open critical risk,
-   runtime block rate, SLA posture, and asset risk concentration.
-6. **Human experience**: TrustOps console for controls, evidence, assets, and risk.
-7. **Agent experience**: JSON CLI/API surfaces for posture, violations, and snapshots.
-8. **Agent skill**: repeatable instructions for an AI agent to answer posture,
-   audit, and remediation questions using the produced artifacts.
-9. **Hero data lakes**: Snowflake schema/views for governed audit evidence and
-   ClickHouse tables/views for fast telemetry analytics.
+```mermaid
+flowchart LR
+  A[Security evidence] --> B[Bronze raw records]
+  B --> C[Silver normalized facts]
+  C --> D[Control catalog]
+  D --> E[Assessment engine]
+  E --> F[Current posture]
+  E --> G[Violations]
+  E --> H[Point-in-time snapshots]
+  F --> I[TrustOps console]
+  G --> I
+  H --> I
+  F --> J[Agent API]
+  G --> J
 
-## Internal Compliance Tool Scope
+  C -. governed audit evidence .-> S[(Snowflake)]
+  C -. fast telemetry analytics .-> K[(ClickHouse)]
+```
 
-The project is shaped like a compact trust operations product:
+## Confidence Model
 
-| Capability | Small-company version |
+TrustOps separates readiness from confidence.
+
+| Metric | Meaning |
 |---|---|
-| Connector inventory | JSONL evidence from cloud, vuln, identity, runtime, SIEM, ticketing, and model registry sources |
-| Control library | implemented seed mappings for SOC 2-oriented controls and NIST AI RMF controls with owner and risk domain |
-| Continuous testing | pass/fail control posture, evidence coverage, runtime block rate, open risk events |
-| Current posture | continuously refreshed `current_posture.json` with framework scores and violations |
-| Point-in-time snapshots | immutable assessment exports for audits, incidents, and just-in-time vendor reviews |
-| Owner workflows | asset risk queue and control workbench for remediation ownership |
-| Audit room | evidence table with retained artifact references and raw hashes |
-| Data lakes | Snowflake for governed evidence, ClickHouse for high-volume telemetry |
+| Readiness score | How many implemented control tests are passing |
+| Posture confidence | How much trust to place in the reported posture |
+| Evidence freshness | Latest event time and source availability |
+| Evidence coverage | Controls with linked evidence |
+| Snapshot hash | Immutable assessment hash for point-in-time reporting |
 
-Current implemented framework scope is intentionally small: SOC 2-oriented
-controls and NIST AI RMF. PCI DSS and ISO/IEC 27001 analyst skills are present
-as guardrailed expansion surfaces, but their controls are not marked implemented
-until a versioned catalog and validation tests are added.
+This matters because a company can be failing controls and still have high
+confidence in the report. That is useful: leadership sees the true posture,
+owners get a clear remediation queue, and auditors get traceable evidence.
 
-## Hero Security Data Lakes
+## Implemented Framework Scope
 
-This repo uses two production data-lake stories:
+Current implemented controls are intentionally small and source-linked:
 
-| Backend | Role | Proof |
-|---|---|---|
-| Snowflake | Governed evidence lake for audit, GRC, RBAC, retention, and executive reporting | `deploy/snowflake/schema.sql` |
-| ClickHouse | Telemetry analytics lake for runtime events, detections, fast aggregations, and dashboards | `deploy/clickhouse/schema.sql`, `deploy/clickhouse/docker-compose.yml` |
+| Framework | Status |
+|---|---|
+| SOC 2-oriented controls | implemented seed controls |
+| NIST AI RMF | implemented seed controls |
+| PCI DSS | guarded analyst skill only |
+| ISO/IEC 27001 | guarded analyst skill only |
 
-See [Hero Security Data Lakes](docs/HERO_DATA_LAKES.md) and the
-[Dual Lakehouse Architecture](docs/diagrams/dual-lakehouse.md).
+PCI DSS and ISO/IEC 27001 controls are not marked implemented until versioned
+catalog mappings and regression tests are added.
 
-## Product Artifacts
+## Data Model
 
-Start here for the product surface:
+```text
+raw evidence
+  -> bronze/raw_events.jsonl          immutable replay + SHA-256
+  -> silver/normalized_events.jsonl   canonical security facts
+  -> gold/control_posture.jsonl       control test state
+  -> gold/asset_risk.jsonl            owner remediation queue
+  -> gold/current_posture.json        live posture contract
+  -> snapshots/*.json                 point-in-time assessment evidence
+  -> mart/security_lakehouse.sqlite   SQL analytics surface
+```
 
-- [Product Artifacts](docs/PRODUCT_ARTIFACTS.md)
-- [Vendor Diligence Use Case](docs/USE_CASE_VENDOR_DILIGENCE.md)
-- [Data Flow](docs/DATA_FLOW.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Data Model](docs/DATA_MODEL.md)
-- [Visual System](docs/VISUAL_SYSTEM.md)
-- [Human and Agent API](docs/api/AGENT_API.md)
-- [Framework Analyst Skills](agent-skills/FRAMEWORK_SKILLS.md)
+## API
 
-## Core Commands
+| Route | Purpose |
+|---|---|
+| `GET /api/healthz` | service status |
+| `GET /api/posture/current` | current posture, scores, confidence inputs, violations |
+| `GET /api/controls` | control workbench records |
+| `GET /api/violations` | open control and asset violations |
+| `GET /api/assets` | asset risk queue |
+| `POST /api/snapshots` | immutable point-in-time assessment snapshot |
+
+## Commands
 
 ```bash
 security-lakehouse validate --raw data/raw/security_events.jsonl
@@ -123,49 +135,45 @@ security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build
 security-lakehouse assessment status --lake build/lakehouse
 security-lakehouse assessment violations --lake build/lakehouse
 security-lakehouse assessment snapshot --lake build/lakehouse --reason vendor_due_diligence
-security-lakehouse serve --lake build/lakehouse --port 8787
 security-lakehouse query --lake build/lakehouse "select * from control_posture order by risk_score desc"
-security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
 ```
 
-## Human And Agent API
-
-The local server exposes assessment-first routes:
-
-| Route | Consumer | Purpose |
-|---|---|---|
-| `GET /api/posture/current` | agents, dashboards, humans | current posture and framework scores |
-| `GET /api/violations` | agents, owners, security engineers | open control and asset violations |
-| `POST /api/snapshots` | auditors, vendor reviews, incidents | point-in-time assessment snapshot |
-| `GET /api/controls` | UI, reporting, agents | control workbench data |
-| `GET /api/assets` | UI, remediation owners | asset risk queue |
-
-## Repo Structure
+## Repo Map
 
 ```text
-security-compliance-lakehouse/
-├─ src/security_lakehouse/        # CLI, ingestion, transform, metrics, mart
-├─ data/raw/                      # sample raw security events
-├─ data/schemas/                  # JSON schemas for raw and normalized records
-├─ mappings/                      # framework/control mapping logic
-├─ deploy/                        # Snowflake and ClickHouse schema/deploy examples
-├─ docs/diagrams/                 # Mermaid architecture and data-flow diagrams
-├─ agent-skills/                  # AI agent skill for analytics/audit workflows
-├─ app/                           # dashboard template
-└─ tests/                         # regression tests for pipeline behavior
+src/security_lakehouse/     CLI, pipeline, assessment engine, API, dashboard
+data/raw/                   sample security evidence
+data/schemas/               raw and normalized JSON schemas
+controls/                   versioned implemented control catalog
+frameworks/                 source-linked framework registry
+deploy/snowflake/           governed evidence lake schema
+deploy/clickhouse/          telemetry analytics lake schema
+docs/                       architecture, diagrams, data model, product artifacts
+agent-skills/               guardrailed analyst skills for humans and agents
+tests/                      pipeline, catalog, mapping, and assessment tests
 ```
 
-## Design Notes
+## Verification
 
-- Raw events are immutable JSONL records with source, tenant, timestamp, type,
-  entity, severity, controls, and evidence metadata.
-- Bronze keeps raw records plus SHA-256 hashes for audit replay.
-- Silver normalizes fields across tools and security domains.
-- Gold produces metrics, control posture, asset risk, and evidence freshness.
-- The SQLite mart gives SQL access without requiring cloud infrastructure.
+```bash
+make smoke
+```
 
-## Diagrams
+The smoke target validates raw evidence, runs the pipeline, renders the console,
+and executes the regression suite.
 
-- [Architecture](docs/diagrams/architecture.md)
-- [Data Model](docs/diagrams/data-model.md)
-- [Agent Workflow](docs/diagrams/agent-workflow.md)
+## Name
+
+The product should lead with assessment, trust operations, or continuous
+compliance. The lakehouse/data lake language belongs in the architecture story.
+
+Good product/repo names:
+
+- `trustops`
+- `trustops-assessment`
+- `continuous-compliance-assessment`
+- `security-compliance-assessment`
+- `open-trustops`
+
+`security-compliance-lakehouse` is accurate for the data architecture, but it
+undersells the product experience.
