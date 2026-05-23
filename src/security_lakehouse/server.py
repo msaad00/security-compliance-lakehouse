@@ -17,8 +17,7 @@ def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) ->
     """Serve the TrustOps console and JSON assessment API."""
     lake = Path(lake_dir)
     dashboard = lake / "console.html"
-    if not dashboard.exists():
-        render_dashboard(lake, dashboard)
+    render_dashboard(lake, dashboard)
 
     class Handler(_Handler):
         lake_dir = lake

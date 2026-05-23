@@ -79,10 +79,11 @@ def test_dashboard_render_uses_gold_data(tmp_path: Path) -> None:
     output = render_dashboard(tmp_path / "lake", tmp_path / "dashboard" / "index.html")
 
     html = output.read_text(encoding="utf-8")
-    assert "Internal TrustOps Console" in html
-    assert "Continuous compliance evidence for one company" in html
-    assert "Snowflake" in html
-    assert "ClickHouse" in html
+    assert "TrustOps Assessment Console" in html
+    assert "Current compliance and risk assessment" in html
+    assert "Control workbench" in html
+    assert "Violation queue" in html
+    assert "Agent API" in html
     assert "SOC2-CC6.1" in html
     assert "container:rag-api@sha256:91ab" in html
 
