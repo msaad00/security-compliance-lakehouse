@@ -14,11 +14,15 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install package
-        run: python -m pip install -e .
+        run: python -m pip install -e ".[dev]"
       - name: Validate sample evidence
         run: security-lakehouse validate --raw data/raw/security_events.jsonl
+      - name: Validate catalog and mappings
+        run: python -c "from security_lakehouse.catalog import validate_catalog; errors = validate_catalog(); assert not errors, errors"
       - name: Run pipeline smoke
         run: security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
+      - name: Validate current posture API payload
+        run: security-lakehouse assessment status --lake build/lakehouse
       - name: Render dashboard
         run: security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
       - name: Run tests

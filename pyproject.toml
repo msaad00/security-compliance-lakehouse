@@ -11,6 +11,11 @@ requires-python = ">=3.11"
 authors = [{ name = "Mohamed Saad" }]
 dependencies = []
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
 [project.scripts]
 security-lakehouse = "security_lakehouse.cli:main"
 

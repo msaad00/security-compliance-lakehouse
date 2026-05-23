@@ -10,6 +10,8 @@ This page is the product review index for the public repo.
 | Local console/API server | `src/security_lakehouse/server.py` |
 | Continuous assessment engine | `src/security_lakehouse/assessment.py` |
 | CLI entry point | `src/security_lakehouse/cli.py` |
+| Vendor diligence use case | `docs/USE_CASE_VENDOR_DILIGENCE.md` |
+| Console screenshot | `docs/images/trustops-console.png` |
 
 Run locally:
 
