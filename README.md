@@ -6,6 +6,8 @@ platform, and AI governance teams.
 It reports near realtime posture with confidence from security evidence,
 control tests, owner workflows, snapshots, and agent-readable APIs.
 
+![TrustOps workflow](docs/images/trustops-readme-banner.svg)
+
 ![TrustOps console](docs/images/trustops-console.png)
 
 ## What This Is
@@ -26,7 +28,7 @@ It can run in two modes:
 | Trust dashboard | report current posture, freshness, confidence, and risk | `GET /api/posture/current` |
 | Control workbench | inspect tests, owners, evidence, and failures | `GET /api/controls` |
 | Violation queue | assign remediation from failing evidence | `GET /api/violations` |
-| Evidence room | trace source records, hashes, artifacts, and mappings | normalized JSONL + SQLite mart |
+| Evidence room | trace source records, hashes, artifacts, and mappings | normalized JSONL + local SQL mart |
 | Snapshot engine | freeze point-in-time posture for audit or vendor review | `POST /api/snapshots` |
 | Analyst skills | SOC analyst, SOC 2, AI governance, PCI/ISO expansion guards | skill-pack instructions |
 
@@ -89,6 +91,22 @@ This matters because a company can be failing controls and still have high
 confidence in the report. That is useful: leadership sees the true posture,
 owners get a clear remediation queue, and auditors get traceable evidence.
 
+## Data Store Choices
+
+TrustOps separates product logic from storage.
+
+| Store | Role | Status |
+|---|---|---|
+| Snowflake | governed evidence lake, audit views, retention, RBAC, executive reporting | production hero path |
+| ClickHouse | high-volume telemetry, runtime events, trends, fast aggregations | production hero path |
+| DuckDB | local analytical lakehouse file for columnar demos and bigger local datasets | recommended next local mart |
+| SQLite | zero-dependency local SQL artifact for smoke tests and first-run demos | current lightweight default |
+
+SQLite is not the strategic data lake. It is used because it ships with Python
+and makes the project runnable without cloud credentials. For a stronger local
+analytics story, DuckDB should be added next while keeping Snowflake and
+ClickHouse as the production architecture.
+
 ## Implemented Framework Scope
 
 Current implemented controls are intentionally small and source-linked:
@@ -113,7 +131,7 @@ raw evidence
   -> gold/asset_risk.jsonl            owner remediation queue
   -> gold/current_posture.json        live posture contract
   -> snapshots/*.json                 point-in-time assessment evidence
-  -> mart/security_lakehouse.sqlite   SQL analytics surface
+  -> mart/security_lakehouse.sqlite   local SQL smoke/demo surface
 ```
 
 ## API
