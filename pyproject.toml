@@ -15,6 +15,9 @@ dependencies = []
 dev = [
     "pytest>=8.0",
 ]
+analytics = [
+    "duckdb>=1.0",
+]
 
 [project.scripts]
 security-lakehouse = "security_lakehouse.cli:main"

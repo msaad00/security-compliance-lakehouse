@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import sqlite3
 from collections import Counter, defaultdict
@@ -68,6 +69,10 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
     write_jsonl(gold_dir / "asset_risk.jsonl", asset_rows)
     write_json(gold_dir / "metrics.json", metrics)
     write_json(gold_dir / "dashboard_data.json", dashboard_data)
+    sqlite_mart_path = mart_dir / "security_lakehouse.sqlite"
+    duckdb_mart_path = mart_dir / "security_data_lake.duckdb"
+    wrote_duckdb = _write_duckdb_mart_if_available(duckdb_mart_path, silver_rows, control_rows, asset_rows, metrics)
+
     write_json(
         out / "manifest.json",
         {
@@ -79,11 +84,20 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
                 "gold_control_posture": str(gold_dir / "control_posture.jsonl"),
                 "gold_asset_risk": str(gold_dir / "asset_risk.jsonl"),
             },
+            "marts": {
+                "sqlite": str(sqlite_mart_path),
+                "duckdb": str(duckdb_mart_path) if wrote_duckdb else None,
+            },
+            "storage_roles": {
+                "sqlite": "zero-dependency local smoke/demo SQL artifact",
+                "duckdb": "optional local analytical mart for columnar datasets",
+                "snowflake": "production governed evidence lake",
+                "clickhouse": "production telemetry analytics lake",
+            },
         },
     )
 
-    mart_path = mart_dir / "security_lakehouse.sqlite"
-    _write_mart(mart_path, silver_rows, control_rows, asset_rows, metrics)
+    _write_sqlite_mart(sqlite_mart_path, silver_rows, control_rows, asset_rows, metrics)
     from security_lakehouse.assessment import write_current_posture
 
     write_current_posture(out)
@@ -93,9 +107,10 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
         silver_count=len(silver_rows),
         control_count=len(control_rows),
         asset_count=len(asset_rows),
-        mart_path=str(mart_path),
+        mart_path=str(sqlite_mart_path),
         metrics_path=str(gold_dir / "metrics.json"),
         dashboard_data_path=str(gold_dir / "dashboard_data.json"),
+        duckdb_mart_path=str(duckdb_mart_path) if wrote_duckdb else None,
     )
 
 
@@ -288,7 +303,7 @@ def _source_route(source: str) -> str:
     return "dual"
 
 
-def _write_mart(
+def _write_sqlite_mart(
     mart_path: Path,
     silver_rows: list[dict[str, Any]],
     control_rows: list[dict[str, Any]],
@@ -376,3 +391,145 @@ def _write_mart(
         )
         conn.executemany("INSERT INTO metrics VALUES (?, ?)", [(key, str(value)) for key, value in metrics.items()])
         conn.commit()
+
+
+def _write_duckdb_mart_if_available(
+    mart_path: Path,
+    silver_rows: list[dict[str, Any]],
+    control_rows: list[dict[str, Any]],
+    asset_rows: list[dict[str, Any]],
+    metrics: dict[str, Any],
+) -> bool:
+    if importlib.util.find_spec("duckdb") is None:
+        return False
+
+    import duckdb  # type: ignore[import-not-found]
+
+    if mart_path.exists():
+        mart_path.unlink()
+    with duckdb.connect(str(mart_path)) as conn:
+        conn.execute(
+            """
+            CREATE TABLE normalized_events (
+                event_id VARCHAR,
+                tenant_id VARCHAR,
+                event_time TIMESTAMP,
+                source VARCHAR,
+                event_type VARCHAR,
+                asset_id VARCHAR,
+                asset_type VARCHAR,
+                asset_owner VARCHAR,
+                environment VARCHAR,
+                severity VARCHAR,
+                severity_score INTEGER,
+                status VARCHAR,
+                control_ids_json VARCHAR,
+                evidence_id VARCHAR,
+                evidence_ref VARCHAR,
+                evidence_collected_at TIMESTAMP,
+                raw_sha256 VARCHAR
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE control_posture (
+                control_id VARCHAR,
+                framework VARCHAR,
+                title VARCHAR,
+                risk_domain VARCHAR,
+                owner VARCHAR,
+                status VARCHAR,
+                risk_score INTEGER,
+                event_count INTEGER,
+                open_event_count INTEGER,
+                evidence_count INTEGER,
+                evidence_coverage DOUBLE,
+                latest_event_time TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE asset_risk (
+                asset_id VARCHAR,
+                asset_type VARCHAR,
+                asset_owner VARCHAR,
+                environment VARCHAR,
+                risk_score INTEGER,
+                critical_open INTEGER,
+                high_open INTEGER,
+                event_count INTEGER,
+                latest_event_time TIMESTAMP
+            )
+            """
+        )
+        conn.execute("CREATE TABLE metrics (metric VARCHAR, value VARCHAR)")
+        conn.executemany(
+            """
+            INSERT INTO normalized_events VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
+            """,
+            [
+                (
+                    row["event_id"],
+                    row["tenant_id"],
+                    row["event_time"],
+                    row["source"],
+                    row["event_type"],
+                    row["asset_id"],
+                    row["asset_type"],
+                    row["asset_owner"],
+                    row["environment"],
+                    row["severity"],
+                    row["severity_score"],
+                    row["status"],
+                    json.dumps(row["control_ids"]),
+                    row["evidence_id"],
+                    row["evidence_ref"],
+                    row["evidence_collected_at"],
+                    row["raw_sha256"],
+                )
+                for row in silver_rows
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO control_posture VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    row["control_id"],
+                    row["framework"],
+                    row["title"],
+                    row["risk_domain"],
+                    row["owner"],
+                    row["status"],
+                    row["risk_score"],
+                    row["event_count"],
+                    row["open_event_count"],
+                    row["evidence_count"],
+                    row["evidence_coverage"],
+                    row["latest_event_time"],
+                )
+                for row in control_rows
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO asset_risk VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    row["asset_id"],
+                    row["asset_type"],
+                    row["asset_owner"],
+                    row["environment"],
+                    row["risk_score"],
+                    row["critical_open"],
+                    row["high_open"],
+                    row["event_count"],
+                    row["latest_event_time"],
+                )
+                for row in asset_rows
+            ],
+        )
+        conn.executemany("INSERT INTO metrics VALUES (?, ?)", [(key, str(value)) for key, value in metrics.items()])
+    return True

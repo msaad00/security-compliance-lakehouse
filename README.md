@@ -47,6 +47,14 @@ security-lakehouse serve \
   --port 8787
 ```
 
+Optional local analytical mart:
+
+```bash
+pip install -e ".[dev,analytics]"
+security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
+security-lakehouse query --engine duckdb --lake build/lakehouse "select * from control_posture"
+```
+
 Open:
 
 ```text
@@ -98,13 +106,13 @@ TrustOps separates product logic from storage.
 |---|---|---|
 | Snowflake | governed evidence lake, audit views, retention, RBAC, executive reporting | production hero path |
 | ClickHouse | high-volume telemetry, runtime events, trends, fast aggregations | production hero path |
-| DuckDB | local analytical lakehouse file for columnar demos and bigger local datasets | recommended next local mart |
+| DuckDB | local analytical file for columnar demos and bigger local datasets | optional analytical mart via `.[analytics]` |
 | SQLite | zero-dependency local SQL artifact for smoke tests and first-run demos | current lightweight default |
 
 SQLite is not the strategic data lake. It is used because it ships with Python
-and makes the project runnable without cloud credentials. For a stronger local
-analytics story, DuckDB should be added next while keeping Snowflake and
-ClickHouse as the production architecture.
+and makes the project runnable without cloud credentials. DuckDB is the stronger
+local analytical path when the optional `analytics` extra is installed.
+Snowflake and ClickHouse remain the production architecture.
 
 ## Implemented Framework Scope
 
@@ -131,6 +139,7 @@ raw evidence
   -> gold/current_posture.json        live posture contract
   -> snapshots/*.json                 point-in-time assessment evidence
   -> mart/security_lakehouse.sqlite   local SQL smoke/demo surface
+  -> mart/security_data_lake.duckdb   optional local analytical mart
 ```
 
 ## API
