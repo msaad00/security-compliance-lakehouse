@@ -19,6 +19,8 @@ jobs:
         run: security-lakehouse validate --raw data/raw/security_events.jsonl
       - name: Validate catalog and mappings
         run: python -c "from security_lakehouse.catalog import validate_catalog; errors = validate_catalog(); assert not errors, errors"
+      - name: Validate connector access contracts
+        run: security-lakehouse connectors validate
       - name: Run pipeline smoke
         run: security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
       - name: Validate current posture API payload

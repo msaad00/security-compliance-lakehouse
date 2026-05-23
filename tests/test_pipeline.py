@@ -6,6 +6,7 @@ from pathlib import Path
 
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
 from security_lakehouse.catalog import load_control_catalog, load_framework_registry, validate_catalog, validate_evidence_controls
+from security_lakehouse.connectors import load_connector_catalog, validate_connector_catalog
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.io import read_json, read_jsonl
 from security_lakehouse.pipeline import run_pipeline
@@ -39,6 +40,16 @@ def test_sample_evidence_references_only_implemented_controls() -> None:
     referenced = {control for row in rows for control in row.get("controls", [])}
 
     assert validate_evidence_controls(referenced) == []
+
+
+def test_connector_catalog_uses_least_privilege_access_boundaries() -> None:
+    connectors = load_connector_catalog()
+
+    assert validate_connector_catalog() == []
+    assert {"snowflake-evidence-lake", "clickhouse-telemetry-lake", "managed-local-evidence"} <= set(connectors)
+    assert connectors["snowflake-evidence-lake"]["access_boundary"] == "read_only_role"
+    assert connectors["clickhouse-telemetry-lake"]["default_route"] == "ClickHouse"
+    assert connectors["managed-local-evidence"]["collection_mode"] == "managed_evidence_object"
 
 
 def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:

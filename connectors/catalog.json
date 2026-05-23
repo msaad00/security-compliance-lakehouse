@@ -1,0 +1,156 @@
+{
+  "connectors": [
+    {
+      "connector_id": "snowflake-evidence-lake",
+      "name": "Snowflake Evidence Lake",
+      "category": "warehouse",
+      "collection_mode": "existing_lake_read",
+      "access_boundary": "read_only_role",
+      "credential_type": "external_oauth_or_key_pair",
+      "minimum_permissions": [
+        "USAGE on warehouse",
+        "USAGE on database",
+        "USAGE on schema",
+        "SELECT on evidence views"
+      ],
+      "evidence_types": ["audit_event", "control_posture", "asset_risk", "evidence_bundle"],
+      "default_route": "Snowflake",
+      "freshness_slo_minutes": 60,
+      "production_status": "hero_path"
+    },
+    {
+      "connector_id": "clickhouse-telemetry-lake",
+      "name": "ClickHouse Telemetry Lake",
+      "category": "analytics_lake",
+      "collection_mode": "existing_lake_read",
+      "access_boundary": "read_only_role",
+      "credential_type": "scoped_user_or_cloud_token",
+      "minimum_permissions": [
+        "SELECT on normalized_events",
+        "SELECT on runtime_policy_metrics",
+        "SELECT on detection summaries"
+      ],
+      "evidence_types": ["runtime_event", "detection", "telemetry_metric", "trend"],
+      "default_route": "ClickHouse",
+      "freshness_slo_minutes": 15,
+      "production_status": "hero_path"
+    },
+    {
+      "connector_id": "object-storage-evidence",
+      "name": "Object Storage Evidence",
+      "category": "evidence_store",
+      "collection_mode": "existing_lake_read",
+      "access_boundary": "read_only_role",
+      "credential_type": "cloud_iam_role",
+      "minimum_permissions": [
+        "LIST evidence prefix",
+        "GET evidence objects"
+      ],
+      "evidence_types": ["sarif", "json", "attestation", "audit_export"],
+      "default_route": "Snowflake",
+      "freshness_slo_minutes": 120,
+      "production_status": "supported_path"
+    },
+    {
+      "connector_id": "github-security",
+      "name": "GitHub Security",
+      "category": "developer_platform",
+      "collection_mode": "direct_api_read",
+      "access_boundary": "scoped_token",
+      "credential_type": "github_app_installation_token",
+      "minimum_permissions": [
+        "read code scanning alerts",
+        "read secret scanning alerts",
+        "read dependabot alerts",
+        "read repository metadata"
+      ],
+      "evidence_types": ["code_scan", "secret_finding", "dependency_alert", "repository"],
+      "default_route": "dual",
+      "freshness_slo_minutes": 60,
+      "production_status": "supported_path"
+    },
+    {
+      "connector_id": "identity-provider",
+      "name": "Identity Provider",
+      "category": "identity",
+      "collection_mode": "direct_api_read",
+      "access_boundary": "scoped_token",
+      "credential_type": "oauth_client_credentials",
+      "minimum_permissions": [
+        "read groups",
+        "read users",
+        "read app assignments",
+        "read access reviews"
+      ],
+      "evidence_types": ["user", "group", "assignment", "access_review"],
+      "default_route": "Snowflake",
+      "freshness_slo_minutes": 240,
+      "production_status": "supported_path"
+    },
+    {
+      "connector_id": "ticketing",
+      "name": "Ticketing",
+      "category": "workflow",
+      "collection_mode": "direct_api_read",
+      "access_boundary": "scoped_token",
+      "credential_type": "project_scoped_api_token",
+      "minimum_permissions": [
+        "read project issues",
+        "read issue status",
+        "read issue labels"
+      ],
+      "evidence_types": ["remediation_ticket", "owner_sla", "exception"],
+      "default_route": "Snowflake",
+      "freshness_slo_minutes": 60,
+      "production_status": "supported_path"
+    },
+    {
+      "connector_id": "siem-alerts",
+      "name": "SIEM Alerts",
+      "category": "detections",
+      "collection_mode": "existing_lake_read",
+      "access_boundary": "read_only_role",
+      "credential_type": "read_only_service_account",
+      "minimum_permissions": [
+        "read alert index",
+        "read detection metadata"
+      ],
+      "evidence_types": ["alert", "detection", "incident_signal"],
+      "default_route": "ClickHouse",
+      "freshness_slo_minutes": 10,
+      "production_status": "supported_path"
+    },
+    {
+      "connector_id": "runtime-gateway",
+      "name": "Runtime Gateway",
+      "category": "runtime_security",
+      "collection_mode": "existing_lake_read",
+      "access_boundary": "read_only_role",
+      "credential_type": "read_only_service_account",
+      "minimum_permissions": [
+        "read runtime event stream",
+        "read policy decision logs"
+      ],
+      "evidence_types": ["tool_call", "policy_decision", "runtime_block"],
+      "default_route": "ClickHouse",
+      "freshness_slo_minutes": 5,
+      "production_status": "supported_path"
+    },
+    {
+      "connector_id": "managed-local-evidence",
+      "name": "Managed Local Evidence Objects",
+      "category": "starter_mode",
+      "collection_mode": "managed_evidence_object",
+      "access_boundary": "dedicated_schema",
+      "credential_type": "local_filesystem",
+      "minimum_permissions": [
+        "write dedicated TrustOps output directory",
+        "read generated TrustOps output directory"
+      ],
+      "evidence_types": ["raw_event", "normalized_event", "control_posture", "snapshot"],
+      "default_route": "local",
+      "freshness_slo_minutes": 1440,
+      "production_status": "starter_path"
+    }
+  ]
+}

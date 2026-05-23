@@ -40,6 +40,15 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--mapping", default=None, help="optional control mapping JSON")
     run.set_defaults(func=_run_pipeline)
 
+    connectors = sub.add_parser("connectors", help="connector catalog commands")
+    connectors_sub = connectors.add_subparsers(dest="connectors_command", required=True)
+    connectors_validate = connectors_sub.add_parser("validate", help="validate connector access contracts")
+    connectors_validate.add_argument("--catalog", default=None, help="optional connector catalog JSON")
+    connectors_validate.set_defaults(func=_connectors_validate)
+    connectors_list = connectors_sub.add_parser("list", help="list connector access contracts")
+    connectors_list.add_argument("--catalog", default=None, help="optional connector catalog JSON")
+    connectors_list.set_defaults(func=_connectors_list)
+
     dashboard = sub.add_parser("dashboard", help="render static dashboard HTML")
     dashboard.add_argument("--lake", required=True, help="security data lake output directory")
     dashboard.add_argument("--out", required=True, help="dashboard HTML output path")
@@ -90,6 +99,37 @@ def _validate(args: argparse.Namespace) -> int:
 def _run_pipeline(args: argparse.Namespace) -> int:
     result = run_pipeline(args.raw, args.out, mapping_path=args.mapping)
     print(json.dumps(result.__dict__, indent=2, sort_keys=True))
+    return 0
+
+
+def _connectors_validate(args: argparse.Namespace) -> int:
+    from security_lakehouse.connectors import validate_connector_catalog
+
+    errors = validate_connector_catalog(args.catalog)
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 1
+    print("valid connector catalog")
+    return 0
+
+
+def _connectors_list(args: argparse.Namespace) -> int:
+    from security_lakehouse.connectors import load_connector_catalog
+
+    connectors = load_connector_catalog(args.catalog)
+    rows = [
+        {
+            "connector_id": connector["connector_id"],
+            "name": connector["name"],
+            "collection_mode": connector["collection_mode"],
+            "access_boundary": connector["access_boundary"],
+            "default_route": connector["default_route"],
+            "freshness_slo_minutes": connector["freshness_slo_minutes"],
+        }
+        for connector in connectors.values()
+    ]
+    print(json.dumps({"connectors": rows, "count": len(rows)}, indent=2, sort_keys=True))
     return 0
 
 
