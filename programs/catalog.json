@@ -1,0 +1,96 @@
+{
+  "catalog_version": "2026-05-23",
+  "scope": "single_company_internal_trust_program",
+  "status_lifecycle": [
+    "not_started",
+    "collecting",
+    "ready",
+    "failing",
+    "accepted_risk",
+    "auditor_ready"
+  ],
+  "programs": [
+    {
+      "program_id": "acme-continuous-trust",
+      "name": "Acme Continuous Trust Program",
+      "description": "Internal continuous assessment program for SOC 2-oriented and NIST AI RMF seed controls.",
+      "framework_ids": [
+        "soc2",
+        "nist-ai-rmf"
+      ],
+      "owners": [
+        "security-platform",
+        "detection-engineering",
+        "ai-security",
+        "appsec"
+      ],
+      "default_freshness_days": 7,
+      "control_tests": [
+        {
+          "test_id": "test-soc2-cc6-1-access-review",
+          "control_id": "SOC2-CC6.1",
+          "name": "Access review and privileged access evidence is current",
+          "owner": "security-platform",
+          "cadence": "continuous",
+          "automation_level": "automated_evidence_assisted_review",
+          "required_evidence_types": [
+            "identity.access_review",
+            "cloud.config",
+            "secret.finding",
+            "compliance.evidence_bundle"
+          ],
+          "remediation_sla_hours": 48,
+          "agent_skill": "soc2-control-analyst"
+        },
+        {
+          "test_id": "test-soc2-cc7-2-monitoring",
+          "control_id": "SOC2-CC7.2",
+          "name": "Monitoring and response evidence is current",
+          "owner": "detection-engineering",
+          "cadence": "continuous",
+          "automation_level": "automated_evidence_assisted_review",
+          "required_evidence_types": [
+            "audit.chain",
+            "detection.alert",
+            "runtime.tool_call",
+            "vulnerability.finding",
+            "remediation.ticket",
+            "compliance.evidence_bundle"
+          ],
+          "remediation_sla_hours": 24,
+          "agent_skill": "security-operations-analyst"
+        },
+        {
+          "test_id": "test-nist-ai-rmf-map-1-5-inventory",
+          "control_id": "NIST-AI-RMF-MAP-1.5",
+          "name": "AI system inventory and dependency evidence is current",
+          "owner": "ai-security",
+          "cadence": "continuous",
+          "automation_level": "automated_evidence_assisted_review",
+          "required_evidence_types": [
+            "ai.model_inventory",
+            "cloud.config"
+          ],
+          "remediation_sla_hours": 72,
+          "agent_skill": "ai-governance-analyst"
+        },
+        {
+          "test_id": "test-nist-ai-rmf-measure-2-7-runtime-risk",
+          "control_id": "NIST-AI-RMF-MEASURE-2.7",
+          "name": "AI runtime risk indicators are measured and acted on",
+          "owner": "ai-security",
+          "cadence": "continuous",
+          "automation_level": "automated_evidence_assisted_review",
+          "required_evidence_types": [
+            "runtime.tool_call",
+            "detection.alert",
+            "vulnerability.finding",
+            "remediation.ticket"
+          ],
+          "remediation_sla_hours": 24,
+          "agent_skill": "ai-governance-analyst"
+        }
+      ]
+    }
+  ]
+}

@@ -25,7 +25,7 @@ It can run in two modes:
 | Surface | Human workflow | Agent workflow |
 |---|---|---|
 | Trust dashboard | report current posture, freshness, confidence, and risk | `GET /api/posture/current` |
-| Control workbench | inspect tests, owners, evidence, and failures | `GET /api/controls` |
+| Control workbench | inspect tests, owners, evidence, and failures | `GET /api/control-tests`, `GET /api/controls` |
 | Violation queue | assign remediation from failing evidence | `GET /api/violations` |
 | Evidence room | trace source records, hashes, artifacts, and mappings | normalized JSONL + local SQL mart |
 | Snapshot engine | freeze point-in-time posture for audit or vendor review | `POST /api/snapshots` |
@@ -97,7 +97,8 @@ flowchart LR
   A[Security evidence] --> B[Bronze raw records]
   B --> C[Silver normalized facts]
   C --> D[Control catalog]
-  D --> E[Assessment engine]
+  D --> P[Compliance program + control tests]
+  P --> E[Assessment engine]
   E --> F[Current posture]
   E --> G[Violations]
   E --> H[Point-in-time snapshots]
@@ -110,6 +111,32 @@ flowchart LR
   C -. governed audit evidence .-> S[(Snowflake)]
   C -. fast telemetry analytics .-> K[(ClickHouse)]
 ```
+
+## Compliance Program Model
+
+TrustOps now has a first-class program and control-test model.
+
+```mermaid
+flowchart TB
+  Program[Compliance program] --> Frameworks[SOC 2-oriented + NIST AI RMF scope]
+  Program --> Tests[Continuous control tests]
+  Tests --> Evidence[Required evidence types]
+  Tests --> Owners[Owners + SLAs]
+  Evidence --> Confidence[Freshness + coverage + source health + hash integrity]
+  Confidence --> Results[pass / fail / needs evidence]
+  Results --> Workflow[remediation task / evidence request / snapshot]
+```
+
+Each control test has:
+
+| Field | Why it matters |
+|---|---|
+| `program_id` and `control_id` | ties posture to a scoped internal compliance program |
+| `required_evidence_types` | makes evidence collection explicit instead of hand-wavy |
+| `result` and lifecycle `status` | separates test outcome from workflow state |
+| `confidence_inputs` | explains whether the reported posture is trustworthy |
+| `next_action` | turns findings into owner work |
+| `agent_skill` | routes headless analysis to the right guarded skill |
 
 ## Confidence Model
 
@@ -163,7 +190,8 @@ catalog mappings and regression tests are added.
 raw evidence
   -> bronze/raw_events.jsonl          immutable replay + SHA-256
   -> silver/normalized_events.jsonl   canonical security facts
-  -> gold/control_posture.jsonl       control test state
+  -> gold/control_posture.jsonl       framework and control posture
+  -> gold/control_tests.jsonl         program tests, owners, SLAs, confidence
   -> gold/asset_risk.jsonl            owner remediation queue
   -> gold/current_posture.json        live posture contract
   -> snapshots/*.json                 point-in-time assessment evidence
@@ -177,8 +205,10 @@ raw evidence
 |---|---|
 | `GET /api/healthz` | service status |
 | `GET /api/posture/current` | current posture, scores, confidence inputs, violations |
+| `GET /api/control-tests` | continuous control tests, owners, confidence, next action |
 | `GET /api/controls` | control workbench records |
 | `GET /api/violations` | open control and asset violations |
+| `GET /api/evidence` | normalized evidence facts, filterable by control |
 | `GET /api/assets` | asset risk queue |
 | `POST /api/snapshots` | immutable point-in-time assessment snapshot |
 
@@ -188,6 +218,7 @@ raw evidence
 security-lakehouse validate --raw data/raw/security_events.jsonl
 security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
 security-lakehouse assessment status --lake build/lakehouse
+security-lakehouse assessment tests --lake build/lakehouse
 security-lakehouse assessment violations --lake build/lakehouse
 security-lakehouse assessment snapshot --lake build/lakehouse --reason vendor_due_diligence
 security-lakehouse query --lake build/lakehouse "select * from control_posture order by risk_score desc"
@@ -201,6 +232,7 @@ data/raw/                   sample security evidence
 data/schemas/               raw and normalized JSON schemas
 connectors/                 source connector and access-boundary catalog
 controls/                   versioned implemented control catalog
+programs/                   internal compliance program and control-test catalog
 frameworks/                 source-linked framework registry
 deploy/snowflake/           governed evidence lake schema
 deploy/clickhouse/          telemetry analytics lake schema

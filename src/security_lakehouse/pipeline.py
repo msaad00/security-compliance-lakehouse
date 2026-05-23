@@ -14,6 +14,7 @@ from typing import Any
 from security_lakehouse.controls import expand_controls, load_control_map
 from security_lakehouse.io import read_jsonl, write_json, write_jsonl
 from security_lakehouse.models import PipelineResult, SEVERITY_SCORE, parse_event_time, utc_iso
+from security_lakehouse.programs import build_control_tests
 from security_lakehouse.validation import validate_raw_events
 
 
@@ -36,7 +37,9 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
     control_map = load_control_map(mapping_path)
     control_rows = _build_control_rows(silver_rows, control_map)
     asset_rows = _build_asset_rows(silver_rows)
+    control_test_rows = build_control_tests(silver_rows, control_rows)
     metrics = _build_metrics(silver_rows, control_rows, asset_rows)
+    metrics.update(_build_control_test_metrics(control_test_rows))
     dashboard_data = {
         "generated_at": utc_iso(datetime.now(timezone.utc)),
         "lake_backends": [
@@ -59,6 +62,7 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
         "severity_mix": _build_severity_mix(silver_rows),
         "backend_routes": _build_backend_routes(silver_rows),
         "control_posture": control_rows,
+        "control_tests": control_test_rows,
         "asset_risk": asset_rows,
         "recent_events": sorted(silver_rows, key=lambda item: item["event_time"], reverse=True)[:10],
     }
@@ -66,12 +70,20 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
     write_jsonl(bronze_dir / "raw_events.jsonl", bronze_rows)
     write_jsonl(silver_dir / "normalized_events.jsonl", silver_rows)
     write_jsonl(gold_dir / "control_posture.jsonl", control_rows)
+    write_jsonl(gold_dir / "control_tests.jsonl", control_test_rows)
     write_jsonl(gold_dir / "asset_risk.jsonl", asset_rows)
     write_json(gold_dir / "metrics.json", metrics)
     write_json(gold_dir / "dashboard_data.json", dashboard_data)
     sqlite_mart_path = mart_dir / "security_lakehouse.sqlite"
     duckdb_mart_path = mart_dir / "security_data_lake.duckdb"
-    wrote_duckdb = _write_duckdb_mart_if_available(duckdb_mart_path, silver_rows, control_rows, asset_rows, metrics)
+    wrote_duckdb = _write_duckdb_mart_if_available(
+        duckdb_mart_path,
+        silver_rows,
+        control_rows,
+        control_test_rows,
+        asset_rows,
+        metrics,
+    )
 
     write_json(
         out / "manifest.json",
@@ -82,6 +94,7 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
                 "silver": str(silver_dir / "normalized_events.jsonl"),
                 "gold_metrics": str(gold_dir / "metrics.json"),
                 "gold_control_posture": str(gold_dir / "control_posture.jsonl"),
+                "gold_control_tests": str(gold_dir / "control_tests.jsonl"),
                 "gold_asset_risk": str(gold_dir / "asset_risk.jsonl"),
             },
             "marts": {
@@ -97,7 +110,7 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
         },
     )
 
-    _write_sqlite_mart(sqlite_mart_path, silver_rows, control_rows, asset_rows, metrics)
+    _write_sqlite_mart(sqlite_mart_path, silver_rows, control_rows, control_test_rows, asset_rows, metrics)
     from security_lakehouse.assessment import write_current_posture
 
     write_current_posture(out)
@@ -232,6 +245,23 @@ def _build_metrics(
     }
 
 
+def _build_control_test_metrics(control_test_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    failing = [row for row in control_test_rows if row["result"] == "fail"]
+    ready = [row for row in control_test_rows if row["status"] in {"ready", "auditor_ready"}]
+    avg_confidence = (
+        round(sum(int(row["confidence_score"]) for row in control_test_rows) / len(control_test_rows), 2)
+        if control_test_rows
+        else 0
+    )
+    return {
+        "control_test_count": len(control_test_rows),
+        "failing_control_tests": len(failing),
+        "ready_control_tests": len(ready),
+        "control_test_readiness": round(len(ready) / len(control_test_rows), 4) if control_test_rows else 1,
+        "avg_control_test_confidence": avg_confidence,
+    }
+
+
 def _build_pipeline_stages(
     raw_rows: list[dict[str, Any]],
     bronze_rows: list[dict[str, Any]],
@@ -307,6 +337,7 @@ def _write_sqlite_mart(
     mart_path: Path,
     silver_rows: list[dict[str, Any]],
     control_rows: list[dict[str, Any]],
+    control_test_rows: list[dict[str, Any]],
     asset_rows: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> None:
@@ -369,6 +400,37 @@ def _write_sqlite_mart(
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE control_tests (
+                test_id TEXT PRIMARY KEY,
+                program_id TEXT NOT NULL,
+                control_id TEXT NOT NULL,
+                framework TEXT NOT NULL,
+                name TEXT NOT NULL,
+                owner TEXT NOT NULL,
+                cadence TEXT NOT NULL,
+                automation_level TEXT NOT NULL,
+                agent_skill TEXT NOT NULL,
+                status TEXT NOT NULL,
+                result TEXT NOT NULL,
+                confidence_score INTEGER NOT NULL,
+                confidence_inputs_json TEXT NOT NULL,
+                required_evidence_types_json TEXT NOT NULL,
+                observed_evidence_types_json TEXT NOT NULL,
+                missing_evidence_types_json TEXT NOT NULL,
+                evidence_count INTEGER NOT NULL,
+                failing_evidence_count INTEGER NOT NULL,
+                open_violation_count INTEGER NOT NULL,
+                latest_evidence_at TEXT,
+                freshness_status TEXT NOT NULL,
+                remediation_sla_hours INTEGER NOT NULL,
+                next_action TEXT NOT NULL,
+                api_refs_json TEXT NOT NULL,
+                evaluated_at TEXT NOT NULL
+            )
+            """
+        )
         conn.execute("CREATE TABLE metrics (metric TEXT PRIMARY KEY, value TEXT NOT NULL)")
         conn.executemany(
             """
@@ -389,14 +451,40 @@ def _write_sqlite_mart(
             "INSERT INTO asset_risk VALUES (:asset_id,:asset_type,:asset_owner,:environment,:risk_score,:critical_open,:high_open,:event_count,:latest_event_time)",
             asset_rows,
         )
+        conn.executemany(
+            """
+            INSERT INTO control_tests VALUES (
+                :test_id, :program_id, :control_id, :framework, :name, :owner,
+                :cadence, :automation_level, :agent_skill, :status, :result,
+                :confidence_score, :confidence_inputs_json, :required_evidence_types_json,
+                :observed_evidence_types_json, :missing_evidence_types_json,
+                :evidence_count, :failing_evidence_count, :open_violation_count,
+                :latest_evidence_at, :freshness_status, :remediation_sla_hours,
+                :next_action, :api_refs_json, :evaluated_at
+            )
+            """,
+            [_control_test_sql_row(row) for row in control_test_rows],
+        )
         conn.executemany("INSERT INTO metrics VALUES (?, ?)", [(key, str(value)) for key, value in metrics.items()])
         conn.commit()
+
+
+def _control_test_sql_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **row,
+        "confidence_inputs_json": json.dumps(row["confidence_inputs"], sort_keys=True),
+        "required_evidence_types_json": json.dumps(row["required_evidence_types"], sort_keys=True),
+        "observed_evidence_types_json": json.dumps(row["observed_evidence_types"], sort_keys=True),
+        "missing_evidence_types_json": json.dumps(row["missing_evidence_types"], sort_keys=True),
+        "api_refs_json": json.dumps(row["api_refs"], sort_keys=True),
+    }
 
 
 def _write_duckdb_mart_if_available(
     mart_path: Path,
     silver_rows: list[dict[str, Any]],
     control_rows: list[dict[str, Any]],
+    control_test_rows: list[dict[str, Any]],
     asset_rows: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> bool:
@@ -461,6 +549,37 @@ def _write_duckdb_mart_if_available(
                 high_open INTEGER,
                 event_count INTEGER,
                 latest_event_time TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE control_tests (
+                test_id VARCHAR,
+                program_id VARCHAR,
+                control_id VARCHAR,
+                framework VARCHAR,
+                name VARCHAR,
+                owner VARCHAR,
+                cadence VARCHAR,
+                automation_level VARCHAR,
+                agent_skill VARCHAR,
+                status VARCHAR,
+                result VARCHAR,
+                confidence_score INTEGER,
+                confidence_inputs_json VARCHAR,
+                required_evidence_types_json VARCHAR,
+                observed_evidence_types_json VARCHAR,
+                missing_evidence_types_json VARCHAR,
+                evidence_count INTEGER,
+                failing_evidence_count INTEGER,
+                open_violation_count INTEGER,
+                latest_evidence_at TIMESTAMP,
+                freshness_status VARCHAR,
+                remediation_sla_hours INTEGER,
+                next_action VARCHAR,
+                api_refs_json VARCHAR,
+                evaluated_at TIMESTAMP
             )
             """
         )
@@ -529,6 +648,39 @@ def _write_duckdb_mart_if_available(
                     row["latest_event_time"],
                 )
                 for row in asset_rows
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO control_tests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    row["test_id"],
+                    row["program_id"],
+                    row["control_id"],
+                    row["framework"],
+                    row["name"],
+                    row["owner"],
+                    row["cadence"],
+                    row["automation_level"],
+                    row["agent_skill"],
+                    row["status"],
+                    row["result"],
+                    row["confidence_score"],
+                    json.dumps(row["confidence_inputs"], sort_keys=True),
+                    json.dumps(row["required_evidence_types"], sort_keys=True),
+                    json.dumps(row["observed_evidence_types"], sort_keys=True),
+                    json.dumps(row["missing_evidence_types"], sort_keys=True),
+                    row["evidence_count"],
+                    row["failing_evidence_count"],
+                    row["open_violation_count"],
+                    row["latest_evidence_at"],
+                    row["freshness_status"],
+                    row["remediation_sla_hours"],
+                    row["next_action"],
+                    json.dumps(row["api_refs"], sort_keys=True),
+                    row["evaluated_at"],
+                )
+                for row in control_test_rows
             ],
         )
         conn.executemany("INSERT INTO metrics VALUES (?, ?)", [(key, str(value)) for key, value in metrics.items()])

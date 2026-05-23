@@ -56,6 +56,36 @@ create table if not exists SECURITY_GOLD.CONTROL_POSTURE (
   primary key (control_id)
 );
 
+create table if not exists SECURITY_GOLD.CONTROL_TESTS (
+  test_id string not null,
+  program_id string not null,
+  control_id string not null,
+  framework string not null,
+  name string not null,
+  owner string not null,
+  cadence string not null,
+  automation_level string not null,
+  agent_skill string not null,
+  status string not null,
+  result string not null,
+  confidence_score number not null,
+  confidence_inputs variant not null,
+  required_evidence_types array not null,
+  observed_evidence_types array not null,
+  missing_evidence_types array not null,
+  evidence_count number not null,
+  failing_evidence_count number not null,
+  open_violation_count number not null,
+  latest_evidence_at timestamp_tz,
+  freshness_status string not null,
+  remediation_sla_hours number not null,
+  next_action string not null,
+  api_refs variant not null,
+  evaluated_at timestamp_tz not null,
+  loaded_at timestamp_tz default current_timestamp(),
+  primary key (test_id)
+);
+
 create table if not exists SECURITY_GOLD.ASSET_RISK (
   asset_id string not null,
   asset_type string not null,
@@ -99,3 +129,14 @@ select
 from SECURITY_GOLD.CONTROL_POSTURE
 group by framework
 order by avg_risk_score desc;
+
+create or replace view SECURITY_GOLD.CONTROL_TEST_READINESS as
+select
+  framework,
+  count(*) as tests,
+  count_if(result = 'pass') as passing_tests,
+  count_if(result = 'fail') as failing_tests,
+  round(avg(confidence_score), 2) as avg_confidence_score
+from SECURITY_GOLD.CONTROL_TESTS
+group by framework
+order by failing_tests desc, avg_confidence_score asc;
