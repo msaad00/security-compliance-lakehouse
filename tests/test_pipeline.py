@@ -54,6 +54,7 @@ def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
     metrics = read_json(result.metrics_path)
     dashboard_data = read_json(result.dashboard_data_path)
     current_posture = read_json(tmp_path / "lake" / "gold" / "current_posture.json")
+    manifest = read_json(tmp_path / "lake" / "manifest.json")
 
     assert len(bronze[0]["raw_sha256"]) == 64
     assert silver[0]["asset_id"] == "aws:iam:role/ml-prod-agent"
@@ -64,6 +65,12 @@ def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
     assert current_posture["assessment_type"] == "current_posture"
     assert current_posture["posture"]["state"] == "critical"
     assert current_posture["posture"]["open_violation_count"] > 0
+    assert manifest["marts"]["sqlite"].endswith("security_lakehouse.sqlite")
+    assert manifest["storage_roles"]["duckdb"] == "optional local analytical mart for columnar datasets"
+    if result.duckdb_mart_path is not None:
+        assert Path(result.duckdb_mart_path).exists()
+    else:
+        assert manifest["marts"]["duckdb"] is None
 
     with sqlite3.connect(result.mart_path) as conn:
         failing = conn.execute("select count(*) from control_posture where status = 'fail'").fetchone()[0]

@@ -63,6 +63,7 @@ class PipelineResult:
     mart_path: str
     metrics_path: str
     dashboard_data_path: str
+    duckdb_mart_path: str | None = None
 
 
 def parse_event_time(value: str) -> datetime:

@@ -47,6 +47,7 @@ def _parser() -> argparse.ArgumentParser:
 
     query = sub.add_parser("query", help="run read-only SQL against the analytics mart")
     query.add_argument("--lake", required=True, help="security data lake output directory")
+    query.add_argument("--engine", choices=["sqlite", "duckdb"], default="sqlite", help="local mart engine")
     query.add_argument("sql", help="SQL SELECT statement")
     query.set_defaults(func=_query)
 
@@ -102,12 +103,31 @@ def _query(args: argparse.Namespace) -> int:
     sql = args.sql.strip()
     if not sql.lower().startswith("select"):
         raise ValueError("query command only allows SELECT statements")
+    if args.engine == "duckdb":
+        rows = _query_duckdb(Path(args.lake) / "mart" / "security_data_lake.duckdb", sql)
+        print(json.dumps({"count": len(rows), "engine": args.engine, "rows": rows}, indent=2, sort_keys=True, default=str))
+        return 0
+
     mart = Path(args.lake) / "mart" / "security_lakehouse.sqlite"
     with sqlite3.connect(mart) as conn:
         conn.row_factory = sqlite3.Row
         rows = [dict(row) for row in conn.execute(sql).fetchall()]
-    print(json.dumps({"count": len(rows), "rows": rows}, indent=2, sort_keys=True))
+    print(json.dumps({"count": len(rows), "engine": args.engine, "rows": rows}, indent=2, sort_keys=True))
     return 0
+
+
+def _query_duckdb(mart: Path, sql: str) -> list[dict]:
+    if not mart.exists():
+        raise ValueError("DuckDB mart not found. Install with `pip install -e '.[analytics]'` and rerun the pipeline.")
+    try:
+        import duckdb  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise ValueError("DuckDB is not installed. Install with `pip install -e '.[analytics]'`.") from exc
+
+    with duckdb.connect(str(mart), read_only=True) as conn:
+        cursor = conn.execute(sql)
+        columns = [column[0] for column in cursor.description]
+        return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
 
 
 def _serve(args: argparse.Namespace) -> int:
