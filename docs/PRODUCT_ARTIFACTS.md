@@ -12,6 +12,8 @@ This page is the product review index for the public repo.
 | CLI entry point | `src/security_lakehouse/cli.py` |
 | Vendor diligence use case | `docs/USE_CASE_VENDOR_DILIGENCE.md` |
 | Console screenshot | `docs/images/trustops-console.png` |
+| Framework badge strip | `docs/images/trustops-framework-badges.svg` |
+| Individual framework SVG badges | `docs/images/frameworks/` |
 
 Run locally:
 
@@ -49,6 +51,7 @@ See [Human and Agent API](api/AGENT_API.md).
 | Hosting model | [hosting.md](diagrams/hosting.md) |
 | ASCII system map | [ascii-system-map.md](diagrams/ascii-system-map.md) |
 | SVG architecture visual | [trustops-assessment-architecture.svg](images/trustops-assessment-architecture.svg) |
+| SVG framework badge visual | [trustops-framework-badges.svg](images/trustops-framework-badges.svg) |
 
 ## Data And Schema
 
@@ -83,6 +86,7 @@ See [Human and Agent API](api/AGENT_API.md).
 Each framework-specific skill is guardrailed to use local evidence and official
 source references, and to avoid invented controls or certification claims.
 
-Implemented control scope is currently limited to SOC 2-oriented controls and
-NIST AI RMF. PCI DSS and ISO/IEC 27001 are skill expansion surfaces until their
-versioned catalogs and validation tests are added.
+Framework support currently covers eight source-linked, readiness-gated
+frameworks: SOC 2, NIST AI RMF, ISO/IEC 27001, HIPAA Security Rule, PCI DSS,
+GDPR, EU AI Act, and ISO/IEC 42001. The framework SVGs are TrustOps-owned UI
+marks, not official certification seals or framework logos.
