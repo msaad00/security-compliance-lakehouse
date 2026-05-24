@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -11,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.io import read_jsonl
+from security_lakehouse.web import web_dist_dir, web_dist_index
 
 
 def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) -> None:
@@ -22,6 +24,7 @@ def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) ->
     class Handler(_Handler):
         lake_dir = lake
         dashboard_path = dashboard
+        web_dist = web_dist_dir() if web_dist_index() else None
 
     httpd = ThreadingHTTPServer((host, port), Handler)
     try:
@@ -30,15 +33,26 @@ def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) ->
         httpd.server_close()
 
 
+# MIME types Next.js static export ships that aren't always in the system table.
+_MIME_OVERRIDES = {
+    ".mjs": "text/javascript",
+    ".map": "application/json",
+    ".webmanifest": "application/manifest+json",
+}
+
+
 class _Handler(BaseHTTPRequestHandler):
     lake_dir: Path
     dashboard_path: Path
+    web_dist: Path | None = None
 
     server_version = "TrustOpsAssessment/0.1"
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        if parsed.path in {"/", "/console"}:
+        if self.web_dist is not None and self._serve_from_dist(parsed.path):
+            return
+        if parsed.path in {"/", "/console", "/console/"}:
             self._send_bytes(self.dashboard_path.read_bytes(), content_type="text/html; charset=utf-8")
             return
         if parsed.path == "/api/healthz":
@@ -107,6 +121,59 @@ class _Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args: object) -> None:
         return
+
+    def _serve_from_dist(self, request_path: str) -> bool:
+        """Serve Next.js static export files when the React bundle is packaged.
+
+        Routes resolve in this order:
+          - /                                     -> dist/index.html (redirects to /console/dashboard/)
+          - /console, /console/                   -> dist/index.html
+          - /console/<route>/                     -> dist/<route>/index.html
+          - /console/_next/static/<asset>         -> dist/_next/static/<asset>
+          - any other /console/<asset>            -> dist/<asset>
+
+        Returns True if the request was handled (200 or 404 served from dist).
+        """
+        dist = self.web_dist
+        if dist is None:
+            return False
+        if request_path in {"/", "/console", "/console/"}:
+            self._send_file(dist / "index.html", "text/html; charset=utf-8")
+            return True
+        if not request_path.startswith("/console/"):
+            return False
+        rel = request_path[len("/console/") :]
+        # Strip query/fragment if any survived urlparse path handling.
+        rel = rel.split("?", 1)[0].split("#", 1)[0]
+        candidates: list[Path] = []
+        # Treat directory-style routes as <route>/index.html.
+        if rel.endswith("/") or not Path(rel).suffix:
+            base = rel.rstrip("/")
+            if base:
+                candidates.append(dist / base / "index.html")
+            candidates.append(dist / "index.html")
+        if rel:
+            candidates.append(dist / rel)
+        for candidate in candidates:
+            resolved = candidate.resolve()
+            try:
+                resolved.relative_to(dist.resolve())
+            except ValueError:
+                continue
+            if resolved.is_file():
+                content_type = (
+                    _MIME_OVERRIDES.get(resolved.suffix)
+                    or mimetypes.guess_type(resolved.name)[0]
+                    or "application/octet-stream"
+                )
+                if content_type.startswith("text/") or content_type.endswith("javascript"):
+                    content_type = f"{content_type}; charset=utf-8"
+                self._send_file(resolved, content_type)
+                return True
+        return False
+
+    def _send_file(self, path: Path, content_type: str) -> None:
+        self._send_bytes(path.read_bytes(), content_type=content_type)
 
     def _read_json_body(self) -> dict:
         length = int(self.headers.get("content-length") or "0")

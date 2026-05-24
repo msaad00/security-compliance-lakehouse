@@ -6,3 +6,14 @@ build/
 dist/
 *.egg-info/
 .DS_Store
+
+# Next.js workbench
+app/web/node_modules/
+app/web/.next/
+app/web/out/
+app/web/*.tsbuildinfo
+
+# React build output ships in the wheel but is a build artifact in git;
+# keep the package directory + .gitkeep, ignore everything generated.
+src/security_lakehouse/web/dist/*
+!src/security_lakehouse/web/dist/.gitkeep

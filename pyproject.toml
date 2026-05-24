@@ -25,5 +25,11 @@ security-lakehouse = "security_lakehouse.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"security_lakehouse" = [
+    "web/dist/**/*",
+    "web/dist/.gitkeep",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

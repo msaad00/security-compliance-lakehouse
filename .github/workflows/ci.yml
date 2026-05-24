@@ -6,13 +6,45 @@ on:
     branches: [main]
 
 jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: app/web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build static export
+        run: npm run build
+      - name: Upload built React bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: src/security_lakehouse/web/dist
+          if-no-files-found: error
+          retention-days: 1
+
   test:
     runs-on: ubuntu-latest
+    needs: web
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+      - name: Download React bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: src/security_lakehouse/web/dist
       - name: Install package
         run: python -m pip install -e ".[dev]"
       - name: Validate sample evidence
@@ -25,7 +57,7 @@ jobs:
         run: security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
       - name: Validate current posture API payload
         run: security-lakehouse assessment status --lake build/lakehouse
-      - name: Render dashboard
+      - name: Render dashboard (legacy single-file gate)
         run: security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
       - name: Run tests
         run: python -m pytest -q
