@@ -244,7 +244,13 @@ security-lakehouse assessment tests --lake build/lakehouse
 security-lakehouse assessment violations --lake build/lakehouse
 security-lakehouse assessment snapshot --lake build/lakehouse --reason vendor_due_diligence
 security-lakehouse query --lake build/lakehouse "select * from control_posture order by risk_score desc"
+security-lakehouse repo audit https://github.com/OWNER/REPO --out build/repo-audit.jsonl
 ```
+
+Public repository audit mode works without credentials for public GitHub repos.
+It emits normalized raw evidence for metadata, code ownership, security policy,
+workflows, manifests, IaC, AI artifacts, and a repo code graph. See
+[Public Repository Audit](docs/REPO_AUDIT.md).
 
 ## Repo Map
 
