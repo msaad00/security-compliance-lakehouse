@@ -4,6 +4,7 @@ import { ExternalLink, FileCheck2, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
+import { FrameworkBadge } from "@/components/framework/FrameworkBadge";
 import { useCrosswalk, useMappings, useReviewedCrosswalk } from "@/lib/api/hooks";
 
 export default function CrosswalkPage() {
@@ -53,8 +54,13 @@ export default function CrosswalkPage() {
             mapping.articles.map((article) => (
               <div
                 key={`${mapping.control_id}-${article.article_id}`}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-4 rounded-xl border border-line bg-white p-3 text-sm"
+                className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-start gap-4 rounded-xl border border-line bg-white p-3 text-sm"
               >
+                <FrameworkBadge
+                  frameworkId={mapping.framework_id}
+                  fallbackLabel={mapping.framework_id}
+                  size={36}
+                />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-black text-ink">{mapping.control_id}</code>
@@ -105,7 +111,10 @@ export default function CrosswalkPage() {
                     key={f}
                     className="border-l border-line bg-slate-50 px-3 py-2 text-left text-[11px] font-black uppercase tracking-wide text-muted"
                   >
-                    {f}
+                    <span className="inline-flex items-center gap-1.5">
+                      <FrameworkBadge frameworkId={f} fallbackLabel={f} size={20} />
+                      {f}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -114,7 +123,10 @@ export default function CrosswalkPage() {
               {reviewedMatrix.map((row) => (
                 <tr key={row.framework_id} className="border-t border-line">
                   <th className="bg-slate-50 px-3 py-3 text-left text-xs font-black text-ink">
-                    {row.framework_id}
+                    <span className="inline-flex items-center gap-1.5">
+                      <FrameworkBadge frameworkId={row.framework_id} fallbackLabel={row.framework_id} size={20} />
+                      {row.framework_id}
+                    </span>
                     <div className="text-[10px] font-normal text-muted">
                       {row.mapping_count} mappings · {row.article_count} articles
                     </div>
@@ -192,7 +204,10 @@ export default function CrosswalkPage() {
                     key={f}
                     className="border-l border-line bg-slate-50 px-3 py-2 text-left text-[11px] font-black uppercase tracking-wide text-muted"
                   >
-                    {f}
+                    <span className="inline-flex items-center gap-1.5">
+                      <FrameworkBadge frameworkId={f} fallbackLabel={f} size={20} />
+                      {f}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -201,7 +216,10 @@ export default function CrosswalkPage() {
               {heuristicMatrix.map((row) => (
                 <tr key={row.framework_id} className="border-t border-line">
                   <th className="bg-slate-50 px-3 py-3 text-left text-xs font-black text-ink">
-                    {row.framework_id}
+                    <span className="inline-flex items-center gap-1.5">
+                      <FrameworkBadge frameworkId={row.framework_id} fallbackLabel={row.framework_id} size={20} />
+                      {row.framework_id}
+                    </span>
                   </th>
                   {row.cells.map((cell) => (
                     <td
