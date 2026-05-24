@@ -1,0 +1,63 @@
+{
+  "schema": "trustops.mapping.v1",
+  "scope": "reviewed_control_to_source_article",
+  "guardrail": "Article identifiers and titles are reproduced as auditable references; full regulatory text is not embedded — link out to the official source.",
+  "mappings": [
+    {
+      "control_id": "SOC2-CC6.1",
+      "framework_id": "soc2",
+      "articles": [
+        {
+          "article_id": "CC6.1",
+          "title": "Logical and physical access controls",
+          "official_source_url": "https://www.aicpa.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-23T00:00:00Z",
+          "rationale": "Direct mapping: control identifier matches the AICPA SOC 2 TSC CC6.1 criterion verbatim."
+        }
+      ]
+    },
+    {
+      "control_id": "SOC2-CC7.2",
+      "framework_id": "soc2",
+      "articles": [
+        {
+          "article_id": "CC7.2",
+          "title": "Monitoring controls (security monitoring + anomaly detection)",
+          "official_source_url": "https://www.aicpa.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-23T00:00:00Z",
+          "rationale": "Direct mapping: control identifier matches the AICPA SOC 2 TSC CC7.2 criterion verbatim."
+        }
+      ]
+    },
+    {
+      "control_id": "NIST-AI-RMF-MAP-1.5",
+      "framework_id": "nist-ai-rmf",
+      "articles": [
+        {
+          "article_id": "MAP-1.5",
+          "title": "Organizational risk tolerance and AI system risks documented",
+          "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-23T00:00:00Z",
+          "rationale": "AI RMF 1.0 MAP function, category 1, subcategory 5: organizational risk tolerance documented."
+        }
+      ]
+    },
+    {
+      "control_id": "NIST-AI-RMF-MEASURE-2.7",
+      "framework_id": "nist-ai-rmf",
+      "articles": [
+        {
+          "article_id": "MEASURE-2.7",
+          "title": "AI system security and resilience measured (incl. runtime policy)",
+          "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-23T00:00:00Z",
+          "rationale": "AI RMF 1.0 MEASURE function, category 2, subcategory 7: security and resilience of the AI system are evaluated and documented."
+        }
+      ]
+    }
+  ]
+}

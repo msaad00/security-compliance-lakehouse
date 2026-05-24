@@ -10,8 +10,10 @@ import type {
   ConnectorView,
   ControlPosture,
   ControlTest,
+  ControlArticleMapping,
   Crosswalk,
   FrameworkView,
+  ReviewedCrosswalk,
   Health,
   NormalizedEvent,
   SnapshotResponse,
@@ -131,6 +133,9 @@ export const api = {
     ),
   graph: () => get<ComplianceGraph>("/graph"),
   crosswalk: () => get<Crosswalk>("/crosswalk"),
+  reviewedCrosswalk: () => get<ReviewedCrosswalk>("/crosswalk/reviewed"),
+  mappings: () =>
+    get<{ count: number; mappings: ControlArticleMapping[] }>("/mappings"),
   auditLog: (
     opts: { category?: string; actor?: string; limit?: number } = {},
   ): Promise<{ count: number; entries: AuditLogEntry[] }> => {
