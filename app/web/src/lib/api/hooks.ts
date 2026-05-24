@@ -10,8 +10,12 @@ import { api, bootstrapAssessment, type SnapshotSummary } from "./client";
 import type {
   Assessment,
   AssetRisk,
+  ConfigurePayload,
+  ConnectorRun,
+  ConnectorView,
   ControlPosture,
   ControlTest,
+  FrameworkView,
   NormalizedEvent,
   TrackingEvent,
   TriagePayload,
@@ -143,6 +147,56 @@ export function useSnapshotMutation() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["snapshots"] });
     },
+  });
+}
+
+export function useConnectors(opts?: Opts<ConnectorView[]>) {
+  return useQuery({
+    queryKey: ["connectors"],
+    queryFn: async () => (await api.listConnectors()).connectors ?? [],
+    staleTime: STALE,
+    ...opts,
+  });
+}
+
+export function useConnectorRuns(id: string | null) {
+  return useQuery({
+    queryKey: ["connector-runs", id],
+    queryFn: async () => {
+      if (!id) return [] as ConnectorRun[];
+      return (await api.connectorRuns(id)).runs ?? [];
+    },
+    enabled: Boolean(id),
+    staleTime: 5_000,
+  });
+}
+
+export function useConfigureMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: ConfigurePayload }) =>
+      api.configureConnector(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["connectors"] }),
+  });
+}
+
+export function useProbeMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.probeConnector(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ["connectors"] });
+      qc.invalidateQueries({ queryKey: ["connector-runs", id] });
+    },
+  });
+}
+
+export function useFrameworks(opts?: Opts<FrameworkView[]>) {
+  return useQuery({
+    queryKey: ["frameworks"],
+    queryFn: async () => (await api.listFrameworks()).frameworks ?? [],
+    staleTime: STALE,
+    ...opts,
   });
 }
 

@@ -2,8 +2,12 @@ import { isAuditorMode } from "@/lib/state/auditor";
 import type {
   Assessment,
   AssetRisk,
+  ConfigurePayload,
+  ConnectorRun,
+  ConnectorView,
   ControlPosture,
   ControlTest,
+  FrameworkView,
   Health,
   NormalizedEvent,
   SnapshotResponse,
@@ -66,6 +70,21 @@ export const api = {
     ),
   verifyEvidence: (eventId: string) =>
     post<VerifyResult>(`/evidence/${encodeURIComponent(eventId)}/verify`, {}),
+  listConnectors: () =>
+    get<{ count: number; connectors: ConnectorView[] }>("/connectors"),
+  configureConnector: (id: string, payload: ConfigurePayload) =>
+    post<{ event: Record<string, unknown> }>(
+      `/connectors/${encodeURIComponent(id)}/configure`,
+      payload,
+    ),
+  probeConnector: (id: string) =>
+    post<{ run: ConnectorRun }>(`/connectors/${encodeURIComponent(id)}/probe`, {}),
+  connectorRuns: (id: string) =>
+    get<{ connector_id: string; runs: ConnectorRun[] }>(
+      `/connectors/${encodeURIComponent(id)}/runs`,
+    ),
+  listFrameworks: () =>
+    get<{ count: number; frameworks: FrameworkView[] }>("/frameworks"),
 };
 
 export interface SnapshotSummary {
