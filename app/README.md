@@ -50,12 +50,18 @@ existing `dashboard render` CI gate stays green.
 
 ## Offline / audit handoff
 
-The legacy CLI still emits a single self-contained HTML for offline
-distribution:
+`security-lakehouse dashboard` produces a single self-contained HTML
+that auditors can open offline:
 
 ```bash
 security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
 ```
 
-PR 4 replaces the legacy template with a single-file export of the React
-build (data injected via `<script id="app-data">`).
+When the React bundle has been built (`make web-build`), the command
+inlines every JS/CSS asset from `src/security_lakehouse/web/dist/` into
+the `/dashboard` route HTML and injects the current assessment payload
+into `<script id="app-data">` — the result is the full Trust Dashboard
+view, frozen, with zero external requests. Without the React bundle the
+command falls back to a minimal evidence-packet HTML that still embeds
+the same payload, so the `Verify dashboard artifact` CI gate keeps
+passing on clean dev checkouts.

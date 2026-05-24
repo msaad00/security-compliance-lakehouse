@@ -116,18 +116,22 @@ def test_dashboard_render_uses_gold_data(tmp_path: Path) -> None:
     output = render_dashboard(tmp_path / "lake", tmp_path / "dashboard" / "index.html")
 
     html = output.read_text(encoding="utf-8")
-    assert "TrustOps Assessment Console" in html
-    assert "Trust dashboard" in html
-    assert "Acme Continuous Trust Program" in html
-    assert "Posture confidence" in html
-    assert "Continuous Control Monitoring" in html
-    assert "Control workbench" in html
-    assert "AI Control Test Summary" in html
-    assert "GET /api/control-tests" in html
-    assert "Violation queue" in html
-    assert "Agent API" in html
+    # Either the React single-file export (when web/dist/ is packaged) or the
+    # offline fallback packet must surface the workbench heading and embed the
+    # current assessment payload for the auditor downstream of the export.
+    assert "Assessment workbench" in html
+    assert "TrustOps" in html
     assert "SOC2-CC6.1" in html
     assert "container:rag-api@sha256:91ab" in html
+    # Data payload is injected for hydration / offline review.
+    assert '<script id="app-data"' in html
+    # Output must be self-contained — no fetched <script src> or <link href>
+    # may point at /console/_next/... after inlining. (Webpack runtime still
+    # carries the chunk URLs as string literals inside the inlined JS for its
+    # internal lookup table; that's expected and never triggers a network
+    # request because every chunk is already in the bundle.)
+    assert 'src="/console/_next/' not in html
+    assert 'href="/console/_next/' not in html
 
 
 def test_assessment_engine_builds_current_and_point_in_time_posture(tmp_path: Path) -> None:
