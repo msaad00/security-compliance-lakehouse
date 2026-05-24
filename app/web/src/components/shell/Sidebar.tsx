@@ -11,6 +11,7 @@ import {
   Plug,
   Sparkles,
   Bot,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,13 +24,14 @@ interface RailItem {
 }
 
 const ITEMS: RailItem[] = [
-  { href: "/dashboard", label: "Trust dashboard", Icon: LayoutDashboard, badge: "live", group: "Operate" },
-  { href: "/automation", label: "Automation", Icon: Zap, badge: "4", group: "Operate" },
+  { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard, badge: "live", group: "Operate" },
   { href: "/controls", label: "Controls", Icon: ShieldCheck, group: "Operate" },
   { href: "/violations", label: "Violations", Icon: AlertOctagon, group: "Operate" },
-  { href: "/evidence", label: "Evidence room", Icon: FileSearch, group: "Operate" },
+  { href: "/evidence", label: "Evidence", Icon: FileSearch, group: "Operate" },
+  { href: "/automation", label: "Workflows", Icon: Zap, group: "Operate" },
   { href: "/connectors", label: "Connectors", Icon: Plug, group: "Configure" },
-  { href: "/trust-center", label: "Trust center", Icon: Sparkles, badge: "JIT", group: "Configure" },
+  { href: "/frameworks", label: "Frameworks", Icon: BookOpen, group: "Configure" },
+  { href: "/trust-center", label: "Trust center", Icon: Sparkles, group: "Configure" },
   { href: "/agents", label: "Agent API", Icon: Bot, badge: "JSON", group: "Configure" },
 ];
 

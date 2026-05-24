@@ -147,3 +147,66 @@ export interface VerifyResult {
   source_layer: "bronze" | "missing";
   reason: string | null;
 }
+
+export type ConnectorState = "enabled" | "disabled";
+
+export interface ConnectorRun {
+  connector_id: string;
+  kind: "probe" | "sync";
+  result: "ok" | "error" | "skipped";
+  actor: string;
+  duration_ms: number | null;
+  evidence_count: number | null;
+  error: string | null;
+  occurred_at: string;
+}
+
+export interface ConnectorView {
+  connector_id: string;
+  name: string;
+  category: string;
+  collection_mode: string;
+  access_boundary: string;
+  credential_type: string;
+  minimum_permissions: string[];
+  evidence_types: string[];
+  default_route: string;
+  freshness_slo_minutes: number;
+  production_status: "hero_path" | "supported_path" | "starter_path" | string;
+  state: ConnectorState;
+  configured_at: string | null;
+  credential_fingerprint: string | null;
+  configured_options: Record<string, unknown>;
+  last_probe: ConnectorRun | null;
+  last_sync: ConnectorRun | null;
+}
+
+export interface ConfigurePayload {
+  state: ConnectorState;
+  actor?: string;
+  credentials?: Record<string, string>;
+  options?: Record<string, unknown>;
+}
+
+export type FrameworkFreshness = "fresh" | "stale" | "expired" | "never_pulled";
+
+export interface FrameworkView {
+  framework_id: string;
+  name: string;
+  version: string;
+  effective_date: string | null;
+  superseded_by: string | null;
+  official_source_name: string;
+  official_source_url: string;
+  source_sha256: string | null;
+  pulled_at: string | null;
+  implementation_status: string;
+  copyright_guardrail: string;
+  sync_cadence_days: number;
+  control_count: number;
+  implemented_control_count: number;
+  mapping_coverage_pct: number;
+  freshness_state: FrameworkFreshness;
+  pulled_age_days: number | null;
+  next_pull_due: string | null;
+}

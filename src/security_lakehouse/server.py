@@ -10,14 +10,21 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
+from security_lakehouse.connector_state import (
+    append_config_event,
+    build_catalog_view,
+    list_runs,
+    run_probe,
+)
 from security_lakehouse.dashboard import render_dashboard
+from security_lakehouse.framework_provenance import build_framework_view
 from security_lakehouse.io import read_jsonl
 from security_lakehouse.tracking import ALLOWED_STATES, append_event, latest_state, list_events
 from security_lakehouse.verification import verify_event
 from security_lakehouse.web import web_dist_dir, web_dist_index
 
 AUDITOR_ROLE = "auditor"
-REDACTED_FIELDS = {"asset_owner", "actor", "assignee", "note"}
+REDACTED_FIELDS = {"asset_owner", "actor", "assignee", "note", "credentials"}
 
 
 def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) -> None:
@@ -116,6 +123,19 @@ class _Handler(BaseHTTPRequestHandler):
             snapshots = self._list_snapshots()
             self._send_json({"count": len(snapshots), "snapshots": snapshots})
             return
+        if parsed.path == "/api/connectors":
+            view = build_catalog_view(self.lake_dir)
+            self._send_json({"count": len(view), "connectors": view})
+            return
+        if parsed.path == "/api/frameworks":
+            view = build_framework_view()
+            self._send_json({"count": len(view), "frameworks": view})
+            return
+        runs_match = self._match_connector_runs(parsed.path)
+        if runs_match is not None:
+            rows = list_runs(self.lake_dir, runs_match)
+            self._send_json({"connector_id": runs_match, "runs": rows})
+            return
         tracking_match = self._match_violation_tracking(parsed.path)
         if tracking_match is not None:
             events = list_events(self.lake_dir, violation_id=tracking_match)
@@ -173,6 +193,37 @@ class _Handler(BaseHTTPRequestHandler):
             result = verify_event(self.lake_dir, verify_match)
             self._send_json(result)
             return
+        configure_match = self._match_connector_configure(parsed.path)
+        if configure_match is not None:
+            body = self._read_json_body()
+            state = str(body.get("state") or "enabled").lower()
+            try:
+                record = append_config_event(
+                    self.lake_dir,
+                    connector_id=configure_match,
+                    state=state,
+                    actor=str(body.get("actor") or "console"),
+                    credentials=body.get("credentials") or {},
+                    options=body.get("options") or {},
+                )
+            except ValueError as exc:
+                self._send_json(
+                    {"error": "bad_request", "reason": str(exc)},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            self._send_json({"event": record}, status=HTTPStatus.CREATED)
+            return
+        probe_match = self._match_connector_probe(parsed.path)
+        if probe_match is not None:
+            body = self._read_json_body()
+            record = run_probe(
+                self.lake_dir,
+                connector_id=probe_match,
+                actor=str(body.get("actor") or "console"),
+            )
+            self._send_json({"run": record}, status=HTTPStatus.CREATED)
+            return
         self._send_json({"error": "not_found"}, status=HTTPStatus.NOT_FOUND)
 
     @staticmethod
@@ -197,6 +248,30 @@ class _Handler(BaseHTTPRequestHandler):
         if not path.startswith("/api/evidence/") or not path.endswith("/verify"):
             return None
         rest = path[len("/api/evidence/") : -len("/verify")]
+        return rest or None
+
+    @staticmethod
+    def _match_connector_configure(path: str) -> str | None:
+        # /api/connectors/{id}/configure
+        if not path.startswith("/api/connectors/") or not path.endswith("/configure"):
+            return None
+        rest = path[len("/api/connectors/") : -len("/configure")]
+        return rest or None
+
+    @staticmethod
+    def _match_connector_probe(path: str) -> str | None:
+        # /api/connectors/{id}/probe
+        if not path.startswith("/api/connectors/") or not path.endswith("/probe"):
+            return None
+        rest = path[len("/api/connectors/") : -len("/probe")]
+        return rest or None
+
+    @staticmethod
+    def _match_connector_runs(path: str) -> str | None:
+        # /api/connectors/{id}/runs
+        if not path.startswith("/api/connectors/") or not path.endswith("/runs"):
+            return None
+        rest = path[len("/api/connectors/") : -len("/runs")]
         return rest or None
 
     def _list_snapshots(self) -> list[dict[str, object]]:

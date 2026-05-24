@@ -22,23 +22,31 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-[12px] font-black uppercase tracking-wider text-brand">
-            Trust dashboard
+            Dashboard
           </div>
           <h1 className="mt-1 text-3xl font-black text-ink">Assessment workbench</h1>
           <p className="mt-2 max-w-[780px] text-sm text-muted">
-            Acme Continuous Trust Program · current posture from normalized
-            evidence, control tests, source health, and signed snapshots.
+            Current assessment computed from normalized evidence, control tests, source health,
+            and signed snapshots. Every value here is deterministic over the gold layer.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={p?.state === "ready" ? "ready" : p?.state === "critical" ? "critical" : "attention"}>
+          <Badge
+            tone={
+              p?.state === "ready"
+                ? "ready"
+                : p?.state === "critical"
+                  ? "critical"
+                  : "attention"
+            }
+          >
             {p?.state ?? "loading"}
           </Badge>
           <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-600">
-            Acme Co · prod
+            {posture.data?.posture?.framework_count ?? 0} frameworks
           </span>
           <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-600">
-            Trust Admin
+            {posture.data?.posture?.control_count ?? 0} controls
           </span>
         </div>
       </div>
