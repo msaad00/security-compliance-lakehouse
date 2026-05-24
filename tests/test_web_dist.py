@@ -19,7 +19,7 @@ import pytest
 
 from security_lakehouse import web as web_pkg
 from security_lakehouse.server import _Handler
-from security_lakehouse.web import web_dist_dir, web_dist_index
+from security_lakehouse.web import web_dist_dir
 
 
 def test_dist_dir_resolves_inside_package() -> None:

@@ -7,18 +7,20 @@ import importlib.util
 import json
 import sqlite3
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from security_lakehouse.controls import expand_controls, load_control_map
 from security_lakehouse.io import read_jsonl, write_json, write_jsonl
-from security_lakehouse.models import PipelineResult, SEVERITY_SCORE, parse_event_time, utc_iso
+from security_lakehouse.models import SEVERITY_SCORE, PipelineResult, parse_event_time, utc_iso
 from security_lakehouse.programs import build_control_tests
 from security_lakehouse.validation import validate_raw_events
 
 
-def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str | Path | None = None) -> PipelineResult:
+def run_pipeline(
+    raw_path: str | Path, out_dir: str | Path, *, mapping_path: str | Path | None = None
+) -> PipelineResult:
     raw_rows = read_jsonl(raw_path)
     errors = validate_raw_events(raw_rows)
     if errors:
@@ -33,7 +35,7 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
         directory.mkdir(parents=True, exist_ok=True)
 
     bronze_rows = [_bronze_row(row) for row in raw_rows]
-    silver_rows = [_silver_row(row, bronze["raw_sha256"]) for row, bronze in zip(raw_rows, bronze_rows)]
+    silver_rows = [_silver_row(row, bronze["raw_sha256"]) for row, bronze in zip(raw_rows, bronze_rows, strict=True)]
     control_map = load_control_map(mapping_path)
     control_rows = _build_control_rows(silver_rows, control_map)
     asset_rows = _build_asset_rows(silver_rows)
@@ -41,7 +43,7 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
     metrics = _build_metrics(silver_rows, control_rows, asset_rows)
     metrics.update(_build_control_test_metrics(control_test_rows))
     dashboard_data = {
-        "generated_at": utc_iso(datetime.now(timezone.utc)),
+        "generated_at": utc_iso(datetime.now(UTC)),
         "lake_backends": [
             {
                 "name": "Snowflake",
@@ -130,7 +132,7 @@ def run_pipeline(raw_path: str | Path, out_dir: str | Path, *, mapping_path: str
 def _bronze_row(row: dict[str, Any]) -> dict[str, Any]:
     canonical = json.dumps(row, sort_keys=True, separators=(",", ":"), default=str)
     return {
-        "ingested_at": utc_iso(datetime.now(timezone.utc)),
+        "ingested_at": utc_iso(datetime.now(UTC)),
         "raw_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
         "raw": row,
     }
@@ -163,7 +165,9 @@ def _silver_row(row: dict[str, Any], raw_sha256: str) -> dict[str, Any]:
     }
 
 
-def _build_control_rows(silver_rows: list[dict[str, Any]], control_map: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_control_rows(
+    silver_rows: list[dict[str, Any]], control_map: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in silver_rows:
         for control in expand_controls(row["control_ids"], control_map):
@@ -241,7 +245,9 @@ def _build_metrics(
         "runtime_block_rate": round(len(blocked_runtime) / len(runtime_rows), 4) if runtime_rows else 0,
         "asset_count": len(asset_rows),
         "top_risk_asset": asset_rows[0]["asset_id"] if asset_rows else "",
-        "avg_asset_risk": round(sum(float(row["risk_score"]) for row in asset_rows) / len(asset_rows), 2) if asset_rows else 0,
+        "avg_asset_risk": round(sum(float(row["risk_score"]) for row in asset_rows) / len(asset_rows), 2)
+        if asset_rows
+        else 0,
     }
 
 

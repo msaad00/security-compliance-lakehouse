@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +31,7 @@ def build_current_posture(
 ) -> dict[str, Any]:
     """Build the continuously refreshed compliance posture from lake artifacts."""
     lake = Path(lake_dir)
-    evaluated_at = now or datetime.now(timezone.utc)
+    evaluated_at = now or datetime.now(UTC)
     events = read_jsonl(lake / "silver" / "normalized_events.jsonl")
     controls = read_jsonl(lake / "gold" / "control_posture.jsonl")
     assets = read_jsonl(lake / "gold" / "asset_risk.jsonl")
@@ -142,7 +142,9 @@ def _framework_scores(
         total = len(framework_controls)
         failing = [control for control in framework_controls if control["status"] == "fail"]
         stale = [control for control in framework_controls if control["control_id"] in stale_controls]
-        framework_violations = [v for control in framework_controls for v in violations_by_control.get(control["control_id"], [])]
+        framework_violations = [
+            v for control in framework_controls for v in violations_by_control.get(control["control_id"], [])
+        ]
         risk_penalty = sum(min(int(v["severity_score"]), 100) for v in framework_violations)
         max_penalty = max(1, total * 100)
         score = max(0, round(100 - ((risk_penalty / max_penalty) * 100) - (len(stale) * 5), 2))
@@ -170,7 +172,7 @@ def _stale_control_ids(events: list[dict[str, Any]], *, freshness_days: int, now
             current = latest_by_control.get(control_id)
             if current is None or collected > current:
                 latest_by_control[control_id] = collected
-    cutoff = now.astimezone(timezone.utc) - timedelta(days=freshness_days)
+    cutoff = now.astimezone(UTC) - timedelta(days=freshness_days)
     return {control_id for control_id, collected in latest_by_control.items() if collected < cutoff}
 
 

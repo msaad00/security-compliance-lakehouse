@@ -84,7 +84,9 @@ def _parser() -> argparse.ArgumentParser:
     violations.set_defaults(func=_assessment_violations)
     tests = assessment_sub.add_parser("tests", help="list continuous control tests")
     tests.add_argument("--lake", required=True, help="security data lake output directory")
-    tests.add_argument("--result", default=None, choices=["pass", "fail", "needs_evidence"], help="optional result filter")
+    tests.add_argument(
+        "--result", default=None, choices=["pass", "fail", "needs_evidence"], help="optional result filter"
+    )
     tests.set_defaults(func=_assessment_tests)
     return parser
 
@@ -149,7 +151,9 @@ def _query(args: argparse.Namespace) -> int:
         raise ValueError("query command only allows SELECT statements")
     if args.engine == "duckdb":
         rows = _query_duckdb(Path(args.lake) / "mart" / "security_data_lake.duckdb", sql)
-        print(json.dumps({"count": len(rows), "engine": args.engine, "rows": rows}, indent=2, sort_keys=True, default=str))
+        print(
+            json.dumps({"count": len(rows), "engine": args.engine, "rows": rows}, indent=2, sort_keys=True, default=str)
+        )
         return 0
 
     mart = Path(args.lake) / "mart" / "security_lakehouse.sqlite"
