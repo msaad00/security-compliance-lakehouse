@@ -5,11 +5,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
-import { api } from "@/lib/api/client";
+import { AuditorBanner } from "@/components/AuditorBanner";
+import { SnapshotModal } from "@/components/modals/SnapshotModal";
 
 export function Shell({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const [toast, setToast] = useState<string | null>(null);
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -21,31 +23,28 @@ export function Shell({ children }: { children: ReactNode }) {
     flash("Posture refreshed from assessment data");
   }, [qc, flash]);
 
-  const onSnapshot = useCallback(async () => {
-    try {
-      const r = await api.createSnapshot("console_request");
-      flash(`Snapshot created: ${r.snapshot_path}`);
-    } catch {
-      flash(
-        "Snapshot API unavailable. Run: security-lakehouse serve --lake build/lakehouse",
-      );
-    }
-  }, [flash]);
+  const onSnapshot = useCallback(() => setSnapshotOpen(true), []);
 
   return (
-    <div className="grid min-h-screen grid-rows-[78px_1fr] bg-rail">
+    <div className="grid min-h-screen grid-rows-[78px_auto_1fr] bg-rail">
       <TopBar onRefresh={onRefresh} onSnapshot={onSnapshot} />
+      <AuditorBanner />
       <div className="grid grid-cols-[286px_minmax(0,1fr)]">
         <Sidebar />
         <main className="overflow-auto bg-panel">{children}</main>
       </div>
+      <SnapshotModal
+        open={snapshotOpen}
+        onClose={() => setSnapshotOpen(false)}
+        onToast={flash}
+      />
       <AnimatePresence>
         {toast && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 left-1/2 z-50 max-w-[520px] -translate-x-1/2 rounded-lg bg-[#111827] px-3.5 py-3 text-sm text-white shadow-hero"
+            className="fixed bottom-6 left-1/2 z-[60] max-w-[520px] -translate-x-1/2 rounded-lg bg-[#111827] px-3.5 py-3 text-sm text-white shadow-hero"
           >
             {toast}
           </motion.div>

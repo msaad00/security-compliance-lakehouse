@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Toolbar, matchesQuery } from "@/components/Toolbar";
+import { EvidenceDrawer } from "@/components/drawers/EvidenceDrawer";
 import { useControls, useEvidence } from "@/lib/api/hooks";
 import { useToolbar } from "@/lib/state/filters";
 import type { NormalizedEvent } from "@/lib/api/types";
@@ -21,13 +22,18 @@ import type { NormalizedEvent } from "@/lib/api/types";
 const helper = createColumnHelper<NormalizedEvent>();
 
 const toneForStatus = (status: string) =>
-  status === "passed" ? "ready" : status === "blocked" || status === "failed" ? "critical" : "attention";
+  status === "passed"
+    ? "ready"
+    : status === "blocked" || status === "failed"
+      ? "critical"
+      : "attention";
 
 export default function EvidencePage() {
   const evidence = useEvidence();
   const controls = useControls();
   const { filters, setFilters } = useToolbar();
   const [sorting, setSorting] = useState<SortingState>([{ id: "event_time", desc: true }]);
+  const [selected, setSelected] = useState<NormalizedEvent | null>(null);
 
   const frameworks = useMemo(
     () => Array.from(new Set((controls.data ?? []).map((c) => c.framework))),
@@ -56,7 +62,9 @@ export default function EvidencePage() {
   const columns = [
     helper.accessor("event_time", {
       header: "Time",
-      cell: (info) => <code className="text-xs text-ink">{String(info.getValue()).slice(0, 19)}</code>,
+      cell: (info) => (
+        <code className="text-xs text-ink">{String(info.getValue()).slice(0, 19)}</code>
+      ),
     }),
     helper.accessor("source", {
       header: "Source",
@@ -108,7 +116,7 @@ export default function EvidencePage() {
       <PageHeader
         eyebrow="Evidence room"
         title="Normalized evidence facts"
-        description="Bronze-hashed source records mapped to controls. Hash verification + chain-of-custody export land in PR 3."
+        description="Click any row to open the evidence drawer and verify the SHA-256 hash against the immutable bronze record server-side."
         actions={
           <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-600">
             <ShieldCheck className="mr-1 inline h-3 w-3 text-emerald-600" />
@@ -151,7 +159,11 @@ export default function EvidencePage() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((r) => (
-                <tr key={r.id} className="border-b border-line last:border-0 hover:bg-blue-50/40">
+                <tr
+                  key={r.id}
+                  onClick={() => setSelected(r.original)}
+                  className="cursor-pointer border-b border-line last:border-0 hover:bg-blue-50/40"
+                >
                   {r.getVisibleCells().map((c) => (
                     <td key={c.id} className="px-4 py-3 align-top">
                       {flexRender(c.column.columnDef.cell, c.getContext())}
@@ -170,6 +182,7 @@ export default function EvidencePage() {
           </table>
         </div>
       </Card>
+      <EvidenceDrawer evidence={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
