@@ -210,16 +210,29 @@ raw evidence
 
 ## API
 
+`/api/v1/*` is the stable headless contract for agents and external clients. It
+returns `{data, meta, errors}` envelopes and supports `limit`, `offset`, `sort`,
+and field filters on list resources. The unversioned `/api/*` routes remain for
+the bundled console.
+
 | Route | Purpose |
 |---|---|
-| `GET /api/healthz` | service status |
-| `GET /api/posture/current` | current posture, scores, confidence inputs, violations |
-| `GET /api/control-tests` | continuous control tests, owners, confidence, next action |
-| `GET /api/controls` | control workbench records |
-| `GET /api/violations` | open control and asset violations |
-| `GET /api/evidence` | normalized evidence facts, filterable by control |
-| `GET /api/assets` | asset risk queue |
-| `POST /api/snapshots` | immutable point-in-time assessment snapshot |
+| `GET /api/v1/healthz` | service status |
+| `GET /api/v1/posture/current` | current posture, scores, confidence inputs, violations |
+| `GET /api/v1/control-tests` | continuous control tests, owners, confidence, next action |
+| `GET /api/v1/controls` | control workbench records |
+| `GET /api/v1/violations` | open control and asset violations |
+| `GET /api/v1/evidence` | normalized evidence facts, filterable by field |
+| `GET /api/v1/assets` | asset risk queue |
+| `GET /api/v1/snapshots` | immutable point-in-time assessment snapshots |
+| `POST /api/v1/snapshots` | create an immutable point-in-time assessment snapshot |
+
+Example:
+
+```bash
+curl -s 'http://127.0.0.1:8787/api/v1/control-tests?result=fail&sort=-confidence_score&limit=10' | jq .
+curl -s 'http://127.0.0.1:8787/api/v1/evidence?control_ids=SOC2-CC6.1' | jq .
+```
 
 ## Commands
 

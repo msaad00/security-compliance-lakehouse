@@ -27,15 +27,15 @@ interface RouteSpec {
 }
 
 const ROUTES: RouteSpec[] = [
-  { method: "GET", path: "/api/healthz", description: "Server liveness.", scope: "posture" },
-  { method: "GET", path: "/api/posture/current", description: "Full assessment posture + violations + frameworks.", scope: "posture" },
-  { method: "GET", path: "/api/control-tests", description: "Latest control test results with confidence + freshness.", scope: "controls" },
-  { method: "GET", path: "/api/controls", description: "Control posture catalog.", scope: "controls" },
-  { method: "GET", path: "/api/violations", description: "Open control failures (severity sorted).", scope: "controls" },
-  { method: "GET", path: "/api/evidence", description: "Silver normalized events.", scope: "evidence" },
-  { method: "GET", path: "/api/assets", description: "Asset risk roll-up.", scope: "assets" },
-  { method: "GET", path: "/api/snapshots", description: "Point-in-time snapshot list.", scope: "snapshots" },
-  { method: "POST", path: "/api/snapshots", description: "Freeze a snapshot.", scope: "snapshots", body_example: { reason: "audit_request" } },
+  { method: "GET", path: "/api/v1/healthz", description: "Server liveness envelope.", scope: "posture" },
+  { method: "GET", path: "/api/v1/posture/current", description: "Full assessment posture + violations + frameworks.", scope: "posture" },
+  { method: "GET", path: "/api/v1/control-tests?result=fail&limit=10", description: "Paginated control test results with confidence + freshness.", scope: "controls" },
+  { method: "GET", path: "/api/v1/controls?sort=-risk_score", description: "Sortable control posture catalog.", scope: "controls" },
+  { method: "GET", path: "/api/v1/violations?severity=critical,high", description: "Filterable open control failures.", scope: "controls" },
+  { method: "GET", path: "/api/v1/evidence?control_ids=SOC2-CC6.1", description: "Filterable silver normalized events.", scope: "evidence" },
+  { method: "GET", path: "/api/v1/assets?sort=-risk_score", description: "Sortable asset risk roll-up.", scope: "assets" },
+  { method: "GET", path: "/api/v1/snapshots", description: "Point-in-time snapshot list.", scope: "snapshots" },
+  { method: "POST", path: "/api/v1/snapshots", description: "Freeze a snapshot.", scope: "snapshots", body_example: { reason: "audit_request" } },
   { method: "GET", path: "/api/connectors", description: "Connector registry joined with state + last probe.", scope: "controls" },
   {
     method: "POST",
