@@ -12,7 +12,12 @@ import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import type { ControlTest } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const helper = createColumnHelper<ControlTest>();
 
@@ -53,7 +58,9 @@ export function ControlTestTable({ rows }: { rows: ControlTest[] }) {
         const v = info.getValue();
         return (
           <div>
-            <Badge tone={toneFor(v) as "ready" | "critical" | "attention"}>{v}</Badge>
+            <Badge tone={toneFor(v) as "ready" | "critical" | "attention"}>
+              {v}
+            </Badge>
             <div className="mt-1 text-xs text-muted">
               {info.row.original.confidence_score}% confidence
             </div>
@@ -67,7 +74,9 @@ export function ControlTestTable({ rows }: { rows: ControlTest[] }) {
     }),
     helper.accessor("agent_skill", {
       header: "Skill",
-      cell: (info) => <code className="text-xs text-ink">{info.getValue()}</code>,
+      cell: (info) => (
+        <code className="text-xs text-ink">{info.getValue()}</code>
+      ),
     }),
   ];
 
@@ -85,7 +94,8 @@ export function ControlTestTable({ rows }: { rows: ControlTest[] }) {
       <CardHeader>
         <CardTitle>Live control test queue</CardTitle>
         <CardDescription>
-          Sorted by result, freshness, and confidence. Click a row in PR 2 to open the control drawer.
+          Sorted by result, freshness, and confidence. Click a row in PR 2 to
+          open the control drawer.
         </CardDescription>
       </CardHeader>
       <div className="overflow-x-auto">
@@ -110,7 +120,10 @@ export function ControlTestTable({ rows }: { rows: ControlTest[] }) {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((r) => (
-              <tr key={r.id} className="border-b border-line last:border-0 hover:bg-blue-50/40">
+              <tr
+                key={r.id}
+                className="border-b border-line last:border-0 hover:bg-blue-50/40"
+              >
                 {r.getVisibleCells().map((c) => (
                   <td key={c.id} className="px-4 py-3 align-top">
                     {flexRender(c.column.columnDef.cell, c.getContext())}
@@ -120,7 +133,10 @@ export function ControlTestTable({ rows }: { rows: ControlTest[] }) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-sm text-muted" colSpan={5}>
+                <td
+                  className="px-4 py-6 text-center text-sm text-muted"
+                  colSpan={5}
+                >
                   No control tests reported by the assessment engine.
                 </td>
               </tr>

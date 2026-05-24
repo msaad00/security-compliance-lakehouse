@@ -17,7 +17,10 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-function coerce(value: string, field: ActionSchemaField): string | number | boolean {
+function coerce(
+  value: string,
+  field: ActionSchemaField,
+): string | number | boolean {
   if (field.type === "number") {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
@@ -26,7 +29,13 @@ function coerce(value: string, field: ActionSchemaField): string | number | bool
   return value;
 }
 
-export function NodeConfigDrawer({ node, spec, onClose, onUpdateParams, onDelete }: Props) {
+export function NodeConfigDrawer({
+  node,
+  spec,
+  onClose,
+  onUpdateParams,
+  onDelete,
+}: Props) {
   const test = useTestAction();
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
@@ -100,7 +109,9 @@ export function NodeConfigDrawer({ node, spec, onClose, onUpdateParams, onDelete
         </div>
 
         <section className="grid gap-3">
-          <div className="text-xs font-black uppercase tracking-wide text-muted">Parameters</div>
+          <div className="text-xs font-black uppercase tracking-wide text-muted">
+            Parameters
+          </div>
           {fields.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
               This action takes no parameters.
@@ -119,9 +130,14 @@ export function NodeConfigDrawer({ node, spec, onClose, onUpdateParams, onDelete
                   {field.required && <span className="text-rose-600">*</span>}
                   <input
                     value={inputValue}
-                    placeholder={field.default !== undefined ? String(field.default) : ""}
+                    placeholder={
+                      field.default !== undefined ? String(field.default) : ""
+                    }
                     onChange={(e) => {
-                      const next = { ...params, [name]: coerce(e.target.value, field) };
+                      const next = {
+                        ...params,
+                        [name]: coerce(e.target.value, field),
+                      };
                       persist(next);
                     }}
                     className="rounded-lg border border-line bg-white px-3 py-2 text-sm normal-case text-ink focus:outline-none focus:ring-1 focus:ring-brand"
@@ -138,7 +154,10 @@ export function NodeConfigDrawer({ node, spec, onClose, onUpdateParams, onDelete
           </div>
           <div className="mt-2 grid gap-1 text-xs">
             {Object.entries(spec.output_schema).map(([key, kind]) => (
-              <div key={key} className="flex items-center justify-between rounded border border-line bg-white px-2 py-1">
+              <div
+                key={key}
+                className="flex items-center justify-between rounded border border-line bg-white px-2 py-1"
+              >
                 <code className="text-ink">{key}</code>
                 <span className="text-muted">{kind}</span>
               </div>
@@ -167,7 +186,7 @@ export function NodeConfigDrawer({ node, spec, onClose, onUpdateParams, onDelete
               )}
             </div>
             <pre className="mt-2 overflow-auto rounded bg-white p-2 font-mono text-[11px] text-ink">
-{error ?? JSON.stringify(result, null, 2)}
+              {error ?? JSON.stringify(result, null, 2)}
             </pre>
           </section>
         )}

@@ -3,7 +3,16 @@
 @tailwind utilities;
 
 @layer base {
-  html, body { height: 100%; }
-  body { font-family: theme(fontFamily.sans); color: theme(colors.ink); background: theme(colors.panel); }
-  code { font-family: theme(fontFamily.mono); }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    font-family: theme(fontFamily.sans);
+    color: theme(colors.ink);
+    background: theme(colors.panel);
+  }
+  code {
+    font-family: theme(fontFamily.mono);
+  }
 }

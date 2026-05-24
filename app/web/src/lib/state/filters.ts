@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import type { ToolbarFilters } from "@/components/Toolbar";
 
-const initial: ToolbarFilters = { query: "", framework: "all", severity: "all" };
+const initial: ToolbarFilters = {
+  query: "",
+  framework: "all",
+  severity: "all",
+};
 
 export function useToolbar() {
   const [filters, setFilters] = useState<ToolbarFilters>(initial);

@@ -67,12 +67,18 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     tags: ["triage"],
     nodes: [
       node("t", "trigger.evidence_changed", {}, 120, 140),
-      node("a", "action.assign_owner", {
-        violation_id: "{{t.output.matched ? 'auto' : ''}}",
-        assignee: "appsec",
-        state: "triaged",
-        note: "auto-assigned by workflow",
-      }, 380, 140),
+      node(
+        "a",
+        "action.assign_owner",
+        {
+          violation_id: "{{t.output.matched ? 'auto' : ''}}",
+          assignee: "appsec",
+          state: "triaged",
+          note: "auto-assigned by workflow",
+        },
+        380,
+        140,
+      ),
     ],
     edges: [edge("t", "a", "passed")],
   },
@@ -115,14 +121,26 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     tags: ["scheduled", "framework"],
     nodes: [
       node("t", "trigger.cron", { schedule: "@daily" }, 120, 140),
-      node("c", "check.control_pass", { control_id: "NIST-AI-RMF-MEASURE-2.7" }, 340, 140),
+      node(
+        "c",
+        "check.control_pass",
+        { control_id: "NIST-AI-RMF-MEASURE-2.7" },
+        340,
+        140,
+      ),
       node("s", "action.snapshot", { reason: "framework_drift" }, 560, 80),
-      node("a", "action.assign_owner", {
-        violation_id: "NIST-AI-RMF-MEASURE-2.7:framework_drift",
-        assignee: "ai-security",
-        state: "in_progress",
-        note: "framework drift — owner review required",
-      }, 560, 220),
+      node(
+        "a",
+        "action.assign_owner",
+        {
+          violation_id: "NIST-AI-RMF-MEASURE-2.7:framework_drift",
+          assignee: "ai-security",
+          state: "in_progress",
+          note: "framework drift — owner review required",
+        },
+        560,
+        220,
+      ),
     ],
     edges: [edge("t", "c"), edge("c", "s", "failed"), edge("c", "a", "failed")],
   },

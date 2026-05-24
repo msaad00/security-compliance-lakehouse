@@ -11,9 +11,9 @@ The public category is:
 
 The tool should be able to run in two modes:
 
-| Mode | Best fit |
-|---|---|
-| Existing lake mode | read from a company's Snowflake, ClickHouse, object storage, SIEM, scanner, or ticketing data |
+| Mode                      | Best fit                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Existing lake mode        | read from a company's Snowflake, ClickHouse, object storage, SIEM, scanner, or ticketing data                     |
 | Managed lake objects mode | create normalized tables, views, snapshots, and evidence objects when the company does not have a clean model yet |
 
 ## Core Jobs
@@ -76,25 +76,25 @@ The tool should be able to run in two modes:
 
 The first version should ship these product surfaces:
 
-| Surface | Purpose |
-|---|---|
-| Current Posture API/CLI | continuously refreshed answer to "are we compliant right now?" |
-| Snapshot API/CLI | point-in-time assessment for audits, incidents, and just-in-time vendor reviews |
-| Violations API/CLI | open framework/control violations with owner, asset, evidence, and raw hash |
-| Agent API | JSON routes for posture, violations, controls, assets, and snapshots |
-| TrustOps Overview | executive posture, control gaps, evidence coverage, top risk asset |
-| Control Workbench | risk-ranked controls, owners, pass/fail, evidence count |
-| Evidence Room | source event, asset, control, evidence reference, raw hash |
-| Asset Risk Queue | systems driving control gaps and remediation work |
-| Data Lake Routing | Snowflake for governed evidence, ClickHouse for telemetry analytics |
+| Surface                 | Purpose                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| Current Posture API/CLI | continuously refreshed answer to "are we compliant right now?"                  |
+| Snapshot API/CLI        | point-in-time assessment for audits, incidents, and just-in-time vendor reviews |
+| Violations API/CLI      | open framework/control violations with owner, asset, evidence, and raw hash     |
+| Agent API               | JSON routes for posture, violations, controls, assets, and snapshots            |
+| TrustOps Overview       | executive posture, control gaps, evidence coverage, top risk asset              |
+| Control Workbench       | risk-ranked controls, owners, pass/fail, evidence count                         |
+| Evidence Room           | source event, asset, control, evidence reference, raw hash                      |
+| Asset Risk Queue        | systems driving control gaps and remediation work                               |
+| Data Lake Routing       | Snowflake for governed evidence, ClickHouse for telemetry analytics             |
 
 ## Continuous vs Point-In-Time Assessment
 
 The system has two assessment modes:
 
-| Mode | Question answered | Artifact |
-|---|---|---|
-| Current posture | "What is our accurate compliance and risk state right now?" | `build/lakehouse/gold/current_posture.json` |
+| Mode                   | Question answered                                              | Artifact                                           |
+| ---------------------- | -------------------------------------------------------------- | -------------------------------------------------- |
+| Current posture        | "What is our accurate compliance and risk state right now?"    | `build/lakehouse/gold/current_posture.json`        |
 | Point-in-time snapshot | "What did we know at this exact audit/vendor/incident moment?" | `build/lakehouse/gold/snapshots/assessment-*.json` |
 
 Current posture should refresh whenever connectors ingest new evidence. A

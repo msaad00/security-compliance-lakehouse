@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { Calendar, ExternalLink, FileCheck2, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Drawer } from "@/components/ui/drawer";
 import { PageHeader } from "@/components/PageHeader";
 import { FrameworkBadge } from "@/components/framework/FrameworkBadge";
@@ -15,7 +20,10 @@ import type {
   ReadinessStage,
 } from "@/lib/api/types";
 
-const TONE: Record<FrameworkFreshness, "ready" | "attention" | "critical" | "default"> = {
+const TONE: Record<
+  FrameworkFreshness,
+  "ready" | "attention" | "critical" | "default"
+> = {
   fresh: "ready",
   stale: "attention",
   expired: "critical",
@@ -29,14 +37,24 @@ const TONE_TEXT: Record<FrameworkFreshness, string> = {
   never_pulled: "Source never pulled — provenance unverified",
 };
 
-function Row({ framework, onSelect }: { framework: FrameworkView; onSelect: () => void }) {
+function Row({
+  framework,
+  onSelect,
+}: {
+  framework: FrameworkView;
+  onSelect: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onSelect}
       className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-brand hover:shadow-card"
     >
-      <FrameworkBadge frameworkId={framework.framework_id} fallbackLabel={framework.name} size={44} />
+      <FrameworkBadge
+        frameworkId={framework.framework_id}
+        fallbackLabel={framework.name}
+        size={44}
+      />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate font-black text-ink">{framework.name}</span>
@@ -46,11 +64,14 @@ function Row({ framework, onSelect }: { framework: FrameworkView; onSelect: () =
         </div>
         <div className="mt-1 truncate text-xs text-muted">
           {framework.version}
-          {framework.effective_date && ` · effective ${framework.effective_date}`}
+          {framework.effective_date &&
+            ` · effective ${framework.effective_date}`}
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <Badge>{framework.control_count} controls</Badge>
-          <Badge tone={framework.mapping_coverage_pct >= 95 ? "ready" : "attention"}>
+          <Badge
+            tone={framework.mapping_coverage_pct >= 95 ? "ready" : "attention"}
+          >
             {framework.mapping_coverage_pct}% coverage
           </Badge>
           <Badge>sync every {framework.sync_cadence_days}d</Badge>
@@ -75,7 +96,13 @@ function Row({ framework, onSelect }: { framework: FrameworkView; onSelect: () =
   );
 }
 
-function Detail({ framework, onClose }: { framework: FrameworkView | null; onClose: () => void }) {
+function Detail({
+  framework,
+  onClose,
+}: {
+  framework: FrameworkView | null;
+  onClose: () => void;
+}) {
   return (
     <Drawer
       open={Boolean(framework)}
@@ -129,7 +156,8 @@ function Detail({ framework, onClose }: { framework: FrameworkView | null; onClo
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 break-all text-brand hover:underline"
               >
-                {framework.official_source_name} <ExternalLink className="h-3 w-3" />
+                {framework.official_source_name}{" "}
+                <ExternalLink className="h-3 w-3" />
               </a>
             </dd>
             <dt className="text-muted">Effective date</dt>
@@ -161,7 +189,9 @@ function Detail({ framework, onClose }: { framework: FrameworkView | null; onClo
               <span className="text-2xl font-black text-ink">
                 {framework.implemented_control_count}
               </span>
-              <span className="text-muted">of {framework.control_count} controls implemented</span>
+              <span className="text-muted">
+                of {framework.control_count} controls implemented
+              </span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
               <div
@@ -202,15 +232,22 @@ function ReadinessRow({ row }: { row: FrameworkReadiness }) {
     <div className="rounded-xl border border-line bg-white p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2">
-          <FrameworkBadge frameworkId={row.framework_id} fallbackLabel={row.name} size={28} />
-          <code className="text-sm font-black text-ink">{row.framework_id}</code>
+          <FrameworkBadge
+            frameworkId={row.framework_id}
+            fallbackLabel={row.name}
+            size={28}
+          />
+          <code className="text-sm font-black text-ink">
+            {row.framework_id}
+          </code>
         </span>
         <Badge tone={row.is_ready ? "ready" : "attention"}>
           {row.is_ready ? "ready" : `blocked at ${row.stage}`}
         </Badge>
       </div>
       <div className="mt-1 text-xs text-muted">
-        {row.mapped_control_count}/{row.control_count} controls mapped · {row.coverage_pct}% coverage
+        {row.mapped_control_count}/{row.control_count} controls mapped ·{" "}
+        {row.coverage_pct}% coverage
       </div>
       <div className="mt-3 grid grid-cols-5 gap-1">
         {STAGE_ORDER.map((stage) => {
@@ -252,7 +289,8 @@ export default function FrameworksPage() {
         description="Every framework declares its official source, version, sha256 of the pulled text, effective date, and mapping coverage. Click any row to inspect provenance and link out to the regulator."
         actions={
           <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-600">
-            <FileCheck2 className="mr-1 inline h-3 w-3 text-emerald-600" /> {data.length} loaded
+            <FileCheck2 className="mr-1 inline h-3 w-3 text-emerald-600" />{" "}
+            {data.length} loaded
           </span>
         }
       />
@@ -261,9 +299,10 @@ export default function FrameworksPage() {
         <CardHeader>
           <CardTitle>Staged readiness</CardTitle>
           <CardDescription>
-            Coverage is only certified after every gate is green: source pulled, controls mapped to source
-            articles, evidence requirements declared, evaluation rules versioned, and mapping coverage ≥ 95%.
-            The earliest unmet gate is highlighted amber.
+            Coverage is only certified after every gate is green: source pulled,
+            controls mapped to source articles, evidence requirements declared,
+            evaluation rules versioned, and mapping coverage ≥ 95%. The earliest
+            unmet gate is highlighted amber.
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
@@ -282,18 +321,24 @@ export default function FrameworksPage() {
         <CardHeader>
           <CardTitle>{data.length} frameworks</CardTitle>
           <CardDescription>
-            Provenance is the contract: source URL + sha256 + last-pulled timestamp + mapping coverage.
-            Frameworks past their sync cadence are flagged stale or expired.
+            Provenance is the contract: source URL + sha256 + last-pulled
+            timestamp + mapping coverage. Frameworks past their sync cadence are
+            flagged stale or expired.
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
           {data.length === 0 && (
             <div className="rounded-lg border border-dashed border-line p-4 text-sm text-muted">
-              No frameworks registered. Check <code>frameworks/registry.json</code>.
+              No frameworks registered. Check{" "}
+              <code>frameworks/registry.json</code>.
             </div>
           )}
           {data.map((f) => (
-            <Row key={f.framework_id} framework={f} onSelect={() => setSelected(f)} />
+            <Row
+              key={f.framework_id}
+              framework={f}
+              onSelect={() => setSelected(f)}
+            />
           ))}
         </div>
       </Card>

@@ -11,7 +11,12 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUpDown, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Toolbar, matchesQuery } from "@/components/Toolbar";
 import { EvidenceDrawer } from "@/components/drawers/EvidenceDrawer";
@@ -32,7 +37,9 @@ export default function EvidencePage() {
   const evidence = useEvidence();
   const controls = useControls();
   const { filters, setFilters } = useToolbar();
-  const [sorting, setSorting] = useState<SortingState>([{ id: "event_time", desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "event_time", desc: true },
+  ]);
   const [selected, setSelected] = useState<NormalizedEvent | null>(null);
 
   const frameworks = useMemo(
@@ -50,10 +57,13 @@ export default function EvidencePage() {
     () =>
       (evidence.data ?? []).filter((e) => {
         if (filters.framework !== "all") {
-          const hit = e.control_ids.some((cid) => controlFramework.get(cid) === filters.framework);
+          const hit = e.control_ids.some(
+            (cid) => controlFramework.get(cid) === filters.framework,
+          );
           if (!hit) return false;
         }
-        if (filters.severity !== "all" && e.severity !== filters.severity) return false;
+        if (filters.severity !== "all" && e.severity !== filters.severity)
+          return false;
         return matchesQuery(e, filters.query);
       }),
     [evidence.data, filters, controlFramework],
@@ -63,7 +73,9 @@ export default function EvidencePage() {
     helper.accessor("event_time", {
       header: "Time",
       cell: (info) => (
-        <code className="text-xs text-ink">{String(info.getValue()).slice(0, 19)}</code>
+        <code className="text-xs text-ink">
+          {String(info.getValue()).slice(0, 19)}
+        </code>
       ),
     }),
     helper.accessor("source", {
@@ -75,7 +87,9 @@ export default function EvidencePage() {
       cell: (info) => (
         <div>
           <code className="text-xs text-ink">{info.getValue()}</code>
-          <div className="text-xs text-muted">{info.row.original.asset_owner}</div>
+          <div className="text-xs text-muted">
+            {info.row.original.asset_owner}
+          </div>
         </div>
       ),
     }),
@@ -134,7 +148,8 @@ export default function EvidencePage() {
         <CardHeader>
           <CardTitle>{filtered.length} matching records</CardTitle>
           <CardDescription>
-            All rows are append-only silver facts written from immutable bronze evidence.
+            All rows are append-only silver facts written from immutable bronze
+            evidence.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -173,7 +188,10 @@ export default function EvidencePage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center text-sm text-muted">
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-8 text-center text-sm text-muted"
+                  >
                     No evidence records match the current filters.
                   </td>
                 </tr>

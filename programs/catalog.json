@@ -14,10 +14,7 @@
       "program_id": "acme-continuous-trust",
       "name": "Acme Continuous Trust Program",
       "description": "Internal continuous assessment program for SOC 2-oriented and NIST AI RMF seed controls.",
-      "framework_ids": [
-        "soc2",
-        "nist-ai-rmf"
-      ],
+      "framework_ids": ["soc2", "nist-ai-rmf"],
       "owners": [
         "security-platform",
         "detection-engineering",
@@ -67,10 +64,7 @@
           "owner": "ai-security",
           "cadence": "continuous",
           "automation_level": "automated_evidence_assisted_review",
-          "required_evidence_types": [
-            "ai.model_inventory",
-            "cloud.config"
-          ],
+          "required_evidence_types": ["ai.model_inventory", "cloud.config"],
           "remediation_sla_hours": 72,
           "agent_skill": "ai-governance-analyst"
         },

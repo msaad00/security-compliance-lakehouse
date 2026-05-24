@@ -15,7 +15,10 @@ interface Props {
   onToast: (msg: string) => void;
 }
 
-const STATE_TONE: Record<TrackingState, "default" | "info" | "ready" | "attention" | "critical"> = {
+const STATE_TONE: Record<
+  TrackingState,
+  "default" | "info" | "ready" | "attention" | "critical"
+> = {
   open: "critical",
   triaged: "info",
   in_progress: "attention",
@@ -23,7 +26,12 @@ const STATE_TONE: Record<TrackingState, "default" | "info" | "ready" | "attentio
   dismissed: "default",
 };
 
-const STATES: TrackingState[] = ["triaged", "in_progress", "resolved", "dismissed"];
+const STATES: TrackingState[] = [
+  "triaged",
+  "in_progress",
+  "resolved",
+  "dismissed",
+];
 
 export function ViolationDrawer({ violation, onClose, onToast }: Props) {
   const auditor = useAuditorMode();
@@ -46,7 +54,9 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
 
   const history = tracking.data?.events ?? [];
   const currentState =
-    tracking.data?.current_state ?? (violation?.state as TrackingState | undefined) ?? "open";
+    tracking.data?.current_state ??
+    (violation?.state as TrackingState | undefined) ??
+    "open";
 
   const submit = async () => {
     if (!violation) return;
@@ -82,15 +92,24 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
       open={Boolean(violation)}
       onOpenChange={(o) => !o && onClose()}
       title={violation?.violation_id ?? "Violation"}
-      description={violation ? `${violation.event_type} · ${violation.control_id}` : undefined}
+      description={
+        violation
+          ? `${violation.event_type} · ${violation.control_id}`
+          : undefined
+      }
       width="lg"
       footer={
         !auditor && (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted">
-              Persisted to gold/violation_tracking.jsonl — auditable + append-only.
+              Persisted to gold/violation_tracking.jsonl — auditable +
+              append-only.
             </span>
-            <Button variant="primary" onClick={submit} disabled={triage.isPending}>
+            <Button
+              variant="primary"
+              onClick={submit}
+              disabled={triage.isPending}
+            >
               {triage.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -106,10 +125,16 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
         <div className="grid gap-5">
           <div className="rounded-xl border border-line bg-slate-50/60 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Badge tone={violation.severity === "critical" ? "critical" : "attention"}>
+              <Badge
+                tone={
+                  violation.severity === "critical" ? "critical" : "attention"
+                }
+              >
                 {violation.severity} · {violation.severity_score}
               </Badge>
-              <Badge tone={STATE_TONE[currentState as TrackingState] ?? "default"}>
+              <Badge
+                tone={STATE_TONE[currentState as TrackingState] ?? "default"}
+              >
                 {currentState}
               </Badge>
             </div>
@@ -130,7 +155,9 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
               </dd>
               <dt className="text-muted">Raw hash</dt>
               <dd>
-                <code className="text-ink">{violation.raw_sha256.slice(0, 24)}…</code>
+                <code className="text-ink">
+                  {violation.raw_sha256.slice(0, 24)}…
+                </code>
               </dd>
             </dl>
           </div>
@@ -191,7 +218,8 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
 
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-muted">
-              <History className="h-3 w-3" /> Triage history · {history.length} events
+              <History className="h-3 w-3" /> Triage history · {history.length}{" "}
+              events
             </div>
             <div className="grid gap-2">
               {history.length === 0 && (
@@ -200,9 +228,14 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
                 </div>
               )}
               {history.map((event) => (
-                <div key={event.tracking_id} className="rounded-lg border border-line p-3 text-xs">
+                <div
+                  key={event.tracking_id}
+                  className="rounded-lg border border-line p-3 text-xs"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Badge tone={STATE_TONE[event.state] ?? "default"}>{event.state}</Badge>
+                    <Badge tone={STATE_TONE[event.state] ?? "default"}>
+                      {event.state}
+                    </Badge>
                     <span className="text-muted">{event.occurred_at}</span>
                   </div>
                   <div className="mt-1 text-muted">
@@ -220,7 +253,9 @@ export function ViolationDrawer({ violation, onClose, onToast }: Props) {
                       </>
                     )}
                   </div>
-                  {event.note && <div className="mt-1 text-ink">{event.note}</div>}
+                  {event.note && (
+                    <div className="mt-1 text-ink">{event.note}</div>
+                  )}
                 </div>
               ))}
             </div>

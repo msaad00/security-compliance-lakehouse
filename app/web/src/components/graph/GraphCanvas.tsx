@@ -17,7 +17,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { FrameworkBadge } from "@/components/framework/FrameworkBadge";
-import type { ComplianceGraph, GraphNode, GraphNodeKind } from "@/lib/api/types";
+import type {
+  ComplianceGraph,
+  GraphNode,
+  GraphNodeKind,
+} from "@/lib/api/types";
 
 interface GraphNodeData extends Record<string, unknown> {
   label: string;
@@ -32,7 +36,10 @@ interface GraphNodeData extends Record<string, unknown> {
 
 type FlowGraphNode = Node<GraphNodeData, "trustops-graph">;
 
-const KIND_STYLE: Record<GraphNodeKind, { border: string; bg: string; chip: string }> = {
+const KIND_STYLE: Record<
+  GraphNodeKind,
+  { border: string; bg: string; chip: string }
+> = {
   framework: { border: "#4f7cff", bg: "#eff6ff", chip: "#1d4ed8" },
   control: { border: "#16b364", bg: "#ecfdf5", chip: "#067647" },
   evidence_type: { border: "#f79009", bg: "#fffbeb", chip: "#b54708" },
@@ -75,13 +82,23 @@ function GraphNodeCard({ data, selected }: NodeProps<FlowGraphNode>) {
               {data.kind.replace("_", " ")}
             </span>
             {data.kind === "framework" && data.framework_id && (
-              <FrameworkBadge frameworkId={data.framework_id} fallbackLabel={data.label} size={24} />
+              <FrameworkBadge
+                frameworkId={data.framework_id}
+                fallbackLabel={data.label}
+                size={24}
+              />
             )}
           </div>
-          <div className="mt-1.5 truncate text-sm font-black text-ink">{data.label}</div>
-          <div className="truncate text-[11px] text-slate-600">{data.subtitle}</div>
+          <div className="mt-1.5 truncate text-sm font-black text-ink">
+            {data.label}
+          </div>
+          <div className="truncate text-[11px] text-slate-600">
+            {data.subtitle}
+          </div>
           {data.owner && (
-            <div className="mt-1 truncate text-[10px] text-slate-500">owner {data.owner}</div>
+            <div className="mt-1 truncate text-[10px] text-slate-500">
+              owner {data.owner}
+            </div>
           )}
         </div>
       </Tooltip.Trigger>
@@ -95,7 +112,9 @@ function GraphNodeCard({ data, selected }: NodeProps<FlowGraphNode>) {
             {data.kind.replace("_", " ")}
           </div>
           <div className="mt-1 font-black">{data.label}</div>
-          {data.subtitle && <div className="mt-0.5 text-muted">{data.subtitle}</div>}
+          {data.subtitle && (
+            <div className="mt-0.5 text-muted">{data.subtitle}</div>
+          )}
           <div className="mt-2 grid gap-0.5 text-[11px]">
             {data.framework_id && (
               <div>
@@ -165,7 +184,9 @@ interface ImperativeRef {
   toSVG: () => string | null;
 }
 
-export function GraphCanvas(props: Props & { canvasRef?: React.MutableRefObject<ImperativeRef | null> }) {
+export function GraphCanvas(
+  props: Props & { canvasRef?: React.MutableRefObject<ImperativeRef | null> },
+) {
   return (
     <ReactFlowProvider>
       <Tooltip.Provider>
@@ -200,14 +221,28 @@ function InnerGraphCanvas({
     return graph.nodes.filter((n) => {
       if (!visibleKinds.has(n.kind)) return false;
       if (filterOwner && (n.owner ?? "") !== filterOwner) return false;
-      if (filterEnvironment && (n.environment ?? "") !== filterEnvironment) return false;
-      if (filterFramework && n.kind !== "framework" && (n.framework_id ?? "") !== filterFramework) return false;
-      if (filterFramework && n.kind === "framework" && n.framework_id !== filterFramework) return false;
+      if (filterEnvironment && (n.environment ?? "") !== filterEnvironment)
+        return false;
+      if (
+        filterFramework &&
+        n.kind !== "framework" &&
+        (n.framework_id ?? "") !== filterFramework
+      )
+        return false;
+      if (
+        filterFramework &&
+        n.kind === "framework" &&
+        n.framework_id !== filterFramework
+      )
+        return false;
       return true;
     });
   }, [graph, visibleKinds, filterOwner, filterEnvironment, filterFramework]);
 
-  const allowedIds = useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes]);
+  const allowedIds = useMemo(
+    () => new Set(filteredNodes.map((n) => n.id)),
+    [filteredNodes],
+  );
 
   // Compute neighbor sets for the currently selected node so the canvas can
   // bright-highlight it + its 1-hop neighbors and dim the rest.
@@ -232,7 +267,10 @@ function InnerGraphCanvas({
   }, [selectedId, adjacency]);
 
   // Two-click path trace via BFS over the filtered subgraph.
-  const pathSet = useMemo<{ nodes: Set<string>; edges: Set<string> } | null>(() => {
+  const pathSet = useMemo<{
+    nodes: Set<string>;
+    edges: Set<string>;
+  } | null>(() => {
     if (!graph || !pathFrom || !pathTo || pathFrom === pathTo) return null;
     if (!allowedIds.has(pathFrom) || !allowedIds.has(pathTo)) return null;
     const visited = new Map<string, string | null>([[pathFrom, null]]);
@@ -266,7 +304,8 @@ function InnerGraphCanvas({
     const lower = searchQuery.trim().toLowerCase();
     const out = new Set<string>();
     for (const n of filteredNodes) {
-      const hay = `${n.label} ${n.subtitle ?? ""} ${n.id} ${n.owner ?? ""}`.toLowerCase();
+      const hay =
+        `${n.label} ${n.subtitle ?? ""} ${n.id} ${n.owner ?? ""}`.toLowerCase();
       if (hay.includes(lower)) out.add(n.id);
     }
     return out;
@@ -278,7 +317,8 @@ function InnerGraphCanvas({
       let emphasis: GraphNodeData["emphasis"] = "active";
       if (matchSet) emphasis = matchSet.has(n.id) ? "match" : "dimmed";
       else if (pathSet) emphasis = pathSet.nodes.has(n.id) ? "path" : "dimmed";
-      else if (highlightSet) emphasis = highlightSet.has(n.id) ? "highlight" : "dimmed";
+      else if (highlightSet)
+        emphasis = highlightSet.has(n.id) ? "highlight" : "dimmed";
       return {
         id: n.id,
         type: "trustops-graph",
@@ -299,7 +339,8 @@ function InnerGraphCanvas({
       .map((e) => {
         const onPath = pathSet?.edges.has(e.id) ?? false;
         const onHighlight =
-          highlightSet && (highlightSet.has(e.source) || highlightSet.has(e.target));
+          highlightSet &&
+          (highlightSet.has(e.source) || highlightSet.has(e.target));
         const dimmed =
           (matchSet && !matchSet.has(e.source) && !matchSet.has(e.target)) ||
           (pathSet && !onPath) ||
@@ -317,7 +358,15 @@ function InnerGraphCanvas({
         };
       });
     return layoutGraph(list, edges, layout);
-  }, [graph, filteredNodes, allowedIds, layout, matchSet, pathSet, highlightSet]);
+  }, [
+    graph,
+    filteredNodes,
+    allowedIds,
+    layout,
+    matchSet,
+    pathSet,
+    highlightSet,
+  ]);
 
   // When the search has exactly one match, recentre the viewport on it so the
   // user sees the result immediately.
@@ -325,7 +374,10 @@ function InnerGraphCanvas({
     if (!matchSet || matchSet.size !== 1) return;
     const match = rfNodes.find((n) => matchSet.has(n.id));
     if (!match) return;
-    setCenter(match.position.x + 100, match.position.y + 40, { zoom: 1.1, duration: 300 });
+    setCenter(match.position.x + 100, match.position.y + 40, {
+      zoom: 1.1,
+      duration: 300,
+    });
   }, [matchSet, rfNodes, setCenter]);
 
   // Expose imperative export helpers to the parent (Export menu).
@@ -336,7 +388,9 @@ function InnerGraphCanvas({
       toSVG: () => {
         const root = wrapperRef.current;
         if (!root) return null;
-        const svg = root.querySelector("svg.react-flow__edges") as SVGSVGElement | null;
+        const svg = root.querySelector(
+          "svg.react-flow__edges",
+        ) as SVGSVGElement | null;
         if (!svg) return null;
         const clone = svg.cloneNode(true) as SVGSVGElement;
         clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
@@ -357,11 +411,16 @@ function InnerGraphCanvas({
   );
 
   if (!hydrated) {
-    return <div className="h-[640px] rounded-2xl border border-line bg-white" />;
+    return (
+      <div className="h-[640px] rounded-2xl border border-line bg-white" />
+    );
   }
 
   return (
-    <div ref={wrapperRef} className="h-[640px] overflow-hidden rounded-2xl border border-line bg-white">
+    <div
+      ref={wrapperRef}
+      className="h-[640px] overflow-hidden rounded-2xl border border-line bg-white"
+    >
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}

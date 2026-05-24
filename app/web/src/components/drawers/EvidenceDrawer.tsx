@@ -32,11 +32,14 @@ export function EvidenceDrawer({ evidence, onClose }: Props) {
       open={Boolean(evidence)}
       onOpenChange={(o) => !o && onClose()}
       title={evidence?.event_id ?? "Evidence"}
-      description={evidence ? `${evidence.source} · ${evidence.asset_id}` : undefined}
+      description={
+        evidence ? `${evidence.source} · ${evidence.asset_id}` : undefined
+      }
       footer={
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted">
-            Verification recomputes SHA-256 over the bronze raw record server-side.
+            Verification recomputes SHA-256 over the bronze raw record
+            server-side.
           </span>
           <Button variant="primary" onClick={run} disabled={verify.isPending}>
             {verify.isPending ? (
@@ -72,7 +75,11 @@ export function EvidenceDrawer({ evidence, onClose }: Props) {
             </dd>
             <dt className="text-muted">Severity</dt>
             <dd>
-              <Badge tone={evidence.severity === "critical" ? "critical" : "attention"}>
+              <Badge
+                tone={
+                  evidence.severity === "critical" ? "critical" : "attention"
+                }
+              >
                 {evidence.severity}
               </Badge>
             </dd>
@@ -92,7 +99,9 @@ export function EvidenceDrawer({ evidence, onClose }: Props) {
             </dd>
             <dt className="text-muted">Collected</dt>
             <dd>
-              <code className="text-xs text-ink">{evidence.evidence_collected_at}</code>
+              <code className="text-xs text-ink">
+                {evidence.evidence_collected_at}
+              </code>
             </dd>
           </dl>
 
@@ -108,18 +117,24 @@ export function EvidenceDrawer({ evidence, onClose }: Props) {
               <div className="flex items-center gap-2 font-black">
                 {result.verified ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4" /> Hash matches bronze raw record.
+                    <CheckCircle2 className="h-4 w-4" /> Hash matches bronze raw
+                    record.
                   </>
                 ) : (
                   <>
-                    <ShieldAlert className="h-4 w-4" /> Hash mismatch — {result.reason ?? "details below"}
+                    <ShieldAlert className="h-4 w-4" /> Hash mismatch —{" "}
+                    {result.reason ?? "details below"}
                   </>
                 )}
               </div>
               <dl className="mt-3 grid grid-cols-[120px_1fr] gap-x-3 gap-y-1.5 text-xs">
                 <dt>Source layer</dt>
                 <dd>
-                  <Badge tone={result.source_layer === "bronze" ? "ready" : "critical"}>
+                  <Badge
+                    tone={
+                      result.source_layer === "bronze" ? "ready" : "critical"
+                    }
+                  >
                     {result.source_layer}
                   </Badge>
                 </dd>

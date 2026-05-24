@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronRight, Loader2, Play, ShieldAlert, Trash2, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Loader2,
+  Play,
+  ShieldAlert,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTestAction } from "@/lib/api/hooks";
@@ -12,13 +20,20 @@ interface Props {
   node: FlowNode | null;
   spec: ActionSpec | null;
   /** Per-node result from the last workflow run, if any. */
-  lastResult?: { result: "ok" | "error"; output?: Record<string, unknown>; error?: string } | null;
+  lastResult?: {
+    result: "ok" | "error";
+    output?: Record<string, unknown>;
+    error?: string;
+  } | null;
   onClose: () => void;
   onUpdateParams: (id: string, params: Record<string, unknown>) => void;
   onDelete: (id: string) => void;
 }
 
-function coerce(value: string, field: ActionSchemaField): string | number | boolean {
+function coerce(
+  value: string,
+  field: ActionSchemaField,
+): string | number | boolean {
   if (field.type === "number") {
     const n = Number(value);
     return Number.isFinite(n) ? n : 0;
@@ -37,7 +52,9 @@ export function NodeConfigPanel({
 }: Props) {
   const test = useTestAction();
   const [params, setParams] = useState<Record<string, unknown>>({});
-  const [testResult, setTestResult] = useState<Record<string, unknown> | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [testError, setTestError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -118,13 +135,15 @@ export function NodeConfigPanel({
               )}
             </div>
             <pre className="mt-2 overflow-auto rounded bg-white p-2 font-mono text-[11px] text-ink">
-{lastResult.error ?? JSON.stringify(lastResult.output, null, 2)}
+              {lastResult.error ?? JSON.stringify(lastResult.output, null, 2)}
             </pre>
           </section>
         )}
 
         <section className="grid gap-3">
-          <div className="text-xs font-black uppercase tracking-wide text-muted">Parameters</div>
+          <div className="text-xs font-black uppercase tracking-wide text-muted">
+            Parameters
+          </div>
           {fields.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
               This action takes no parameters.
@@ -132,7 +151,8 @@ export function NodeConfigPanel({
           ) : (
             fields.map(([name, field]) => {
               const value = params[name];
-              const inputValue = value === undefined || value === null ? "" : String(value);
+              const inputValue =
+                value === undefined || value === null ? "" : String(value);
               return (
                 <label
                   key={name}
@@ -140,7 +160,9 @@ export function NodeConfigPanel({
                 >
                   <span>
                     {field.label}
-                    {field.required && <span className="text-rose-600"> *</span>}
+                    {field.required && (
+                      <span className="text-rose-600"> *</span>
+                    )}
                   </span>
                   <input
                     value={inputValue}
@@ -150,7 +172,10 @@ export function NodeConfigPanel({
                         : "supports {{nodeId.output.field}} refs"
                     }
                     onChange={(e) => {
-                      const next = { ...params, [name]: coerce(e.target.value, field) };
+                      const next = {
+                        ...params,
+                        [name]: coerce(e.target.value, field),
+                      };
                       persist(next);
                     }}
                     className="rounded-lg border border-line bg-white px-3 py-2 text-sm normal-case text-ink focus:outline-none focus:ring-1 focus:ring-brand"
@@ -189,9 +214,11 @@ export function NodeConfigPanel({
                 : "border-emerald-200 bg-emerald-50 text-emerald-900",
             ].join(" ")}
           >
-            <div className="font-black">{testError ? "Test action errored" : "Test action returned"}</div>
+            <div className="font-black">
+              {testError ? "Test action errored" : "Test action returned"}
+            </div>
             <pre className="mt-2 overflow-auto rounded bg-white p-2 font-mono text-[11px] text-ink">
-{testError ?? JSON.stringify(testResult, null, 2)}
+              {testError ?? JSON.stringify(testResult, null, 2)}
             </pre>
           </section>
         )}
@@ -208,8 +235,17 @@ export function NodeConfigPanel({
         >
           <Trash2 className="h-4 w-4" /> Remove
         </Button>
-        <Button variant="primary" size="sm" onClick={runTest} disabled={test.isPending}>
-          {test.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{" "}
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={runTest}
+          disabled={test.isPending}
+        >
+          {test.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}{" "}
           Test action
         </Button>
       </footer>

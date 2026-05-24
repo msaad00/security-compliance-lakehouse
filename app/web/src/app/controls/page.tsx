@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Toolbar, matchesQuery } from "@/components/Toolbar";
 import { ControlDrawer } from "@/components/drawers/ControlDrawer";
@@ -33,7 +38,9 @@ function ControlRow({
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <code className="text-sm font-black text-ink">{control.control_id}</code>
+        <code className="text-sm font-black text-ink">
+          {control.control_id}
+        </code>
         <Badge tone={toneForStatus(control.status)}>{control.status}</Badge>
       </div>
       <div className="mt-1 text-sm text-ink">{control.title}</div>
@@ -47,7 +54,9 @@ function ControlRow({
           evidence {control.evidence_count}/{control.event_count}
         </Badge>
         {confidence !== undefined && (
-          <Badge tone={confidence >= 75 ? "ready" : "attention"}>test {confidence}%</Badge>
+          <Badge tone={confidence >= 75 ? "ready" : "attention"}>
+            test {confidence}%
+          </Badge>
         )}
       </div>
     </button>
@@ -79,7 +88,9 @@ export default function ControlsPage() {
   );
 
   const openViolation = (violationId: string) => {
-    const v = (posture.data?.violations ?? []).find((row) => row.violation_id === violationId);
+    const v = (posture.data?.violations ?? []).find(
+      (row) => row.violation_id === violationId,
+    );
     if (v) setViolation(v);
   };
 
@@ -100,7 +111,8 @@ export default function ControlsPage() {
         <CardHeader>
           <CardTitle>{filtered.length} controls</CardTitle>
           <CardDescription>
-            Click a control to inspect evidence, violations, owner, and API-safe facts.
+            Click a control to inspect evidence, violations, owner, and API-safe
+            facts.
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0 lg:grid-cols-2">
@@ -110,7 +122,9 @@ export default function ControlsPage() {
             </div>
           )}
           {filtered.map((c) => {
-            const t = (tests.data ?? []).find((x) => x.control_id === c.control_id);
+            const t = (tests.data ?? []).find(
+              (x) => x.control_id === c.control_id,
+            );
             return (
               <ControlRow
                 key={c.control_id}

@@ -44,14 +44,27 @@ export function PostureKpis({ posture, evidenceCount }: Props) {
   const stale = p?.stale_control_count ?? 0;
   const evidenceCoverage = posture?.frameworks
     ? Math.round(
-        posture.frameworks.reduce((acc, f) => acc + Number(f.score) * Number(f.control_count), 0) /
-          Math.max(1, posture.frameworks.reduce((acc, f) => acc + Number(f.control_count), 0)),
+        posture.frameworks.reduce(
+          (acc, f) => acc + Number(f.score) * Number(f.control_count),
+          0,
+        ) /
+          Math.max(
+            1,
+            posture.frameworks.reduce(
+              (acc, f) => acc + Number(f.control_count),
+              0,
+            ),
+          ),
       )
     : 0;
 
   return (
     <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
-      <Stat label="Posture score" value={`${score}%`} sub="weighted across frameworks" />
+      <Stat
+        label="Posture score"
+        value={`${score}%`}
+        sub="weighted across frameworks"
+      />
       <Stat
         label="Confidence"
         value={`${evidenceCoverage}%`}
@@ -64,7 +77,12 @@ export function PostureKpis({ posture, evidenceCount }: Props) {
         sub={critical ? `${critical} critical` : "no critical"}
         delay={0.1}
       />
-      <Stat label="Evidence facts" value={evidenceCount} sub="normalized + hashed" delay={0.15} />
+      <Stat
+        label="Evidence facts"
+        value={evidenceCount}
+        sub="normalized + hashed"
+        delay={0.15}
+      />
       <Stat
         label="Stale controls"
         value={stale}
@@ -73,7 +91,9 @@ export function PostureKpis({ posture, evidenceCount }: Props) {
       />
       <div className="col-span-2 hidden text-xs text-muted lg:col-span-5 lg:block">
         Last evidence: {shortDate(posture?.evaluated_at)} · hash{" "}
-        <code className="text-ink">{posture?.assessment_hash?.slice(0, 16) ?? "—"}…</code>
+        <code className="text-ink">
+          {posture?.assessment_hash?.slice(0, 16) ?? "—"}…
+        </code>
       </div>
     </div>
   );

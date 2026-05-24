@@ -31,29 +31,58 @@ interface RailItem {
 }
 
 const ITEMS: RailItem[] = [
-  { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard, badge: "live", group: "Operate" },
+  {
+    href: "/dashboard",
+    label: "Dashboard",
+    Icon: LayoutDashboard,
+    badge: "live",
+    group: "Operate",
+  },
   { href: "/controls", label: "Controls", Icon: ShieldCheck, group: "Operate" },
-  { href: "/violations", label: "Violations", Icon: AlertOctagon, group: "Operate" },
+  {
+    href: "/violations",
+    label: "Violations",
+    Icon: AlertOctagon,
+    group: "Operate",
+  },
   { href: "/evidence", label: "Evidence", Icon: FileSearch, group: "Operate" },
   { href: "/automation", label: "Workflows", Icon: Zap, group: "Operate" },
   { href: "/graph", label: "Graph", Icon: Network, group: "Operate" },
   { href: "/audit-log", label: "Audit log", Icon: Activity, group: "Operate" },
   { href: "/connectors", label: "Connectors", Icon: Plug, group: "Configure" },
-  { href: "/frameworks", label: "Frameworks", Icon: BookOpen, group: "Configure" },
+  {
+    href: "/frameworks",
+    label: "Frameworks",
+    Icon: BookOpen,
+    group: "Configure",
+  },
   { href: "/crosswalk", label: "Crosswalk", Icon: Layers, group: "Configure" },
-  { href: "/trust-center", label: "Trust center", Icon: Sparkles, group: "Configure" },
-  { href: "/agents", label: "Agent API", Icon: Bot, badge: "JSON", group: "Configure" },
+  {
+    href: "/trust-center",
+    label: "Trust center",
+    Icon: Sparkles,
+    group: "Configure",
+  },
+  {
+    href: "/agents",
+    label: "Agent API",
+    Icon: Bot,
+    badge: "JSON",
+    group: "Configure",
+  },
 ];
 
 const GROUPS: RailItem["group"][] = ["Operate", "Configure"];
 
 export function Sidebar() {
   const pathname = usePathname() ?? "/dashboard";
-  const [collapsed, setCollapsed] = usePersistentState("trustops:sidebar:collapsed", false);
-  const [closedGroups, setClosedGroups] = usePersistentState<Record<string, boolean>>(
-    "trustops:sidebar:closed-groups",
-    {},
+  const [collapsed, setCollapsed] = usePersistentState(
+    "trustops:sidebar:collapsed",
+    false,
   );
+  const [closedGroups, setClosedGroups] = usePersistentState<
+    Record<string, boolean>
+  >("trustops:sidebar:closed-groups", {});
 
   const toggleGroup = (group: string) => {
     setClosedGroups({ ...closedGroups, [group]: !closedGroups[group] });
@@ -78,7 +107,11 @@ export function Sidebar() {
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="ml-auto grid h-7 w-7 place-items-center rounded-md text-[#9aa9bc] hover:bg-[#152030]"
         >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
         </button>
       </div>
 
@@ -109,7 +142,8 @@ export function Sidebar() {
               {!isClosed && (
                 <div className="grid gap-1">
                   {groupItems.map(({ href, label, Icon, badge }) => {
-                    const active = pathname === href || pathname.startsWith(href + "/");
+                    const active =
+                      pathname === href || pathname.startsWith(href + "/");
                     return (
                       <Link
                         key={href}
@@ -117,7 +151,9 @@ export function Sidebar() {
                         title={collapsed ? label : undefined}
                         className={cn(
                           "flex items-center gap-2.5 rounded-xl border px-3 text-[14px] font-extrabold transition-colors",
-                          collapsed ? "h-10 justify-center px-0" : "h-[42px] justify-between",
+                          collapsed
+                            ? "h-10 justify-center px-0"
+                            : "h-[42px] justify-between",
                           active
                             ? "border-[#31435c] bg-[#172436] text-white"
                             : "border-transparent text-[#c6d1df] hover:bg-[#152030]",
@@ -133,7 +169,9 @@ export function Sidebar() {
                             className={cn(
                               "grid place-items-center rounded-lg",
                               collapsed ? "h-7 w-7" : "h-[26px] w-[26px]",
-                              active ? "bg-[#eff6ff] text-[#1d4ed8]" : "bg-[#1d2b3d] text-[#9cc2ff]",
+                              active
+                                ? "bg-[#eff6ff] text-[#1d4ed8]"
+                                : "bg-[#1d2b3d] text-[#9cc2ff]",
                             )}
                           >
                             <Icon className="h-4 w-4" />

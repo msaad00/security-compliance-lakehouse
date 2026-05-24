@@ -59,16 +59,16 @@ flowchart TB
 
 ## Module Boundaries
 
-| Module | Owns | Does not own |
-|---|---|---|
-| Connectors | reading evidence from systems | control decisions |
-| Evidence model | canonical facts, hashes, freshness | UI state |
-| Control catalog | framework/control metadata | raw event parsing |
+| Module            | Owns                                          | Does not own         |
+| ----------------- | --------------------------------------------- | -------------------- |
+| Connectors        | reading evidence from systems                 | control decisions    |
+| Evidence model    | canonical facts, hashes, freshness            | UI state             |
+| Control catalog   | framework/control metadata                    | raw event parsing    |
 | Evaluation engine | pass/fail, scores, stale evidence, violations | storage-specific SQL |
-| Snapshot service | point-in-time assessment exports | live polling |
-| Lake adapters | Snowflake/ClickHouse/local persistence | business rules |
-| API | JSON contracts for humans and agents | rendering-only state |
-| UI | interactive workflow | control truth |
+| Snapshot service  | point-in-time assessment exports              | live polling         |
+| Lake adapters     | Snowflake/ClickHouse/local persistence        | business rules       |
+| API               | JSON contracts for humans and agents          | rendering-only state |
+| UI                | interactive workflow                          | control truth        |
 
 ## Design Rules
 

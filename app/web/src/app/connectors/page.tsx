@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import { Plug, Search, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { ConnectorDrawer } from "@/components/drawers/ConnectorDrawer";
 import { useConnectors } from "@/lib/api/hooks";
@@ -16,7 +21,8 @@ const toneForStatus = (status: string) =>
       ? "info"
       : "attention";
 
-const toneForState = (state: string) => (state === "enabled" ? "ready" : "default");
+const toneForState = (state: string) =>
+  state === "enabled" ? "ready" : "default";
 
 const toneForProbe = (result?: string) =>
   result === "ok"
@@ -53,15 +59,20 @@ function ConnectorRow({
           </Badge>
         </span>
         <span className="mt-1 block truncate text-xs text-muted">
-          {connector.collection_mode.replace(/_/g, " ")} · {connector.access_boundary.replace(/_/g, " ")}{" "}
-          · freshness {connector.freshness_slo_minutes}m SLO
+          {connector.collection_mode.replace(/_/g, " ")} ·{" "}
+          {connector.access_boundary.replace(/_/g, " ")} · freshness{" "}
+          {connector.freshness_slo_minutes}m SLO
         </span>
       </span>
       <span className="text-right">
         {probe ? (
           <>
-            <Badge tone={toneForProbe(probe.result)}>last probe {probe.result}</Badge>
-            <span className="mt-1 block text-[11px] text-muted">{probe.occurred_at?.slice(0, 19)}</span>
+            <Badge tone={toneForProbe(probe.result)}>
+              last probe {probe.result}
+            </Badge>
+            <span className="mt-1 block text-[11px] text-muted">
+              {probe.occurred_at?.slice(0, 19)}
+            </span>
           </>
         ) : (
           <Badge tone="default">no probe yet</Badge>
@@ -74,7 +85,9 @@ function ConnectorRow({
 export default function ConnectorsPage() {
   const connectors = useConnectors();
   const [query, setQuery] = useState("");
-  const [stateFilter, setStateFilter] = useState<"all" | "enabled" | "disabled">("all");
+  const [stateFilter, setStateFilter] = useState<
+    "all" | "enabled" | "disabled"
+  >("all");
   const [selected, setSelected] = useState<ConnectorView | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -109,10 +122,12 @@ export default function ConnectorsPage() {
         actions={
           <>
             <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-600">
-              <Plug className="mr-1 inline h-3 w-3" /> {totals.enabled}/{totals.total} enabled
+              <Plug className="mr-1 inline h-3 w-3" /> {totals.enabled}/
+              {totals.total} enabled
             </span>
             <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-600">
-              <ShieldCheck className="mr-1 inline h-3 w-3 text-emerald-600" /> least-privilege roles only
+              <ShieldCheck className="mr-1 inline h-3 w-3 text-emerald-600" />{" "}
+              least-privilege roles only
             </span>
           </>
         }
@@ -143,8 +158,9 @@ export default function ConnectorsPage() {
         <CardHeader>
           <CardTitle>{filtered.length} connectors</CardTitle>
           <CardDescription>
-            Click a row to configure credentials, run a probe, or disable the connector. {totals.hero} live as hero
-            paths (Snowflake / ClickHouse / object storage).
+            Click a row to configure credentials, run a probe, or disable the
+            connector. {totals.hero} live as hero paths (Snowflake / ClickHouse
+            / object storage).
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
@@ -154,7 +170,11 @@ export default function ConnectorsPage() {
             </div>
           )}
           {filtered.map((c) => (
-            <ConnectorRow key={c.connector_id} connector={c} onSelect={() => setSelected(c)} />
+            <ConnectorRow
+              key={c.connector_id}
+              connector={c}
+              onSelect={() => setSelected(c)}
+            />
           ))}
         </div>
       </Card>

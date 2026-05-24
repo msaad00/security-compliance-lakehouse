@@ -22,11 +22,17 @@ const CATEGORY_TONE: Record<
 
 export function NotificationBell() {
   const log = useAuditLog({ limit: 8 });
-  const [seenAt, setSeenAt] = usePersistentState<string>("trustops:audit-log:seen-at", "");
+  const [seenAt, setSeenAt] = usePersistentState<string>(
+    "trustops:audit-log:seen-at",
+    "",
+  );
 
   const entries = log.data ?? [];
   const unread = useMemo(
-    () => entries.filter((e) => !seenAt || (e.occurred_at && e.occurred_at > seenAt)).length,
+    () =>
+      entries.filter(
+        (e) => !seenAt || (e.occurred_at && e.occurred_at > seenAt),
+      ).length,
     [entries, seenAt],
   );
 
@@ -80,9 +86,13 @@ export function NotificationBell() {
                 href="/audit-log"
                 className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 rounded-md px-2 py-2 text-xs outline-none data-[highlighted]:bg-slate-50"
               >
-                <Badge tone={CATEGORY_TONE[entry.category]}>{entry.category}</Badge>
+                <Badge tone={CATEGORY_TONE[entry.category]}>
+                  {entry.category}
+                </Badge>
                 <span className="min-w-0">
-                  <span className="block truncate text-ink">{entry.summary}</span>
+                  <span className="block truncate text-ink">
+                    {entry.summary}
+                  </span>
                   <span className="block truncate text-[10px] text-muted">
                     {entry.actor} · {entry.occurred_at}
                   </span>

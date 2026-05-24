@@ -38,7 +38,10 @@ function headers(): Record<string, string> {
 }
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { cache: "no-store", headers: headers() });
+  const res = await fetch(`${BASE}${path}`, {
+    cache: "no-store",
+    headers: headers(),
+  });
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
   return (await res.json()) as T;
 }
@@ -68,13 +71,16 @@ export const api = {
   evidence: () =>
     get<{ count: number; evidence: NormalizedEvent[] }>("/evidence"),
   assets: () => get<{ assets: AssetRisk[] }>("/assets"),
-  createSnapshot: (reason: string) => post<SnapshotResponse>("/snapshots", { reason }),
+  createSnapshot: (reason: string) =>
+    post<SnapshotResponse>("/snapshots", { reason }),
   listSnapshots: () =>
     get<{ count: number; snapshots: SnapshotSummary[] }>("/snapshots"),
   getTracking: (violationId: string) =>
-    get<{ violation_id: string; current_state: string; events: TrackingEvent[] }>(
-      `/violations/${encodeURIComponent(violationId)}/tracking`,
-    ),
+    get<{
+      violation_id: string;
+      current_state: string;
+      events: TrackingEvent[];
+    }>(`/violations/${encodeURIComponent(violationId)}/tracking`),
   triage: (violationId: string, payload: TriagePayload) =>
     post<{ event: TrackingEvent }>(
       `/violations/${encodeURIComponent(violationId)}/triage`,
@@ -90,7 +96,10 @@ export const api = {
       payload,
     ),
   probeConnector: (id: string) =>
-    post<{ run: ConnectorRun }>(`/connectors/${encodeURIComponent(id)}/probe`, {}),
+    post<{ run: ConnectorRun }>(
+      `/connectors/${encodeURIComponent(id)}/probe`,
+      {},
+    ),
   connectorRuns: (id: string) =>
     get<{ connector_id: string; runs: ConnectorRun[] }>(
       `/connectors/${encodeURIComponent(id)}/runs`,
@@ -99,7 +108,8 @@ export const api = {
     get<{ count: number; frameworks: FrameworkView[] }>("/frameworks"),
   listWorkflows: () =>
     get<{ count: number; workflows: Workflow[] }>("/workflows"),
-  getWorkflow: (id: string) => get<Workflow>(`/workflows/${encodeURIComponent(id)}`),
+  getWorkflow: (id: string) =>
+    get<Workflow>(`/workflows/${encodeURIComponent(id)}`),
   workflowRuns: (id: string) =>
     get<{ workflow_id: string; runs: WorkflowRun[] }>(
       `/workflows/${encodeURIComponent(id)}/runs`,

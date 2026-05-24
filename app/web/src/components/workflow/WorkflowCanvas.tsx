@@ -31,7 +31,10 @@ interface NodeData extends Record<string, unknown> {
 
 export type FlowNode = Node<NodeData, "trustops">;
 
-const KIND_STYLE: Record<NodeData["kind"], { border: string; bg: string; chip: string }> = {
+const KIND_STYLE: Record<
+  NodeData["kind"],
+  { border: string; bg: string; chip: string }
+> = {
   trigger: { border: "#4f7cff", bg: "#eff6ff", chip: "#1d4ed8" },
   check: { border: "#f79009", bg: "#fffbeb", chip: "#b54708" },
   action: { border: "#16b364", bg: "#ecfdf5", chip: "#067647" },
@@ -93,7 +96,10 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
 
 const nodeTypes: NodeTypes = { trustops: NodeCard };
 
-function toFlowNode(node: WorkflowNode, action: ActionSpec | undefined): FlowNode {
+function toFlowNode(
+  node: WorkflowNode,
+  action: ActionSpec | undefined,
+): FlowNode {
   return {
     id: node.id,
     type: "trustops",
@@ -148,7 +154,9 @@ export function WorkflowCanvas({
     [edges, onEdgesChange],
   );
 
-  const handleSelection = useCallback<NonNullable<ReactFlowProps["onSelectionChange"]>>(
+  const handleSelection = useCallback<
+    NonNullable<ReactFlowProps["onSelectionChange"]>
+  >(
     ({ nodes: selected }) => {
       onSelectNode(selected[0]?.id ?? null);
     },

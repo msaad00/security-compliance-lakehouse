@@ -23,7 +23,9 @@ export function ControlDrawer({ control, onClose, onOpenViolation }: Props) {
     ? (tests.data ?? []).find((t) => t.control_id === control.control_id)
     : undefined;
   const violations = control
-    ? (posture.data?.violations ?? []).filter((v) => v.control_id === control.control_id)
+    ? (posture.data?.violations ?? []).filter(
+        (v) => v.control_id === control.control_id,
+      )
     : [];
 
   return (
@@ -46,7 +48,9 @@ export function ControlDrawer({ control, onClose, onOpenViolation }: Props) {
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Badge>{test.agent_skill}</Badge>
                 <Badge tone="info">{test.freshness_status}</Badge>
-                <Badge tone={test.confidence_score >= 75 ? "ready" : "attention"}>
+                <Badge
+                  tone={test.confidence_score >= 75 ? "ready" : "attention"}
+                >
                   confidence {test.confidence_score}%
                 </Badge>
               </div>
@@ -86,7 +90,11 @@ export function ControlDrawer({ control, onClose, onOpenViolation }: Props) {
                   <code className="text-xs text-ink">{v.event_id}</code>
                   <div className="mt-1 text-xs text-muted">{v.asset_id}</div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    <Badge tone={v.severity === "critical" ? "critical" : "attention"}>
+                    <Badge
+                      tone={
+                        v.severity === "critical" ? "critical" : "attention"
+                      }
+                    >
                       {v.severity}
                     </Badge>
                     <Badge>{v.asset_owner}</Badge>

@@ -52,7 +52,9 @@ export function Drawer({
               >
                 <header className="flex items-start justify-between gap-4 border-b border-line p-5">
                   <div>
-                    <Dialog.Title className="text-lg font-black text-ink">{title}</Dialog.Title>
+                    <Dialog.Title className="text-lg font-black text-ink">
+                      {title}
+                    </Dialog.Title>
                     {description && (
                       <Dialog.Description className="mt-1 text-sm text-muted">
                         {description}
@@ -67,7 +69,9 @@ export function Drawer({
                   </Dialog.Close>
                 </header>
                 <div className="flex-1 overflow-auto p-5">{children}</div>
-                {footer && <footer className="border-t border-line p-4">{footer}</footer>}
+                {footer && (
+                  <footer className="border-t border-line p-4">{footer}</footer>
+                )}
               </motion.aside>
             </Dialog.Content>
           </Dialog.Portal>

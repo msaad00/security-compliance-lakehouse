@@ -17,21 +17,21 @@ TrustOps is an assessment layer, not just an ingestion demo.
 
 It can run in two modes:
 
-| Mode | Use when | What it does |
-|---|---|---|
-| Existing lake mode | You already have Snowflake, ClickHouse, object storage, SIEM, scanners, or GRC exports | Reads normalized evidence and evaluates posture |
-| Managed evidence mode | You need a local proof-of-value first | Creates bronze, silver, gold, mart, API, dashboard, and snapshots |
+| Mode                  | Use when                                                                               | What it does                                                      |
+| --------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Existing lake mode    | You already have Snowflake, ClickHouse, object storage, SIEM, scanners, or GRC exports | Reads normalized evidence and evaluates posture                   |
+| Managed evidence mode | You need a local proof-of-value first                                                  | Creates bronze, silver, gold, mart, API, dashboard, and snapshots |
 
 ## Product Surface
 
-| Surface | Human workflow | Agent workflow |
-|---|---|---|
-| Trust dashboard | report current posture, freshness, confidence, and risk | `GET /api/posture/current` |
-| Control workbench | inspect tests, owners, evidence, and failures | `GET /api/control-tests`, `GET /api/controls` |
-| Violation queue | assign remediation from failing evidence | `GET /api/violations` |
-| Evidence room | trace source records, hashes, artifacts, and mappings | normalized JSONL + local SQL mart |
-| Snapshot engine | freeze point-in-time posture for audit or vendor review | `POST /api/snapshots` |
-| Analyst skills | SOC analyst, SOC 2, AI governance, PCI/ISO expansion guards | skill-pack instructions |
+| Surface           | Human workflow                                              | Agent workflow                                |
+| ----------------- | ----------------------------------------------------------- | --------------------------------------------- |
+| Trust dashboard   | report current posture, freshness, confidence, and risk     | `GET /api/posture/current`                    |
+| Control workbench | inspect tests, owners, evidence, and failures               | `GET /api/control-tests`, `GET /api/controls` |
+| Violation queue   | assign remediation from failing evidence                    | `GET /api/violations`                         |
+| Evidence room     | trace source records, hashes, artifacts, and mappings       | normalized JSONL + local SQL mart             |
+| Snapshot engine   | freeze point-in-time posture for audit or vendor review     | `POST /api/snapshots`                         |
+| Analyst skills    | SOC analyst, SOC 2, AI governance, PCI/ISO expansion guards | skill-pack instructions                       |
 
 ## Connector Access Model
 
@@ -131,26 +131,26 @@ flowchart TB
 
 Each control test has:
 
-| Field | Why it matters |
-|---|---|
-| `program_id` and `control_id` | ties posture to a scoped internal compliance program |
-| `required_evidence_types` | makes evidence collection explicit instead of hand-wavy |
-| `result` and lifecycle `status` | separates test outcome from workflow state |
-| `confidence_inputs` | explains whether the reported posture is trustworthy |
-| `next_action` | turns findings into owner work |
-| `agent_skill` | routes headless analysis to the right guarded skill |
+| Field                           | Why it matters                                          |
+| ------------------------------- | ------------------------------------------------------- |
+| `program_id` and `control_id`   | ties posture to a scoped internal compliance program    |
+| `required_evidence_types`       | makes evidence collection explicit instead of hand-wavy |
+| `result` and lifecycle `status` | separates test outcome from workflow state              |
+| `confidence_inputs`             | explains whether the reported posture is trustworthy    |
+| `next_action`                   | turns findings into owner work                          |
+| `agent_skill`                   | routes headless analysis to the right guarded skill     |
 
 ## Confidence Model
 
 TrustOps separates readiness from confidence.
 
-| Metric | Meaning |
-|---|---|
-| Readiness score | How many implemented control tests are passing |
-| Posture confidence | How much trust to place in the reported posture |
-| Evidence freshness | Latest event time and source availability |
-| Evidence coverage | Controls with linked evidence |
-| Snapshot hash | Immutable assessment hash for point-in-time reporting |
+| Metric             | Meaning                                               |
+| ------------------ | ----------------------------------------------------- |
+| Readiness score    | How many implemented control tests are passing        |
+| Posture confidence | How much trust to place in the reported posture       |
+| Evidence freshness | Latest event time and source availability             |
+| Evidence coverage  | Controls with linked evidence                         |
+| Snapshot hash      | Immutable assessment hash for point-in-time reporting |
 
 This matters because a company can be failing controls and still have high
 confidence in the report. That is useful: leadership sees the true posture,
@@ -160,12 +160,12 @@ owners get a clear remediation queue, and auditors get traceable evidence.
 
 TrustOps separates product logic from storage.
 
-| Store | Role | Status |
-|---|---|---|
-| Snowflake | governed evidence lake, audit views, retention, RBAC, executive reporting | production hero path |
-| ClickHouse | high-volume telemetry, runtime events, trends, fast aggregations | production hero path |
-| DuckDB | local analytical file for columnar demos and bigger local datasets | optional analytical mart via `.[analytics]` |
-| SQLite | zero-dependency local SQL artifact for smoke tests and first-run demos | current lightweight default |
+| Store      | Role                                                                      | Status                                      |
+| ---------- | ------------------------------------------------------------------------- | ------------------------------------------- |
+| Snowflake  | governed evidence lake, audit views, retention, RBAC, executive reporting | production hero path                        |
+| ClickHouse | high-volume telemetry, runtime events, trends, fast aggregations          | production hero path                        |
+| DuckDB     | local analytical file for columnar demos and bigger local datasets        | optional analytical mart via `.[analytics]` |
+| SQLite     | zero-dependency local SQL artifact for smoke tests and first-run demos    | current lightweight default                 |
 
 SQLite is not the strategic data lake. It is used because it ships with Python
 and makes the project runnable without cloud credentials. DuckDB is the stronger
@@ -176,16 +176,16 @@ Snowflake and ClickHouse remain the production architecture.
 
 Current framework support is intentionally source-linked and readiness-gated:
 
-| Framework | Status |
-|---|---|
+| Framework                     | Status                      |
+| ----------------------------- | --------------------------- |
 | SOC 2 Trust Services Criteria | implemented limited mapping |
-| NIST AI RMF 1.0 | implemented limited mapping |
-| ISO/IEC 27001:2022 | implemented limited mapping |
-| HIPAA Security Rule | implemented limited mapping |
-| PCI DSS v4.0 | implemented limited mapping |
-| GDPR 2016/679 | implemented limited mapping |
-| EU AI Act 2024/1689 | implemented limited mapping |
-| ISO/IEC 42001:2023 | implemented limited mapping |
+| NIST AI RMF 1.0               | implemented limited mapping |
+| ISO/IEC 27001:2022            | implemented limited mapping |
+| HIPAA Security Rule           | implemented limited mapping |
+| PCI DSS v4.0                  | implemented limited mapping |
+| GDPR 2016/679                 | implemented limited mapping |
+| EU AI Act 2024/1689           | implemented limited mapping |
+| ISO/IEC 42001:2023            | implemented limited mapping |
 
 The SVG badges above are TrustOps-owned framework marks, not official
 certification seals. A framework is not treated as ready until its official
@@ -215,17 +215,17 @@ returns `{data, meta, errors}` envelopes and supports `limit`, `offset`, `sort`,
 and field filters on list resources. The unversioned `/api/*` routes remain for
 the bundled console.
 
-| Route | Purpose |
-|---|---|
-| `GET /api/v1/healthz` | service status |
-| `GET /api/v1/posture/current` | current posture, scores, confidence inputs, violations |
-| `GET /api/v1/control-tests` | continuous control tests, owners, confidence, next action |
-| `GET /api/v1/controls` | control workbench records |
-| `GET /api/v1/violations` | open control and asset violations |
-| `GET /api/v1/evidence` | normalized evidence facts, filterable by field |
-| `GET /api/v1/assets` | asset risk queue |
-| `GET /api/v1/snapshots` | immutable point-in-time assessment snapshots |
-| `POST /api/v1/snapshots` | create an immutable point-in-time assessment snapshot |
+| Route                         | Purpose                                                   |
+| ----------------------------- | --------------------------------------------------------- |
+| `GET /api/v1/healthz`         | service status                                            |
+| `GET /api/v1/posture/current` | current posture, scores, confidence inputs, violations    |
+| `GET /api/v1/control-tests`   | continuous control tests, owners, confidence, next action |
+| `GET /api/v1/controls`        | control workbench records                                 |
+| `GET /api/v1/violations`      | open control and asset violations                         |
+| `GET /api/v1/evidence`        | normalized evidence facts, filterable by field            |
+| `GET /api/v1/assets`          | asset risk queue                                          |
+| `GET /api/v1/snapshots`       | immutable point-in-time assessment snapshots              |
+| `POST /api/v1/snapshots`      | create an immutable point-in-time assessment snapshot     |
 
 Example:
 

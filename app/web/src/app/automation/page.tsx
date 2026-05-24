@@ -5,7 +5,12 @@ import type { Edge } from "@xyflow/react";
 import { LayoutTemplate, Loader2, Play, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { ActionPalette } from "@/components/workflow/ActionPalette";
 import { NodeConfigPanel } from "@/components/workflow/NodeConfigPanel";
@@ -22,7 +27,12 @@ import {
   useWorkflowRuns,
   useWorkflows,
 } from "@/lib/api/hooks";
-import type { ActionSpec, Workflow, WorkflowNode, WorkflowRun } from "@/lib/api/types";
+import type {
+  ActionSpec,
+  Workflow,
+  WorkflowNode,
+  WorkflowRun,
+} from "@/lib/api/types";
 import { useAuditorMode } from "@/lib/state/auditor";
 import type { WorkflowTemplate } from "@/lib/workflow/templates";
 
@@ -40,7 +50,13 @@ interface Editor {
 }
 
 function emptyEditor(): Editor {
-  return { workflow_id: null, name: "Untitled workflow", description: "", nodes: [], edges: [] };
+  return {
+    workflow_id: null,
+    name: "Untitled workflow",
+    description: "",
+    nodes: [],
+    edges: [],
+  };
 }
 
 function fromWorkflow(w: Workflow, catalog: ActionSpec[]): Editor {
@@ -61,7 +77,10 @@ function fromWorkflow(w: Workflow, catalog: ActionSpec[]): Editor {
   };
 }
 
-function fromTemplate(template: WorkflowTemplate, catalog: ActionSpec[]): Editor {
+function fromTemplate(
+  template: WorkflowTemplate,
+  catalog: ActionSpec[],
+): Editor {
   const byType = new Map(catalog.map((a) => [a.node_type, a]));
   return {
     workflow_id: null,
@@ -93,8 +112,8 @@ function toApiEdges(edges: Edge[]) {
     source: String(e.source),
     target: String(e.target),
     condition:
-      (e.data as { condition?: "always" | "passed" | "failed" } | undefined)?.condition ??
-      "always",
+      (e.data as { condition?: "always" | "passed" | "failed" } | undefined)
+        ?.condition ?? "always",
   }));
 }
 
@@ -172,12 +191,17 @@ export default function AutomationPage() {
     [editor.nodes.length],
   );
 
-  const updateNodeParams = useCallback((id: string, params: Record<string, unknown>) => {
-    setEditor((e) => ({
-      ...e,
-      nodes: e.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, params } } : n)),
-    }));
-  }, []);
+  const updateNodeParams = useCallback(
+    (id: string, params: Record<string, unknown>) => {
+      setEditor((e) => ({
+        ...e,
+        nodes: e.nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, params } } : n,
+        ),
+      }));
+    },
+    [],
+  );
 
   const deleteNode = useCallback((id: string) => {
     setEditor((e) => ({
@@ -227,14 +251,18 @@ export default function AutomationPage() {
     try {
       const { run: result } = await run.mutateAsync(editor.workflow_id);
       setLastRun(result);
-      flash(`Run ${result.result.toUpperCase()} — ${result.node_results.length} nodes executed.`);
+      flash(
+        `Run ${result.result.toUpperCase()} — ${result.node_results.length} nodes executed.`,
+      );
     } catch (err) {
       flash(`Run failed: ${(err as Error).message}`);
     }
   };
 
   const selected = nodesWithRunState.find((n) => n.id === selectedNode) ?? null;
-  const selectedSpec = selected ? (specByType.get(selected.data.node_type) ?? null) : null;
+  const selectedSpec = selected
+    ? (specByType.get(selected.data.node_type) ?? null)
+    : null;
   const selectedRunResult = useMemo(() => {
     if (!lastRun || !selectedNode) return null;
     const match = lastRun.node_results.find((r) => r.node_id === selectedNode);
@@ -273,7 +301,11 @@ export default function AutomationPage() {
             </Button>
             {!auditor && (
               <>
-                <Button variant="default" onClick={persist} disabled={save.isPending}>
+                <Button
+                  variant="default"
+                  onClick={persist}
+                  disabled={save.isPending}
+                >
                   {save.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -305,7 +337,9 @@ export default function AutomationPage() {
             Name
             <input
               value={editor.name}
-              onChange={(e) => setEditor((ed) => ({ ...ed, name: e.target.value }))}
+              onChange={(e) =>
+                setEditor((ed) => ({ ...ed, name: e.target.value }))
+              }
               className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-extrabold text-ink focus:outline-none focus:ring-1 focus:ring-brand"
               disabled={auditor}
             />
@@ -314,7 +348,9 @@ export default function AutomationPage() {
             Description
             <input
               value={editor.description}
-              onChange={(e) => setEditor((ed) => ({ ...ed, description: e.target.value }))}
+              onChange={(e) =>
+                setEditor((ed) => ({ ...ed, description: e.target.value }))
+              }
               className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-brand"
               disabled={auditor}
             />
@@ -346,7 +382,13 @@ export default function AutomationPage() {
         <CardHeader>
           <CardTitle>Run history</CardTitle>
           <CardDescription>
-            Latest runs for {editor.workflow_id ? <code>{editor.workflow_id}</code> : "this canvas"}.
+            Latest runs for{" "}
+            {editor.workflow_id ? (
+              <code>{editor.workflow_id}</code>
+            ) : (
+              "this canvas"
+            )}
+            .
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
@@ -366,7 +408,9 @@ export default function AutomationPage() {
                   <span className="font-black">
                     v{r.workflow_version} · {r.node_results.length} nodes
                   </span>
-                  <Badge tone={r.result === "ok" ? "ready" : "critical"}>{r.result}</Badge>
+                  <Badge tone={r.result === "ok" ? "ready" : "critical"}>
+                    {r.result}
+                  </Badge>
                 </div>
                 <div className="text-muted">
                   actor <b className="text-ink">{r.actor}</b> · {r.started_at}

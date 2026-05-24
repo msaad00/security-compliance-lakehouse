@@ -11,7 +11,12 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Toolbar, matchesQuery } from "@/components/Toolbar";
 import { ViolationDrawer } from "@/components/drawers/ViolationDrawer";
@@ -28,7 +33,9 @@ export default function ViolationsPage() {
   const violations = useViolations();
   const controls = useControls();
   const { filters, setFilters } = useToolbar();
-  const [sorting, setSorting] = useState<SortingState>([{ id: "severity_score", desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "severity_score", desc: true },
+  ]);
   const [selected, setSelected] = useState<Violation | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -46,9 +53,13 @@ export default function ViolationsPage() {
   const filtered = useMemo(
     () =>
       (violations.data ?? []).filter((v) => {
-        if (filters.framework !== "all" && controlFramework.get(v.control_id) !== filters.framework)
+        if (
+          filters.framework !== "all" &&
+          controlFramework.get(v.control_id) !== filters.framework
+        )
           return false;
-        if (filters.severity !== "all" && v.severity !== filters.severity) return false;
+        if (filters.severity !== "all" && v.severity !== filters.severity)
+          return false;
         return matchesQuery(v, filters.query);
       }),
     [violations.data, filters, controlFramework],
@@ -60,7 +71,9 @@ export default function ViolationsPage() {
       cell: (info) => (
         <div>
           <code className="text-xs text-ink">{info.getValue()}</code>
-          <div className="text-xs text-muted">{info.row.original.event_type}</div>
+          <div className="text-xs text-muted">
+            {info.row.original.event_type}
+          </div>
         </div>
       ),
     }),
@@ -73,7 +86,9 @@ export default function ViolationsPage() {
       cell: (info) => (
         <div>
           <code className="text-xs text-ink">{info.getValue()}</code>
-          <div className="text-xs text-muted">{info.row.original.asset_owner}</div>
+          <div className="text-xs text-muted">
+            {info.row.original.asset_owner}
+          </div>
         </div>
       ),
     }),
@@ -84,12 +99,17 @@ export default function ViolationsPage() {
         return (
           <div>
             <Badge tone={toneForSeverity(v)}>{v}</Badge>
-            <div className="mt-1 text-xs text-muted">score {info.row.original.severity_score}</div>
+            <div className="mt-1 text-xs text-muted">
+              score {info.row.original.severity_score}
+            </div>
           </div>
         );
       },
     }),
-    helper.accessor("severity_score", { header: "Score", cell: (info) => info.getValue() }),
+    helper.accessor("severity_score", {
+      header: "Score",
+      cell: (info) => info.getValue(),
+    }),
     helper.accessor("source", {
       header: "Source",
       cell: (info) => <Badge>{info.getValue()}</Badge>,
@@ -126,7 +146,8 @@ export default function ViolationsPage() {
         <CardHeader>
           <CardTitle>{filtered.length} open violations</CardTitle>
           <CardDescription>
-            Click any column to re-sort. Click any row to open the triage drawer.
+            Click any column to re-sort. Click any row to open the triage
+            drawer.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -167,7 +188,10 @@ export default function ViolationsPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-sm text-muted" colSpan={columns.length}>
+                  <td
+                    className="px-4 py-8 text-center text-sm text-muted"
+                    colSpan={columns.length}
+                  >
                     No violations match the current filters.
                   </td>
                 </tr>

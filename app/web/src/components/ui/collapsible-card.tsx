@@ -54,7 +54,9 @@ export function CollapsibleCard({
             )}
             {title}
           </span>
-          {description && <span className="block text-sm text-muted">{description}</span>}
+          {description && (
+            <span className="block text-sm text-muted">{description}</span>
+          )}
         </span>
         {actions && (
           <span

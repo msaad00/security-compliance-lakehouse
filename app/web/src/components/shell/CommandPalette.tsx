@@ -37,18 +37,90 @@ interface PaletteItem {
 }
 
 const ROUTE_ITEMS: PaletteItem[] = [
-  { id: "r:dashboard", group: "Routes", label: "Dashboard", href: "/dashboard", Icon: LayoutDashboard },
-  { id: "r:controls", group: "Routes", label: "Controls", href: "/controls", Icon: ShieldCheck },
-  { id: "r:violations", group: "Routes", label: "Violations", href: "/violations", Icon: AlertOctagon },
-  { id: "r:evidence", group: "Routes", label: "Evidence", href: "/evidence", Icon: FileSearch },
-  { id: "r:automation", group: "Routes", label: "Workflows", href: "/automation", Icon: Zap },
-  { id: "r:graph", group: "Routes", label: "Graph", href: "/graph", Icon: Network },
-  { id: "r:audit-log", group: "Routes", label: "Audit log", href: "/audit-log", Icon: ActivityIcon },
-  { id: "r:connectors", group: "Routes", label: "Connectors", href: "/connectors", Icon: Plug },
-  { id: "r:frameworks", group: "Routes", label: "Frameworks", href: "/frameworks", Icon: BookOpen },
-  { id: "r:crosswalk", group: "Routes", label: "Crosswalk", href: "/crosswalk", Icon: Layers },
-  { id: "r:trust-center", group: "Routes", label: "Trust center", href: "/trust-center", Icon: Sparkles },
-  { id: "r:agents", group: "Routes", label: "Agent API", href: "/agents", Icon: Bot },
+  {
+    id: "r:dashboard",
+    group: "Routes",
+    label: "Dashboard",
+    href: "/dashboard",
+    Icon: LayoutDashboard,
+  },
+  {
+    id: "r:controls",
+    group: "Routes",
+    label: "Controls",
+    href: "/controls",
+    Icon: ShieldCheck,
+  },
+  {
+    id: "r:violations",
+    group: "Routes",
+    label: "Violations",
+    href: "/violations",
+    Icon: AlertOctagon,
+  },
+  {
+    id: "r:evidence",
+    group: "Routes",
+    label: "Evidence",
+    href: "/evidence",
+    Icon: FileSearch,
+  },
+  {
+    id: "r:automation",
+    group: "Routes",
+    label: "Workflows",
+    href: "/automation",
+    Icon: Zap,
+  },
+  {
+    id: "r:graph",
+    group: "Routes",
+    label: "Graph",
+    href: "/graph",
+    Icon: Network,
+  },
+  {
+    id: "r:audit-log",
+    group: "Routes",
+    label: "Audit log",
+    href: "/audit-log",
+    Icon: ActivityIcon,
+  },
+  {
+    id: "r:connectors",
+    group: "Routes",
+    label: "Connectors",
+    href: "/connectors",
+    Icon: Plug,
+  },
+  {
+    id: "r:frameworks",
+    group: "Routes",
+    label: "Frameworks",
+    href: "/frameworks",
+    Icon: BookOpen,
+  },
+  {
+    id: "r:crosswalk",
+    group: "Routes",
+    label: "Crosswalk",
+    href: "/crosswalk",
+    Icon: Layers,
+  },
+  {
+    id: "r:trust-center",
+    group: "Routes",
+    label: "Trust center",
+    href: "/trust-center",
+    Icon: Sparkles,
+  },
+  {
+    id: "r:agents",
+    group: "Routes",
+    label: "Agent API",
+    href: "/agents",
+    Icon: Bot,
+  },
 ];
 
 interface Props {
@@ -127,7 +199,9 @@ export function CommandPalette({ open, onOpenChange }: Props) {
     const lower = query.toLowerCase();
     return all
       .filter((item) =>
-        `${item.label} ${item.subtitle ?? ""} ${item.group}`.toLowerCase().includes(lower),
+        `${item.label} ${item.subtitle ?? ""} ${item.group}`
+          .toLowerCase()
+          .includes(lower),
       )
       .slice(0, 60);
   }, [controls, violations, evidence, workflows, query]);
@@ -189,7 +263,9 @@ export function CommandPalette({ open, onOpenChange }: Props) {
           </div>
           <div className="max-h-[60vh] overflow-auto p-2">
             {items.length === 0 && (
-              <div className="px-3 py-8 text-center text-sm text-muted">No matches.</div>
+              <div className="px-3 py-8 text-center text-sm text-muted">
+                No matches.
+              </div>
             )}
             {Array.from(grouped.entries()).map(([group, list]) => (
               <div key={group} className="grid gap-0.5 px-1 pb-2">
@@ -207,12 +283,22 @@ export function CommandPalette({ open, onOpenChange }: Props) {
                       onClick={() => go(item)}
                       className={[
                         "grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm",
-                        active ? "bg-ink text-white" : "text-ink hover:bg-slate-50",
+                        active
+                          ? "bg-ink text-white"
+                          : "text-ink hover:bg-slate-50",
                       ].join(" ")}
                     >
-                      <item.Icon className={active ? "h-4 w-4 text-brand-cyan" : "h-4 w-4 text-muted"} />
+                      <item.Icon
+                        className={
+                          active
+                            ? "h-4 w-4 text-brand-cyan"
+                            : "h-4 w-4 text-muted"
+                        }
+                      />
                       <span className="min-w-0">
-                        <span className="block truncate font-extrabold">{item.label}</span>
+                        <span className="block truncate font-extrabold">
+                          {item.label}
+                        </span>
                         {item.subtitle && (
                           <span
                             className={[
@@ -242,9 +328,18 @@ export function CommandPalette({ open, onOpenChange }: Props) {
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-line bg-slate-50 px-4 py-2 text-[11px] text-muted">
             <span>
-              <kbd className="rounded border border-line bg-white px-1.5 py-0.5 font-bold">↑↓</kbd> navigate{" "}
-              <kbd className="rounded border border-line bg-white px-1.5 py-0.5 font-bold">↵</kbd> open{" "}
-              <kbd className="rounded border border-line bg-white px-1.5 py-0.5 font-bold">esc</kbd> close
+              <kbd className="rounded border border-line bg-white px-1.5 py-0.5 font-bold">
+                ↑↓
+              </kbd>{" "}
+              navigate{" "}
+              <kbd className="rounded border border-line bg-white px-1.5 py-0.5 font-bold">
+                ↵
+              </kbd>{" "}
+              open{" "}
+              <kbd className="rounded border border-line bg-white px-1.5 py-0.5 font-bold">
+                esc
+              </kbd>{" "}
+              close
             </span>
             <span>{items.length} matches</span>
           </div>

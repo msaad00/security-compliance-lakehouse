@@ -1,4 +1,4 @@
-.PHONY: compile lint format-check diff-check test validate validate-json validate-generated pipeline dashboard api-smoke smoke ci web-install web-dev web-typecheck web-build web-clean web-ci docker-build helm-lint helm-template terraform-fmt terraform-validate deploy-check
+.PHONY: compile lint format-check diff-check test validate validate-json validate-generated pipeline dashboard api-smoke smoke ci web-install web-dev web-typecheck web-build web-clean web-ci docker-build helm-lint helm-template terraform-fmt terraform-validate deploy-check uv-sync uv-lock pre-commit-install pre-commit-run pip-audit npm-audit security
 
 test:
 	PYTHONPATH=src python -m pytest -q
@@ -83,3 +83,29 @@ terraform-validate:
 	terraform -chdir=deploy/eks-terraform validate
 
 deploy-check: helm-lint helm-template terraform-fmt terraform-validate
+
+# --- Supply-chain + commit hooks -------------------------------------------
+# uv is the recommended package manager (deterministic + locked install).
+# pip still works as a fallback when uv isn't installed.
+
+uv-sync:
+	uv sync --frozen --all-extras
+
+uv-lock:
+	uv lock
+
+pre-commit-install:
+	uv run pre-commit install
+	uv run pre-commit install --hook-type commit-msg
+
+pre-commit-run:
+	uv run pre-commit run --all-files
+
+pip-audit:
+	uv export --no-emit-project --format requirements-txt --no-hashes > /tmp/trustops-reqs.txt
+	uv run pip-audit --strict -r /tmp/trustops-reqs.txt
+
+npm-audit:
+	cd app/web && npm audit --omit=dev --audit-level=high
+
+security: pip-audit npm-audit pre-commit-run

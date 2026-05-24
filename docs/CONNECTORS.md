@@ -4,20 +4,20 @@ TrustOps should collect evidence with the smallest viable access boundary.
 
 ## Access Priority
 
-| Priority | Mode | Best for | Boundary |
-|---|---|---|---|
-| 1 | Existing security data lake read | Snowflake, ClickHouse, object storage, SIEM exports | read-only role |
-| 2 | Managed evidence objects | one-company rollout, local proof, starter deployments | dedicated schema/output directory |
-| 3 | Direct tool API read | source systems that are the evidence authority | scoped token or app installation |
+| Priority | Mode                             | Best for                                              | Boundary                          |
+| -------- | -------------------------------- | ----------------------------------------------------- | --------------------------------- |
+| 1        | Existing security data lake read | Snowflake, ClickHouse, object storage, SIEM exports   | read-only role                    |
+| 2        | Managed evidence objects         | one-company rollout, local proof, starter deployments | dedicated schema/output directory |
+| 3        | Direct tool API read             | source systems that are the evidence authority        | scoped token or app installation  |
 
 Avoid broad cloud permissions. Connectors should not need admin, delete, owner,
 or unrestricted write access to evaluate posture.
 
 ## Production Hero Paths
 
-| Store | Role | Connector |
-|---|---|---|
-| Snowflake | governed evidence, audit views, retention, RBAC | `snowflake-evidence-lake` |
+| Store      | Role                                                | Connector                   |
+| ---------- | --------------------------------------------------- | --------------------------- |
+| Snowflake  | governed evidence, audit views, retention, RBAC     | `snowflake-evidence-lake`   |
 | ClickHouse | telemetry, runtime events, trends, fast aggregation | `clickhouse-telemetry-lake` |
 
 ## Catalog
