@@ -6,15 +6,15 @@ snapshots understandable for both humans and agents.
 
 ## Out-Of-Box Views
 
-| View | Purpose |
-|---|---|
-| Executive posture | score, state, open violations, stale evidence, trend |
-| Control workbench | framework, control, owner, status, evidence coverage |
-| Violation queue | severity, asset, owner, source, evidence, raw hash |
-| Evidence room | evidence refs, source systems, collection time, snapshot hash |
-| Data model | assets, evidence, controls, tests, violations, snapshots |
-| Lake routing | Snowflake governed evidence, ClickHouse telemetry analytics |
-| Agent console | API routes, skills, allowed actions, snapshot controls |
+| View              | Purpose                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| Executive posture | score, state, open violations, stale evidence, trend          |
+| Control workbench | framework, control, owner, status, evidence coverage          |
+| Violation queue   | severity, asset, owner, source, evidence, raw hash            |
+| Evidence room     | evidence refs, source systems, collection time, snapshot hash |
+| Data model        | assets, evidence, controls, tests, violations, snapshots      |
+| Lake routing      | Snowflake governed evidence, ClickHouse telemetry analytics   |
+| Agent console     | API routes, skills, allowed actions, snapshot controls        |
 
 ## Interaction Patterns
 

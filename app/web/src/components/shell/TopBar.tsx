@@ -45,7 +45,9 @@ export function TopBar({ onRefresh, onSnapshot, onOpenPalette }: Props) {
         className="group flex flex-1 max-w-[640px] items-center gap-3 rounded-lg border border-[#27364a] bg-[#101926] py-2.5 pl-3.5 pr-2 text-left text-sm text-[#7d8ca3] hover:border-[#3b4d68]"
       >
         <Search className="h-4 w-4 text-[#5b6a7e]" />
-        <span className="flex-1 truncate">Search controls, evidence, owners, assets, workflows…</span>
+        <span className="flex-1 truncate">
+          Search controls, evidence, owners, assets, workflows…
+        </span>
         <kbd className="rounded border border-[#27364a] bg-[#0b1118] px-1.5 py-0.5 text-[10px] font-bold text-[#9aa9bc]">
           ⌘K
         </kbd>

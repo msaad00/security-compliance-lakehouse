@@ -4,16 +4,16 @@ This page is the product review index for the public repo.
 
 ## Product Experience
 
-| Artifact | Path |
-|---|---|
-| Interactive TrustOps console generator | `src/security_lakehouse/dashboard.py` |
-| Local console/API server | `src/security_lakehouse/server.py` |
-| Continuous assessment engine | `src/security_lakehouse/assessment.py` |
-| CLI entry point | `src/security_lakehouse/cli.py` |
-| Vendor diligence use case | `docs/USE_CASE_VENDOR_DILIGENCE.md` |
-| Console screenshot | `docs/images/trustops-console.png` |
-| Framework badge strip | `docs/images/trustops-framework-badges.svg` |
-| Individual framework SVG badges | `docs/images/frameworks/` |
+| Artifact                               | Path                                        |
+| -------------------------------------- | ------------------------------------------- |
+| Interactive TrustOps console generator | `src/security_lakehouse/dashboard.py`       |
+| Local console/API server               | `src/security_lakehouse/server.py`          |
+| Continuous assessment engine           | `src/security_lakehouse/assessment.py`      |
+| CLI entry point                        | `src/security_lakehouse/cli.py`             |
+| Vendor diligence use case              | `docs/USE_CASE_VENDOR_DILIGENCE.md`         |
+| Console screenshot                     | `docs/images/trustops-console.png`          |
+| Framework badge strip                  | `docs/images/trustops-framework-badges.svg` |
+| Individual framework SVG badges        | `docs/images/frameworks/`                   |
 
 Run locally:
 
@@ -30,59 +30,59 @@ http://127.0.0.1:8787/
 
 ## API Surfaces
 
-| Route | Purpose |
-|---|---|
+| Route                         | Purpose                                        |
+| ----------------------------- | ---------------------------------------------- |
 | `GET /api/v1/posture/current` | enveloped current posture and framework scores |
-| `GET /api/v1/violations` | paginated open control and asset violations |
-| `GET /api/v1/controls` | paginated control workbench data |
-| `GET /api/v1/evidence` | paginated normalized evidence facts |
-| `GET /api/v1/assets` | paginated asset risk queue |
-| `POST /api/v1/snapshots` | point-in-time assessment snapshot |
+| `GET /api/v1/violations`      | paginated open control and asset violations    |
+| `GET /api/v1/controls`        | paginated control workbench data               |
+| `GET /api/v1/evidence`        | paginated normalized evidence facts            |
+| `GET /api/v1/assets`          | paginated asset risk queue                     |
+| `POST /api/v1/snapshots`      | point-in-time assessment snapshot              |
 
 See [Human and Agent API](api/AGENT_API.md).
 
 ## Diagrams
 
-| Diagram | Path |
-|---|---|
-| Modular architecture | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Data model | [DATA_MODEL.md](DATA_MODEL.md) |
-| Dual security data lake | [dual-lakehouse.md](diagrams/dual-lakehouse.md) |
-| Evaluation lifecycle | [evaluation-lifecycle.md](diagrams/evaluation-lifecycle.md) |
-| Hosting model | [hosting.md](diagrams/hosting.md) |
-| ASCII system map | [ascii-system-map.md](diagrams/ascii-system-map.md) |
-| SVG architecture visual | [trustops-assessment-architecture.svg](images/trustops-assessment-architecture.svg) |
-| SVG framework badge visual | [trustops-framework-badges.svg](images/trustops-framework-badges.svg) |
+| Diagram                    | Path                                                                                |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| Modular architecture       | [ARCHITECTURE.md](ARCHITECTURE.md)                                                  |
+| Data model                 | [DATA_MODEL.md](DATA_MODEL.md)                                                      |
+| Dual security data lake    | [dual-lakehouse.md](diagrams/dual-lakehouse.md)                                     |
+| Evaluation lifecycle       | [evaluation-lifecycle.md](diagrams/evaluation-lifecycle.md)                         |
+| Hosting model              | [hosting.md](diagrams/hosting.md)                                                   |
+| ASCII system map           | [ascii-system-map.md](diagrams/ascii-system-map.md)                                 |
+| SVG architecture visual    | [trustops-assessment-architecture.svg](images/trustops-assessment-architecture.svg) |
+| SVG framework badge visual | [trustops-framework-badges.svg](images/trustops-framework-badges.svg)               |
 
 ## Data And Schema
 
-| Artifact | Path |
-|---|---|
-| Raw evidence schema | `data/schemas/raw-security-event.schema.json` |
-| Normalized event schema | `data/schemas/normalized-event.schema.json` |
-| Current posture schema | `data/schemas/current-posture.schema.json` |
-| Violation schema | `data/schemas/violation.schema.json` |
-| Framework registry | `frameworks/registry.json` |
-| Implemented control catalog | `controls/catalog.json` |
-| Control mapping | `mappings/control_map.json` |
+| Artifact                    | Path                                          |
+| --------------------------- | --------------------------------------------- |
+| Raw evidence schema         | `data/schemas/raw-security-event.schema.json` |
+| Normalized event schema     | `data/schemas/normalized-event.schema.json`   |
+| Current posture schema      | `data/schemas/current-posture.schema.json`    |
+| Violation schema            | `data/schemas/violation.schema.json`          |
+| Framework registry          | `frameworks/registry.json`                    |
+| Implemented control catalog | `controls/catalog.json`                       |
+| Control mapping             | `mappings/control_map.json`                   |
 
 ## Security Data Lake Backends
 
-| Backend | Role | Path |
-|---|---|---|
-| Snowflake | governed evidence and audit views | `deploy/snowflake/schema.sql` |
-| ClickHouse | high-volume telemetry and trend analytics | `deploy/clickhouse/schema.sql` |
-| Local | developer/internal demo mode | `build/lakehouse`, generated by `make smoke` |
+| Backend    | Role                                      | Path                                         |
+| ---------- | ----------------------------------------- | -------------------------------------------- |
+| Snowflake  | governed evidence and audit views         | `deploy/snowflake/schema.sql`                |
+| ClickHouse | high-volume telemetry and trend analytics | `deploy/clickhouse/schema.sql`               |
+| Local      | developer/internal demo mode              | `build/lakehouse`, generated by `make smoke` |
 
 ## Agent Skills
 
-| Skill | Path |
-|---|---|
+| Skill                       | Path                                                |
+| --------------------------- | --------------------------------------------------- |
 | Security operations analyst | `agent-skills/security-operations-analyst/SKILL.md` |
-| SOC 2 control analyst | `agent-skills/soc2-control-analyst/SKILL.md` |
-| PCI DSS analyst | `agent-skills/pci-dss-analyst/SKILL.md` |
-| ISO/IEC 27001 ISMS analyst | `agent-skills/iso27001-isms-analyst/SKILL.md` |
-| AI governance analyst | `agent-skills/ai-governance-analyst/SKILL.md` |
+| SOC 2 control analyst       | `agent-skills/soc2-control-analyst/SKILL.md`        |
+| PCI DSS analyst             | `agent-skills/pci-dss-analyst/SKILL.md`             |
+| ISO/IEC 27001 ISMS analyst  | `agent-skills/iso27001-isms-analyst/SKILL.md`       |
+| AI governance analyst       | `agent-skills/ai-governance-analyst/SKILL.md`       |
 
 Each framework-specific skill is guardrailed to use local evidence and official
 source references, and to avoid invented controls or certification claims.

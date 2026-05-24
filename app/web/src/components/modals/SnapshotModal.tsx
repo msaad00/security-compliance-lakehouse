@@ -25,9 +25,12 @@ const REASONS = [
 export function SnapshotModal({ open, onClose, onToast }: Props) {
   const snapshots = useSnapshots();
   const create = useSnapshotMutation();
-  const [reason, setReason] = useState<(typeof REASONS)[number]>("audit_request");
+  const [reason, setReason] =
+    useState<(typeof REASONS)[number]>("audit_request");
 
-  const last = (snapshots.data ?? [])[snapshots.data?.length ? snapshots.data.length - 1 : 0];
+  const last = (snapshots.data ?? [])[
+    snapshots.data?.length ? snapshots.data.length - 1 : 0
+  ];
 
   const submit = async () => {
     try {
@@ -50,9 +53,17 @@ export function SnapshotModal({ open, onClose, onToast }: Props) {
           <Button variant="default" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={submit} disabled={create.isPending}>
-            {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />} Freeze
-            snapshot
+          <Button
+            variant="primary"
+            onClick={submit}
+            disabled={create.isPending}
+          >
+            {create.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}{" "}
+            Freeze snapshot
           </Button>
         </div>
       }
@@ -62,7 +73,9 @@ export function SnapshotModal({ open, onClose, onToast }: Props) {
           Reason
           <select
             value={reason}
-            onChange={(e) => setReason(e.target.value as (typeof REASONS)[number])}
+            onChange={(e) =>
+              setReason(e.target.value as (typeof REASONS)[number])
+            }
             className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-extrabold text-ink focus:outline-none focus:ring-1 focus:ring-brand"
           >
             {REASONS.map((r) => (
@@ -73,23 +86,36 @@ export function SnapshotModal({ open, onClose, onToast }: Props) {
           </select>
         </label>
         <div className="rounded-xl border border-line bg-slate-50/60 p-3">
-          <div className="text-xs font-black uppercase tracking-wide text-muted">Latest snapshot</div>
+          <div className="text-xs font-black uppercase tracking-wide text-muted">
+            Latest snapshot
+          </div>
           {last ? (
             <div className="mt-1.5 grid gap-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="info">{last.reason}</Badge>
                 <Badge>{last.evaluated_at?.slice(0, 19) ?? "—"}</Badge>
-                <Badge tone={last.posture_score && last.posture_score >= 80 ? "ready" : "attention"}>
+                <Badge
+                  tone={
+                    last.posture_score && last.posture_score >= 80
+                      ? "ready"
+                      : "attention"
+                  }
+                >
                   posture {Math.round(Number(last.posture_score ?? 0))}%
                 </Badge>
               </div>
-              <code className="break-all text-xs text-ink">{last.snapshot_path}</code>
+              <code className="break-all text-xs text-ink">
+                {last.snapshot_path}
+              </code>
               <div className="text-xs text-muted">
-                open {last.open_violation_count ?? 0} · critical {last.critical_violation_count ?? 0}
+                open {last.open_violation_count ?? 0} · critical{" "}
+                {last.critical_violation_count ?? 0}
               </div>
             </div>
           ) : (
-            <div className="mt-1.5 text-xs text-muted">No snapshots in the lake yet.</div>
+            <div className="mt-1.5 text-xs text-muted">
+              No snapshots in the lake yet.
+            </div>
           )}
         </div>
       </div>

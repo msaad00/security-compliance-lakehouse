@@ -5,7 +5,10 @@ import { LayoutTemplate, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { WORKFLOW_TEMPLATES, type WorkflowTemplate } from "@/lib/workflow/templates";
+import {
+  WORKFLOW_TEMPLATES,
+  type WorkflowTemplate,
+} from "@/lib/workflow/templates";
 
 interface Props {
   open: boolean;
@@ -14,7 +17,9 @@ interface Props {
 }
 
 export function TemplateGallery({ open, onClose, onPick }: Props) {
-  const [selected, setSelected] = useState<string>(WORKFLOW_TEMPLATES[0]?.id ?? "");
+  const [selected, setSelected] = useState<string>(
+    WORKFLOW_TEMPLATES[0]?.id ?? "",
+  );
   const active =
     WORKFLOW_TEMPLATES.find((t) => t.id === selected) ?? WORKFLOW_TEMPLATES[0];
 
@@ -37,7 +42,8 @@ export function TemplateGallery({ open, onClose, onPick }: Props) {
                 onClose();
               }}
             >
-              <LayoutTemplate className="h-4 w-4" /> Load &quot;{active.name}&quot;
+              <LayoutTemplate className="h-4 w-4" /> Load &quot;{active.name}
+              &quot;
             </Button>
           )}
         </div>
@@ -64,7 +70,9 @@ export function TemplateGallery({ open, onClose, onPick }: Props) {
         {active && (
           <div className="grid gap-3 rounded-xl border border-line bg-slate-50/60 p-3 text-sm">
             <div>
-              <div className="text-xs font-black uppercase tracking-wide text-muted">Name</div>
+              <div className="text-xs font-black uppercase tracking-wide text-muted">
+                Name
+              </div>
               <div className="font-black text-ink">{active.name}</div>
             </div>
             <div>
@@ -84,13 +92,21 @@ export function TemplateGallery({ open, onClose, onPick }: Props) {
               </div>
               <div className="mt-1 grid gap-1 font-mono text-[11px] text-ink">
                 {active.nodes.map((node) => (
-                  <div key={node.id} className="rounded border border-line bg-white px-2 py-1">
-                    <span className="text-muted">{node.id}</span> → {node.node_type}
+                  <div
+                    key={node.id}
+                    className="rounded border border-line bg-white px-2 py-1"
+                  >
+                    <span className="text-muted">{node.id}</span> →{" "}
+                    {node.node_type}
                   </div>
                 ))}
                 {active.edges.map((edge, idx) => (
-                  <div key={idx} className="rounded border border-line bg-white px-2 py-1 text-muted">
-                    {edge.source} ──{edge.condition ?? "always"}──▶ {edge.target}
+                  <div
+                    key={idx}
+                    className="rounded border border-line bg-white px-2 py-1 text-muted"
+                  >
+                    {edge.source} ──{edge.condition ?? "always"}──▶{" "}
+                    {edge.target}
                   </div>
                 ))}
               </div>

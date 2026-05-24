@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { Bot, ClipboardCopy, Loader2, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuditorMode } from "@/lib/state/auditor";
 
@@ -27,16 +32,67 @@ interface RouteSpec {
 }
 
 const ROUTES: RouteSpec[] = [
-  { method: "GET", path: "/api/v1/healthz", description: "Server liveness envelope.", scope: "posture" },
-  { method: "GET", path: "/api/v1/posture/current", description: "Full assessment posture + violations + frameworks.", scope: "posture" },
-  { method: "GET", path: "/api/v1/control-tests?result=fail&limit=10", description: "Paginated control test results with confidence + freshness.", scope: "controls" },
-  { method: "GET", path: "/api/v1/controls?sort=-risk_score", description: "Sortable control posture catalog.", scope: "controls" },
-  { method: "GET", path: "/api/v1/violations?severity=critical,high", description: "Filterable open control failures.", scope: "controls" },
-  { method: "GET", path: "/api/v1/evidence?control_ids=SOC2-CC6.1", description: "Filterable silver normalized events.", scope: "evidence" },
-  { method: "GET", path: "/api/v1/assets?sort=-risk_score", description: "Sortable asset risk roll-up.", scope: "assets" },
-  { method: "GET", path: "/api/v1/snapshots", description: "Point-in-time snapshot list.", scope: "snapshots" },
-  { method: "POST", path: "/api/v1/snapshots", description: "Freeze a snapshot.", scope: "snapshots", body_example: { reason: "audit_request" } },
-  { method: "GET", path: "/api/connectors", description: "Connector registry joined with state + last probe.", scope: "controls" },
+  {
+    method: "GET",
+    path: "/api/v1/healthz",
+    description: "Server liveness envelope.",
+    scope: "posture",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/posture/current",
+    description: "Full assessment posture + violations + frameworks.",
+    scope: "posture",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/control-tests?result=fail&limit=10",
+    description: "Paginated control test results with confidence + freshness.",
+    scope: "controls",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/controls?sort=-risk_score",
+    description: "Sortable control posture catalog.",
+    scope: "controls",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/violations?severity=critical,high",
+    description: "Filterable open control failures.",
+    scope: "controls",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/evidence?control_ids=SOC2-CC6.1",
+    description: "Filterable silver normalized events.",
+    scope: "evidence",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/assets?sort=-risk_score",
+    description: "Sortable asset risk roll-up.",
+    scope: "assets",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/snapshots",
+    description: "Point-in-time snapshot list.",
+    scope: "snapshots",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/snapshots",
+    description: "Freeze a snapshot.",
+    scope: "snapshots",
+    body_example: { reason: "audit_request" },
+  },
+  {
+    method: "GET",
+    path: "/api/connectors",
+    description: "Connector registry joined with state + last probe.",
+    scope: "controls",
+  },
   {
     method: "POST",
     path: "/api/connectors/{id}/probe",
@@ -45,30 +101,75 @@ const ROUTES: RouteSpec[] = [
     path_params: [{ name: "id", placeholder: "github-security" }],
     body_example: {},
   },
-  { method: "GET", path: "/api/frameworks", description: "Framework registry + provenance + coverage.", scope: "controls" },
-  { method: "GET", path: "/api/workflows", description: "Workflow list (latest version per id).", scope: "workflows" },
-  { method: "GET", path: "/api/workflows/actions", description: "Action library with input/output schemas.", scope: "workflows" },
+  {
+    method: "GET",
+    path: "/api/frameworks",
+    description: "Framework registry + provenance + coverage.",
+    scope: "controls",
+  },
+  {
+    method: "GET",
+    path: "/api/workflows",
+    description: "Workflow list (latest version per id).",
+    scope: "workflows",
+  },
+  {
+    method: "GET",
+    path: "/api/workflows/actions",
+    description: "Action library with input/output schemas.",
+    scope: "workflows",
+  },
   {
     method: "POST",
     path: "/api/workflows/actions/run",
     description: "Execute a single action against the lake.",
     scope: "workflows",
-    body_example: { node_type: "check.evidence_exists", params: { control_id: "SOC2-CC6.1", minimum: 1 } },
+    body_example: {
+      node_type: "check.evidence_exists",
+      params: { control_id: "SOC2-CC6.1", minimum: 1 },
+    },
   },
-  { method: "GET", path: "/api/trust-shares", description: "List active trust-share tokens.", scope: "trust" },
+  {
+    method: "GET",
+    path: "/api/trust-shares",
+    description: "List active trust-share tokens.",
+    scope: "trust",
+  },
   {
     method: "POST",
     path: "/api/trust-shares",
     description: "Issue a new auditor share (returns raw token once).",
     scope: "trust",
-    body_example: { role: "auditor", scope: "posture_full", expires_in_hours: 24 },
+    body_example: {
+      role: "auditor",
+      scope: "posture_full",
+      expires_in_hours: 24,
+    },
   },
-  { method: "GET", path: "/api/audit-log", description: "Unified activity stream across every append-only log.", scope: "audit" },
-  { method: "GET", path: "/api/graph", description: "Framework → control → evidence → asset graph.", scope: "graph" },
-  { method: "GET", path: "/api/crosswalk", description: "Framework × framework cross-mapping matrix.", scope: "graph" },
+  {
+    method: "GET",
+    path: "/api/audit-log",
+    description: "Unified activity stream across every append-only log.",
+    scope: "audit",
+  },
+  {
+    method: "GET",
+    path: "/api/graph",
+    description: "Framework → control → evidence → asset graph.",
+    scope: "graph",
+  },
+  {
+    method: "GET",
+    path: "/api/crosswalk",
+    description: "Framework × framework cross-mapping matrix.",
+    scope: "graph",
+  },
 ];
 
-const SCOPE_TONE: Record<RouteSpec["scope"], "ready" | "info" | "attention" | "critical" | "default"> = {
+const SCOPE_TONE: Record<
+  RouteSpec["scope"],
+  "ready" | "info" | "attention" | "critical" | "default"
+> = {
   posture: "info",
   controls: "ready",
   evidence: "info",
@@ -89,7 +190,12 @@ function expandPath(route: RouteSpec, params: Record<string, string>): string {
   return path;
 }
 
-function curlFor(route: RouteSpec, path: string, body: string, role: string): string {
+function curlFor(
+  route: RouteSpec,
+  path: string,
+  body: string,
+  role: string,
+): string {
   const lines: string[] = [`curl -s -X ${route.method} \\`];
   if (role) lines.push(`  -H 'X-Trust-Role: ${role}' \\`);
   if (route.method === "POST") {
@@ -116,8 +222,14 @@ export default function AgentsPage() {
     window.setTimeout(() => setToast(null), 3200);
   };
 
-  const path = useMemo(() => expandPath(selected, pathParams), [selected, pathParams]);
-  const curl = useMemo(() => curlFor(selected, path, body, role), [selected, path, body, role]);
+  const path = useMemo(
+    () => expandPath(selected, pathParams),
+    [selected, pathParams],
+  );
+  const curl = useMemo(
+    () => curlFor(selected, path, body, role),
+    [selected, path, body, role],
+  );
 
   const execute = async () => {
     setBusy(true);
@@ -128,7 +240,9 @@ export default function AgentsPage() {
         method: selected.method,
         headers: {
           ...(role ? { "X-Trust-Role": role } : {}),
-          ...(selected.method === "POST" ? { "content-type": "application/json" } : {}),
+          ...(selected.method === "POST"
+            ? { "content-type": "application/json" }
+            : {}),
         },
       };
       if (selected.method === "POST") init.body = body || "{}";
@@ -159,7 +273,9 @@ export default function AgentsPage() {
   const selectRoute = (route: RouteSpec) => {
     setSelected(route);
     setPathParams({});
-    setBody(route.body_example ? JSON.stringify(route.body_example, null, 2) : "");
+    setBody(
+      route.body_example ? JSON.stringify(route.body_example, null, 2) : "",
+    );
     setResponse(null);
     setStatus(null);
   };
@@ -196,7 +312,9 @@ export default function AgentsPage() {
                     : "text-slate-700 hover:bg-slate-50",
                 ].join(" ")}
               >
-                <Badge tone={route.method === "POST" ? "critical" : "ready"}>{route.method}</Badge>
+                <Badge tone={route.method === "POST" ? "critical" : "ready"}>
+                  {route.method}
+                </Badge>
                 <code className="truncate">{route.path}</code>
               </button>
             ))}
@@ -207,20 +325,32 @@ export default function AgentsPage() {
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Badge tone={selected.method === "POST" ? "critical" : "ready"}>{selected.method}</Badge>
+                <Badge tone={selected.method === "POST" ? "critical" : "ready"}>
+                  {selected.method}
+                </Badge>
                 <code className="text-sm text-ink">{selected.path}</code>
-                <Badge tone={SCOPE_TONE[selected.scope]}>{selected.scope}</Badge>
+                <Badge tone={SCOPE_TONE[selected.scope]}>
+                  {selected.scope}
+                </Badge>
               </CardTitle>
               <CardDescription>{selected.description}</CardDescription>
             </CardHeader>
             <div className="grid gap-3 p-5 pt-0">
               {(selected.path_params ?? []).map((p) => (
-                <label key={p.name} className="grid gap-1 text-xs font-black uppercase tracking-wide text-muted">
+                <label
+                  key={p.name}
+                  className="grid gap-1 text-xs font-black uppercase tracking-wide text-muted"
+                >
                   {p.name}
                   <input
                     value={pathParams[p.name] ?? ""}
                     placeholder={p.placeholder}
-                    onChange={(e) => setPathParams((prev) => ({ ...prev, [p.name]: e.target.value }))}
+                    onChange={(e) =>
+                      setPathParams((prev) => ({
+                        ...prev,
+                        [p.name]: e.target.value,
+                      }))
+                    }
                     className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-brand"
                   />
                 </label>
@@ -247,7 +377,12 @@ export default function AgentsPage() {
               )}
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="primary" onClick={execute} disabled={busy}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Run
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}{" "}
+                  Run
                 </Button>
                 <Button variant="default" onClick={() => copy(curl)}>
                   <ClipboardCopy className="h-4 w-4" /> Copy curl
@@ -259,9 +394,13 @@ export default function AgentsPage() {
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle>curl</CardTitle>
-              <CardDescription>Reproduce this call from any shell.</CardDescription>
+              <CardDescription>
+                Reproduce this call from any shell.
+              </CardDescription>
             </CardHeader>
-            <pre className="overflow-auto bg-slate-950 p-4 text-xs text-slate-100">{curl}</pre>
+            <pre className="overflow-auto bg-slate-950 p-4 text-xs text-slate-100">
+              {curl}
+            </pre>
           </Card>
 
           <Card className="overflow-hidden">
@@ -269,17 +408,26 @@ export default function AgentsPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle>Response</CardTitle>
                 {status !== null && (
-                  <Badge tone={status < 300 ? "ready" : status < 500 ? "attention" : "critical"}>
+                  <Badge
+                    tone={
+                      status < 300
+                        ? "ready"
+                        : status < 500
+                          ? "attention"
+                          : "critical"
+                    }
+                  >
                     {status}
                   </Badge>
                 )}
               </div>
               <CardDescription>
-                Response body is identical to what an agent would see hitting the same endpoint.
+                Response body is identical to what an agent would see hitting
+                the same endpoint.
               </CardDescription>
             </CardHeader>
             <pre className="max-h-[420px] overflow-auto bg-slate-50 p-4 text-xs text-ink">
-{response ?? "Click Run to fire the request."}
+              {response ?? "Click Run to fire the request."}
             </pre>
           </Card>
         </div>

@@ -24,10 +24,13 @@ export default function DashboardPage() {
           <div className="text-[12px] font-black uppercase tracking-wider text-brand">
             Dashboard
           </div>
-          <h1 className="mt-1 text-3xl font-black text-ink">Assessment workbench</h1>
+          <h1 className="mt-1 text-3xl font-black text-ink">
+            Assessment workbench
+          </h1>
           <p className="mt-2 max-w-[780px] text-sm text-muted">
-            Current assessment computed from normalized evidence, control tests, source health,
-            and signed snapshots. Every value here is deterministic over the gold layer.
+            Current assessment computed from normalized evidence, control tests,
+            source health, and signed snapshots. Every value here is
+            deterministic over the gold layer.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -6,7 +6,10 @@ import { useCallback, useEffect, useState } from "react";
  * Tiny localStorage-backed hook so sidebar collapse + read-notification state
  * survive reloads. Falls back to defaults during SSR / hydration.
  */
-export function usePersistentState<T>(key: string, initial: T): [T, (next: T) => void] {
+export function usePersistentState<T>(
+  key: string,
+  initial: T,
+): [T, (next: T) => void] {
   const [value, setValue] = useState<T>(initial);
 
   useEffect(() => {

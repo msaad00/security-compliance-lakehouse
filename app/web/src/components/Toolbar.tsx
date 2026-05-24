@@ -16,7 +16,14 @@ interface Props {
   placeholder?: string;
 }
 
-const SEVERITIES: Array<Severity | "all"> = ["all", "critical", "high", "medium", "low", "info"];
+const SEVERITIES: Array<Severity | "all"> = [
+  "all",
+  "critical",
+  "high",
+  "medium",
+  "low",
+  "info",
+];
 
 export function Toolbar({ filters, frameworks, onChange, placeholder }: Props) {
   return (
@@ -45,7 +52,10 @@ export function Toolbar({ filters, frameworks, onChange, placeholder }: Props) {
       <select
         value={filters.severity}
         onChange={(e) =>
-          onChange({ ...filters, severity: e.target.value as ToolbarFilters["severity"] })
+          onChange({
+            ...filters,
+            severity: e.target.value as ToolbarFilters["severity"],
+          })
         }
         className="rounded-lg border border-line bg-white px-3 py-2.5 text-sm font-extrabold focus:outline-none focus:ring-1 focus:ring-brand"
       >

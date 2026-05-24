@@ -16,10 +16,22 @@ dev = [
     "jsonschema>=4.23",
     "pytest>=8.0",
     "ruff>=0.8.0",
+    # supply-chain scan + pre-commit driver
+    "pip-audit>=2.7",
+    "pre-commit>=3.7",
+    "commitizen>=3.27",
 ]
 analytics = [
     "duckdb>=1.0",
 ]
+
+# Conventional commits — used by the pre-commit `commitizen` hook to
+# validate every commit message format.
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+version_files = ["pyproject.toml:version"]
+tag_format = "v$version"
 
 [project.scripts]
 security-lakehouse = "security_lakehouse.cli:main"

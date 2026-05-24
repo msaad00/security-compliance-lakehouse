@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { ActionSpec } from "@/lib/api/types";
 
 interface Props {
@@ -31,7 +36,9 @@ export function ActionPalette({ catalog, onAdd }: Props) {
     if (!query) return catalog;
     const lower = query.toLowerCase();
     return catalog.filter((a) =>
-      `${a.label} ${a.description} ${a.node_type}`.toLowerCase().includes(lower),
+      `${a.label} ${a.description} ${a.node_type}`
+        .toLowerCase()
+        .includes(lower),
     );
   }, [catalog, query]);
 
@@ -42,7 +49,9 @@ export function ActionPalette({ catalog, onAdd }: Props) {
     <Card className="overflow-hidden">
       <CardHeader>
         <CardTitle>Action library</CardTitle>
-        <CardDescription>Click any action to drop it into the canvas.</CardDescription>
+        <CardDescription>
+          Click any action to drop it into the canvas.
+        </CardDescription>
       </CardHeader>
       <div className="px-5 pb-3">
         <div className="relative">

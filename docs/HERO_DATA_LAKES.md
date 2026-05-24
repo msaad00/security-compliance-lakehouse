@@ -2,9 +2,9 @@
 
 This project tells a two-backend security analytics story:
 
-| Backend | Best fit | Security value |
-|---|---|---|
-| Snowflake | governed enterprise evidence lake | auditor sharing, retention, RBAC, data clean rooms, cross-team reporting |
+| Backend    | Best fit                             | Security value                                                              |
+| ---------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| Snowflake  | governed enterprise evidence lake    | auditor sharing, retention, RBAC, data clean rooms, cross-team reporting    |
 | ClickHouse | high-volume telemetry analytics lake | fast runtime/security event analytics, detections, dashboards, aggregations |
 
 The local pipeline remains the source of truth for the demo. It writes replayable

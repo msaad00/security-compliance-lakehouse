@@ -85,17 +85,17 @@ source evidence
 
 ## Current Implementation
 
-| Step | Current artifact |
-|---|---|
-| Source evidence | `data/raw/security_events.jsonl` |
-| Validation | `src/security_lakehouse/validation.py` |
-| Normalization | `src/security_lakehouse/pipeline.py` |
-| Control mapping | `mappings/control_map.json` |
-| Assessment engine | `src/security_lakehouse/assessment.py` |
-| Current posture | `build/lakehouse/gold/current_posture.json` |
-| Violations | `security-lakehouse assessment violations --lake build/lakehouse` |
-| Snapshot | `security-lakehouse assessment snapshot --lake build/lakehouse --reason ...` |
-| API | `src/security_lakehouse/server.py` |
+| Step              | Current artifact                                                             |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Source evidence   | `data/raw/security_events.jsonl`                                             |
+| Validation        | `src/security_lakehouse/validation.py`                                       |
+| Normalization     | `src/security_lakehouse/pipeline.py`                                         |
+| Control mapping   | `mappings/control_map.json`                                                  |
+| Assessment engine | `src/security_lakehouse/assessment.py`                                       |
+| Current posture   | `build/lakehouse/gold/current_posture.json`                                  |
+| Violations        | `security-lakehouse assessment violations --lake build/lakehouse`            |
+| Snapshot          | `security-lakehouse assessment snapshot --lake build/lakehouse --reason ...` |
+| API               | `src/security_lakehouse/server.py`                                           |
 
 ## Connector Contract
 

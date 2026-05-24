@@ -1,10 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardCopy, Loader2, Share2, ShieldCheck, XCircle } from "lucide-react";
+import {
+  ClipboardCopy,
+  Loader2,
+  Share2,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import {
   useCreateTrustShare,
@@ -63,7 +74,8 @@ export default function TrustCenterPage() {
         description="Issue scoped, expiring, revocable share tokens for external reviewers. The server stores only the hash — the raw token shows once, here, and never again. Token holders see the workbench through the auditor lens (read-only, owners and remediation notes redacted)."
         actions={
           <Badge tone="info">
-            <ShieldCheck className="mr-1 h-3 w-3" /> {posture.data?.assessment_hash?.slice(0, 12) ?? "—"}…
+            <ShieldCheck className="mr-1 h-3 w-3" />{" "}
+            {posture.data?.assessment_hash?.slice(0, 12) ?? "—"}…
           </Badge>
         }
       />
@@ -72,8 +84,9 @@ export default function TrustCenterPage() {
         <CardHeader>
           <CardTitle>Issue a new share</CardTitle>
           <CardDescription>
-            Auditor role · scope <code>posture_full</code>. Token expires automatically; you can also revoke it
-            below at any time. PR 7 adds per-framework scoping.
+            Auditor role · scope <code>posture_full</code>. Token expires
+            automatically; you can also revoke it below at any time. PR 7 adds
+            per-framework scoping.
           </CardDescription>
         </CardHeader>
         <div className="grid gap-3 p-5 pt-0 sm:grid-cols-[200px_auto_1fr]">
@@ -87,20 +100,36 @@ export default function TrustCenterPage() {
             >
               {HOURS_OPTIONS.map((h) => (
                 <option key={h} value={h}>
-                  {h === 1 ? "1 hour" : h < 24 ? `${h} hours` : `${h / 24} day${h === 24 ? "" : "s"}`}
+                  {h === 1
+                    ? "1 hour"
+                    : h < 24
+                      ? `${h} hours`
+                      : `${h / 24} day${h === 24 ? "" : "s"}`}
                 </option>
               ))}
             </select>
           </label>
-          <Button variant="primary" onClick={issue} disabled={createShare.isPending || auditor}>
-            {createShare.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}{" "}
+          <Button
+            variant="primary"
+            onClick={issue}
+            disabled={createShare.isPending || auditor}
+          >
+            {createShare.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}{" "}
             Issue share
           </Button>
           {createdToken && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
               <div className="flex items-center justify-between gap-2 font-black">
                 <span>New token (shown once)</span>
-                <Button variant="ghost" size="sm" onClick={() => copy(createdToken.token ?? "")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copy(createdToken.token ?? "")}
+                >
                   <ClipboardCopy className="h-3 w-3" /> Copy
                 </Button>
               </div>
@@ -108,8 +137,9 @@ export default function TrustCenterPage() {
                 {createdToken.token}
               </code>
               <div className="mt-1">
-                share_id <code className="text-ink">{createdToken.share_id}</code> · expires{" "}
-                {createdToken.expires_at}
+                share_id{" "}
+                <code className="text-ink">{createdToken.share_id}</code> ·
+                expires {createdToken.expires_at}
               </div>
             </div>
           )}
@@ -120,8 +150,8 @@ export default function TrustCenterPage() {
         <CardHeader>
           <CardTitle>{(shares.data ?? []).length} active shares</CardTitle>
           <CardDescription>
-            Revoking a share appends a revocation record; future probes with that token fail and the share drops
-            from this list.
+            Revoking a share appends a revocation record; future probes with
+            that token fail and the share drops from this list.
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
@@ -144,11 +174,14 @@ export default function TrustCenterPage() {
                   <Badge>{share.scope}</Badge>
                 </div>
                 <div className="mt-1 text-xs text-muted">
-                  created by <b className="text-ink">{share.created_by}</b> at {share.created_at} · expires{" "}
-                  {share.expires_at}
+                  created by <b className="text-ink">{share.created_by}</b> at{" "}
+                  {share.created_at} · expires {share.expires_at}
                 </div>
                 <div className="mt-1 text-[10px] text-muted">
-                  hash <code className="text-ink">{share.token_sha256.slice(0, 24)}…</code>
+                  hash{" "}
+                  <code className="text-ink">
+                    {share.token_sha256.slice(0, 24)}…
+                  </code>
                 </div>
               </div>
               <Button

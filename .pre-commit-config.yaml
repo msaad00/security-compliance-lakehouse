@@ -1,0 +1,63 @@
+# Pre-commit hooks run before every commit and as a CI gate (see the
+# `pre-commit` job in .github/workflows/ci.yml). Install once:
+#
+#   pip install pre-commit          # or: uv tool install pre-commit
+#   pre-commit install              # writes .git/hooks/pre-commit
+#   pre-commit install --hook-type commit-msg   # enables commitizen msg check
+#
+# Run against the whole tree:
+#
+#   pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^deploy/helm/.*/templates/
+      - id: check-json
+        exclude: ^app/web/.next/
+      - id: detect-private-key
+      - id: trailing-whitespace
+        exclude: \.svg$
+      - id: end-of-file-fixer
+        exclude: \.svg$
+      - id: check-added-large-files
+        args: [--maxkb=512]
+        exclude: ^app/web/package-lock\.json$|^uv\.lock$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.3
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [ts, tsx, json, markdown, css]
+        # YAML deliberately left out — prettier cannot parse Helm Go templates.
+        # Helm rendering is validated by `make helm-lint` + `make helm-template`.
+        exclude: |
+          (?x)^(
+            app/web/package-lock\.json|
+            app/web/\.next/.*|
+            uv\.lock|
+            src/security_lakehouse/web/dist/.*|
+            deploy/helm/.*
+          )$
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.1.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]

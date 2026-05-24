@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import {
   GraphCanvas,
@@ -23,7 +28,12 @@ import {
 import { useComplianceGraph } from "@/lib/api/hooks";
 import type { GraphNode, GraphNodeKind } from "@/lib/api/types";
 
-const ALL_KINDS: GraphNodeKind[] = ["framework", "control", "evidence_type", "asset"];
+const ALL_KINDS: GraphNodeKind[] = [
+  "framework",
+  "control",
+  "evidence_type",
+  "asset",
+];
 
 const KIND_LABEL: Record<GraphNodeKind, string> = {
   framework: "Frameworks",
@@ -32,7 +42,10 @@ const KIND_LABEL: Record<GraphNodeKind, string> = {
   asset: "Assets",
 };
 
-const KIND_TONE: Record<GraphNodeKind, "info" | "ready" | "attention" | "critical"> = {
+const KIND_TONE: Record<
+  GraphNodeKind,
+  "info" | "ready" | "attention" | "critical"
+> = {
   framework: "info",
   control: "ready",
   evidence_type: "attention",
@@ -65,7 +78,9 @@ function downloadBlob(filename: string, blob: Blob) {
 
 export default function GraphPage() {
   const graph = useComplianceGraph();
-  const [visible, setVisible] = useState<Set<GraphNodeKind>>(new Set(ALL_KINDS));
+  const [visible, setVisible] = useState<Set<GraphNodeKind>>(
+    new Set(ALL_KINDS),
+  );
   const [layout, setLayout] = useState<LayoutDir>("LR");
   const [filterOwner, setFilterOwner] = useState("");
   const [filterEnvironment, setFilterEnvironment] = useState("");
@@ -79,20 +94,29 @@ export default function GraphPage() {
 
   const data = graph.data;
   const counts = useMemo(
-    () => data?.counts ?? { framework: 0, control: 0, evidence_type: 0, asset: 0 },
+    () =>
+      data?.counts ?? { framework: 0, control: 0, evidence_type: 0, asset: 0 },
     [data],
   );
 
   // Facet options derived from graph data so the rail only shows real values.
   const owners = useMemo(
     () =>
-      Array.from(new Set((data?.nodes ?? []).map((n) => n.owner).filter(Boolean) as string[])).sort(),
+      Array.from(
+        new Set(
+          (data?.nodes ?? []).map((n) => n.owner).filter(Boolean) as string[],
+        ),
+      ).sort(),
     [data],
   );
   const environments = useMemo(
     () =>
       Array.from(
-        new Set((data?.nodes ?? []).map((n) => n.environment).filter(Boolean) as string[]),
+        new Set(
+          (data?.nodes ?? [])
+            .map((n) => n.environment)
+            .filter(Boolean) as string[],
+        ),
       ).sort(),
     [data],
   );
@@ -142,7 +166,9 @@ export default function GraphPage() {
     if (!payload) return;
     downloadBlob(
       `trustops-graph-${Date.now()}.json`,
-      new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+      new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      }),
     );
   };
 
@@ -173,7 +199,9 @@ export default function GraphPage() {
         actions={
           <Badge tone="info">
             <Network className="mr-1 h-3 w-3" />{" "}
-            {data ? `${data.nodes.length} nodes / ${data.edges.length} edges` : "loading"}
+            {data
+              ? `${data.nodes.length} nodes / ${data.edges.length} edges`
+              : "loading"}
           </Badge>
         }
       />
@@ -208,7 +236,9 @@ export default function GraphPage() {
                 onClick={() => setLayout(dir)}
                 className={[
                   "rounded-md px-2 py-1 text-[11px] font-black uppercase tracking-wide",
-                  layout === dir ? "bg-ink text-white" : "text-slate-600 hover:bg-slate-50",
+                  layout === dir
+                    ? "bg-ink text-white"
+                    : "text-slate-600 hover:bg-slate-50",
                 ].join(" ")}
                 title={LAYOUT_LABEL[dir]}
               >
@@ -252,7 +282,9 @@ export default function GraphPage() {
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4 text-muted" /> Layers + facets
             </CardTitle>
-            <CardDescription>Persistent filters drive every other view.</CardDescription>
+            <CardDescription>
+              Persistent filters drive every other view.
+            </CardDescription>
           </CardHeader>
           <div className="grid gap-4 p-4 pt-0">
             <section>
@@ -341,7 +373,9 @@ export default function GraphPage() {
             </section>
 
             <section className="rounded-xl border border-line bg-slate-50/60 p-3 text-[11px] text-muted">
-              <div className="mb-1 font-black uppercase tracking-wide text-muted">Legend</div>
+              <div className="mb-1 font-black uppercase tracking-wide text-muted">
+                Legend
+              </div>
               <div className="grid gap-1">
                 {ALL_KINDS.map((kind) => (
                   <div key={kind} className="flex items-center gap-2">
@@ -370,10 +404,9 @@ export default function GraphPage() {
         <div className="grid gap-3">
           {pathFrom && pathTo && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-              <b>Path trace:</b>{" "}
-              <code className="text-ink">{pathFrom}</code> →{" "}
-              <code className="text-ink">{pathTo}</code>. Dimmed nodes/edges are outside the
-              shortest path.{" "}
+              <b>Path trace:</b> <code className="text-ink">{pathFrom}</code> →{" "}
+              <code className="text-ink">{pathTo}</code>. Dimmed nodes/edges are
+              outside the shortest path.{" "}
               <button
                 type="button"
                 className="ml-1 underline"
@@ -410,7 +443,8 @@ export default function GraphPage() {
         <CardHeader>
           <CardTitle>Selected node</CardTitle>
           <CardDescription>
-            Click any node in the canvas to inspect. Edges are derived, not stored.
+            Click any node in the canvas to inspect. Edges are derived, not
+            stored.
           </CardDescription>
         </CardHeader>
         <div className="p-5 pt-0 text-sm">

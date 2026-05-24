@@ -48,7 +48,9 @@ export function useHealth(opts?: Opts<{ ok: boolean }>) {
 
 export function usePosture(opts?: Opts<Assessment>) {
   const initialData =
-    typeof window !== "undefined" ? (bootstrapAssessment() ?? undefined) : undefined;
+    typeof window !== "undefined"
+      ? (bootstrapAssessment() ?? undefined)
+      : undefined;
   return useQuery({
     queryKey: ["posture", "current"],
     queryFn: api.posture,
@@ -116,7 +118,8 @@ export function useTracking(violationId: string | null) {
   return useQuery({
     queryKey: ["tracking", violationId],
     queryFn: async () => {
-      if (!violationId) return { events: [] as TrackingEvent[], current_state: "open" };
+      if (!violationId)
+        return { events: [] as TrackingEvent[], current_state: "open" };
       const data = await api.getTracking(violationId);
       return { events: data.events, current_state: data.current_state };
     },
@@ -128,8 +131,13 @@ export function useTracking(violationId: string | null) {
 export function useTriageMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ violationId, payload }: { violationId: string; payload: TriagePayload }) =>
-      api.triage(violationId, payload),
+    mutationFn: ({
+      violationId,
+      payload,
+    }: {
+      violationId: string;
+      payload: TriagePayload;
+    }) => api.triage(violationId, payload),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["tracking", vars.violationId] });
     },
@@ -213,7 +221,8 @@ export function useWorkflows() {
 export function useWorkflow(id: string | null) {
   return useQuery({
     queryKey: ["workflow", id],
-    queryFn: () => (id ? api.getWorkflow(id) : Promise.reject(new Error("no id"))),
+    queryFn: () =>
+      id ? api.getWorkflow(id) : Promise.reject(new Error("no id")),
     enabled: Boolean(id),
     staleTime: 5_000,
   });
@@ -222,7 +231,7 @@ export function useWorkflow(id: string | null) {
 export function useWorkflowRuns(id: string | null) {
   return useQuery({
     queryKey: ["workflow-runs", id],
-    queryFn: async () => (id ? (await api.workflowRuns(id)).runs ?? [] : []),
+    queryFn: async () => (id ? ((await api.workflowRuns(id)).runs ?? []) : []),
     enabled: Boolean(id),
     staleTime: 5_000,
   });
@@ -332,9 +341,18 @@ export function useReadiness() {
   });
 }
 
-export function useAuditLog(opts?: { category?: string; actor?: string; limit?: number }) {
+export function useAuditLog(opts?: {
+  category?: string;
+  actor?: string;
+  limit?: number;
+}) {
   return useQuery({
-    queryKey: ["audit-log", opts?.category ?? null, opts?.actor ?? null, opts?.limit ?? null],
+    queryKey: [
+      "audit-log",
+      opts?.category ?? null,
+      opts?.actor ?? null,
+      opts?.limit ?? null,
+    ],
     queryFn: async () => (await api.auditLog(opts ?? {})).entries ?? [],
     staleTime: 5_000,
   });

@@ -18,7 +18,10 @@ type Theme = "light" | "dark" | "system";
 
 export function UserMenu() {
   const auditor = useAuditorMode();
-  const [theme, setTheme] = usePersistentState<Theme>("trustops:theme", "system");
+  const [theme, setTheme] = usePersistentState<Theme>(
+    "trustops:theme",
+    "system",
+  );
 
   return (
     <DropdownMenu.Root>
@@ -43,9 +46,7 @@ export function UserMenu() {
           <DropdownMenu.Label className="px-2 py-2 text-[10px] font-black uppercase tracking-wider text-muted">
             Organization
           </DropdownMenu.Label>
-          <DropdownMenu.Item
-            className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-slate-50"
-          >
+          <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-slate-50">
             <Building2 className="h-4 w-4 text-muted" />
             <span className="truncate text-ink">Acme Co — Prod</span>
             <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-700">

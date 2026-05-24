@@ -2,10 +2,19 @@
 
 import { ExternalLink, FileCheck2, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { FrameworkBadge } from "@/components/framework/FrameworkBadge";
-import { useCrosswalk, useMappings, useReviewedCrosswalk } from "@/lib/api/hooks";
+import {
+  useCrosswalk,
+  useMappings,
+  useReviewedCrosswalk,
+} from "@/lib/api/hooks";
 
 export default function CrosswalkPage() {
   const heuristic = useCrosswalk();
@@ -26,10 +35,12 @@ export default function CrosswalkPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="ready">
-              <FileCheck2 className="mr-1 h-3 w-3" /> {mappings.data?.length ?? 0} reviewed mappings
+              <FileCheck2 className="mr-1 h-3 w-3" />{" "}
+              {mappings.data?.length ?? 0} reviewed mappings
             </Badge>
             <Badge tone="info">
-              <Layers className="mr-1 h-3 w-3" /> {heuristicFrameworks.length} × {heuristicFrameworks.length} heuristic
+              <Layers className="mr-1 h-3 w-3" /> {heuristicFrameworks.length} ×{" "}
+              {heuristicFrameworks.length} heuristic
             </Badge>
           </div>
         }
@@ -39,8 +50,9 @@ export default function CrosswalkPage() {
         <CardHeader>
           <CardTitle>Reviewed control → article mappings</CardTitle>
           <CardDescription>
-            Auditor-signed mappings from local <code>control_id</code> to the framework's official-source
-            article. Click the source link to verify the article text at the regulator.
+            Auditor-signed mappings from local <code>control_id</code> to the
+            framework's official-source article. Click the source link to verify
+            the article text at the regulator.
           </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
@@ -63,20 +75,30 @@ export default function CrosswalkPage() {
                 />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="font-black text-ink">{mapping.control_id}</code>
+                    <code className="font-black text-ink">
+                      {mapping.control_id}
+                    </code>
                     <Badge>{mapping.framework_id}</Badge>
                   </div>
-                  <div className="mt-1 text-xs text-muted">{article.rationale}</div>
+                  <div className="mt-1 text-xs text-muted">
+                    {article.rationale}
+                  </div>
                   <div className="mt-1 text-[10px] text-muted">
-                    reviewed by <b className="text-ink">{article.reviewed_by}</b> at {article.reviewed_at}
+                    reviewed by{" "}
+                    <b className="text-ink">{article.reviewed_by}</b> at{" "}
+                    {article.reviewed_at}
                   </div>
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <code className="font-black text-ink">{article.article_id}</code>
+                    <code className="font-black text-ink">
+                      {article.article_id}
+                    </code>
                     <Badge tone="ready">reviewed</Badge>
                   </div>
-                  <div className="mt-1 truncate text-xs text-muted">{article.title}</div>
+                  <div className="mt-1 truncate text-xs text-muted">
+                    {article.title}
+                  </div>
                   <a
                     href={article.official_source_url}
                     target="_blank"
@@ -96,7 +118,8 @@ export default function CrosswalkPage() {
         <CardHeader>
           <CardTitle>Reviewed framework × framework</CardTitle>
           <CardDescription>
-            Cells list articles + controls shared between mapping tables. Diagonal is self.
+            Cells list articles + controls shared between mapping tables.
+            Diagonal is self.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -112,7 +135,11 @@ export default function CrosswalkPage() {
                     className="border-l border-line bg-slate-50 px-3 py-2 text-left text-[11px] font-black uppercase tracking-wide text-muted"
                   >
                     <span className="inline-flex items-center gap-1.5">
-                      <FrameworkBadge frameworkId={f} fallbackLabel={f} size={20} />
+                      <FrameworkBadge
+                        frameworkId={f}
+                        fallbackLabel={f}
+                        size={20}
+                      />
                       {f}
                     </span>
                   </th>
@@ -124,11 +151,16 @@ export default function CrosswalkPage() {
                 <tr key={row.framework_id} className="border-t border-line">
                   <th className="bg-slate-50 px-3 py-3 text-left text-xs font-black text-ink">
                     <span className="inline-flex items-center gap-1.5">
-                      <FrameworkBadge frameworkId={row.framework_id} fallbackLabel={row.framework_id} size={20} />
+                      <FrameworkBadge
+                        frameworkId={row.framework_id}
+                        fallbackLabel={row.framework_id}
+                        size={20}
+                      />
                       {row.framework_id}
                     </span>
                     <div className="text-[10px] font-normal text-muted">
-                      {row.mapping_count} mappings · {row.article_count} articles
+                      {row.mapping_count} mappings · {row.article_count}{" "}
+                      articles
                     </div>
                   </th>
                   {row.cells.map((cell) => (
@@ -148,7 +180,9 @@ export default function CrosswalkPage() {
                               articles
                             </div>
                             {cell.shared_articles.length === 0 ? (
-                              <span className="text-muted">no shared articles</span>
+                              <span className="text-muted">
+                                no shared articles
+                              </span>
                             ) : (
                               <div className="flex flex-wrap gap-1">
                                 {cell.shared_articles.map((a) => (
@@ -162,7 +196,9 @@ export default function CrosswalkPage() {
                               controls
                             </div>
                             {cell.shared_controls.length === 0 ? (
-                              <span className="text-muted">no shared controls</span>
+                              <span className="text-muted">
+                                no shared controls
+                              </span>
                             ) : (
                               <div className="flex flex-wrap gap-1">
                                 {cell.shared_controls.map((c) => (
@@ -188,8 +224,9 @@ export default function CrosswalkPage() {
         <CardHeader>
           <CardTitle>Heuristic safety net · shared risk domains</CardTitle>
           <CardDescription>
-            Computed from the local control catalog (<code>risk_domain</code> + <code>owner</code>) when
-            reviewed mappings are absent. Useful for sketching new framework support before reviewers sign off.
+            Computed from the local control catalog (<code>risk_domain</code> +{" "}
+            <code>owner</code>) when reviewed mappings are absent. Useful for
+            sketching new framework support before reviewers sign off.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -205,7 +242,11 @@ export default function CrosswalkPage() {
                     className="border-l border-line bg-slate-50 px-3 py-2 text-left text-[11px] font-black uppercase tracking-wide text-muted"
                   >
                     <span className="inline-flex items-center gap-1.5">
-                      <FrameworkBadge frameworkId={f} fallbackLabel={f} size={20} />
+                      <FrameworkBadge
+                        frameworkId={f}
+                        fallbackLabel={f}
+                        size={20}
+                      />
                       {f}
                     </span>
                   </th>
@@ -217,7 +258,11 @@ export default function CrosswalkPage() {
                 <tr key={row.framework_id} className="border-t border-line">
                   <th className="bg-slate-50 px-3 py-3 text-left text-xs font-black text-ink">
                     <span className="inline-flex items-center gap-1.5">
-                      <FrameworkBadge frameworkId={row.framework_id} fallbackLabel={row.framework_id} size={20} />
+                      <FrameworkBadge
+                        frameworkId={row.framework_id}
+                        fallbackLabel={row.framework_id}
+                        size={20}
+                      />
                       {row.framework_id}
                     </span>
                   </th>
@@ -232,7 +277,9 @@ export default function CrosswalkPage() {
                       {cell.is_self ? (
                         <span className="text-muted">— self —</span>
                       ) : cell.shared_risk_domains.length === 0 ? (
-                        <span className="text-muted">no shared risk domains</span>
+                        <span className="text-muted">
+                          no shared risk domains
+                        </span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {cell.shared_risk_domains.map((d) => (

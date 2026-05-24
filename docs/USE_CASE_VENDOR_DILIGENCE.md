@@ -29,13 +29,13 @@ http://127.0.0.1:8787/
 
 ## What The Tool Produces
 
-| Output | Purpose |
-|---|---|
-| current posture | live assessment state for humans and agents |
-| violations | owner-ready control and asset gaps |
-| snapshot | point-in-time evidence package with assessment hash |
-| console | clickable review surface |
-| API | agent and automation interface |
+| Output          | Purpose                                             |
+| --------------- | --------------------------------------------------- |
+| current posture | live assessment state for humans and agents         |
+| violations      | owner-ready control and asset gaps                  |
+| snapshot        | point-in-time evidence package with assessment hash |
+| console         | clickable review surface                            |
+| API             | agent and automation interface                      |
 
 ## Evidence Path
 

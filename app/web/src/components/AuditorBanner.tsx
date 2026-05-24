@@ -10,7 +10,8 @@ export function AuditorBanner() {
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-7 py-2 text-sm text-amber-900">
       <span className="inline-flex items-center gap-2 font-extrabold">
         <ShieldCheck className="h-4 w-4" />
-        Auditor view — read-only. Owners, assignees, and remediation notes are redacted.
+        Auditor view — read-only. Owners, assignees, and remediation notes are
+        redacted.
       </span>
       <a
         href="?"

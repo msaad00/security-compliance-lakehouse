@@ -1,5 +1,11 @@
 import { Sparkles } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Props {
   title: string;
@@ -22,9 +28,10 @@ export function Placeholder({ title, body }: Props) {
         <CardContent>
           <p className="text-xs text-muted">
             PR 1 ships the Next.js + shadcn/Radix + TanStack + Recharts + Visx +
-            framer-motion shell and the Trust dashboard. The remaining views
-            are ported in PR 2 over the same /api endpoints, then PR 3 adds
-            interactive drawers, triage, evidence verification, and auditor mode.
+            framer-motion shell and the Trust dashboard. The remaining views are
+            ported in PR 2 over the same /api endpoints, then PR 3 adds
+            interactive drawers, triage, evidence verification, and auditor
+            mode.
           </p>
         </CardContent>
       </Card>

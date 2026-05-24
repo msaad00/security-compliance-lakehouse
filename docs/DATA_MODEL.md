@@ -72,18 +72,18 @@ erDiagram
 
 ## Physical Tables
 
-| Layer | Table/object | Purpose |
-|---|---|---|
-| Bronze | `raw_events` | immutable source evidence plus raw hash |
-| Silver | `normalized_events` | canonical evidence facts |
-| Gold | `control_posture` | current control status and evidence coverage |
-| Gold | `asset_risk` | owner-ready risk queue |
-| Gold | `current_posture` | live assessment result |
-| Gold | `assessment_snapshots` | point-in-time assessment exports |
-| API | `/api/posture/current` | current posture contract |
-| API | `/api/violations` | open violation contract |
-| Catalog | `frameworks/registry.json` | official framework source registry |
-| Catalog | `controls/catalog.json` | implemented controls with evidence requirements |
+| Layer   | Table/object               | Purpose                                         |
+| ------- | -------------------------- | ----------------------------------------------- |
+| Bronze  | `raw_events`               | immutable source evidence plus raw hash         |
+| Silver  | `normalized_events`        | canonical evidence facts                        |
+| Gold    | `control_posture`          | current control status and evidence coverage    |
+| Gold    | `asset_risk`               | owner-ready risk queue                          |
+| Gold    | `current_posture`          | live assessment result                          |
+| Gold    | `assessment_snapshots`     | point-in-time assessment exports                |
+| API     | `/api/posture/current`     | current posture contract                        |
+| API     | `/api/violations`          | open violation contract                         |
+| Catalog | `frameworks/registry.json` | official framework source registry              |
+| Catalog | `controls/catalog.json`    | implemented controls with evidence requirements |
 
 ## Schema Contracts
 

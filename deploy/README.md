@@ -2,11 +2,11 @@
 
 Three install surfaces — pick the one that fits your blast radius.
 
-| Surface | When to use | Command |
-| --- | --- | --- |
-| **Python wheel** | Local demos, single laptop, contributor onboarding | `pip install trustops-security-data-lake && security-lakehouse serve --lake build/lakehouse` |
-| **Container image** | CI, Docker Compose, single-host servers | `docker run -p 8787:8787 -v $PWD/build/lakehouse:/lake ghcr.io/msaad00/trustops:latest` |
-| **Helm + EKS** | Production self-hosted, customer-data-residency requirement | See [Helm chart](helm/trustops/) + [EKS reference IaC](eks-terraform/) below |
+| Surface             | When to use                                                 | Command                                                                                      |
+| ------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **Python wheel**    | Local demos, single laptop, contributor onboarding          | `pip install trustops-security-data-lake && security-lakehouse serve --lake build/lakehouse` |
+| **Container image** | CI, Docker Compose, single-host servers                     | `docker run -p 8787:8787 -v $PWD/build/lakehouse:/lake ghcr.io/msaad00/trustops:latest`      |
+| **Helm + EKS**      | Production self-hosted, customer-data-residency requirement | See [Helm chart](helm/trustops/) + [EKS reference IaC](eks-terraform/) below                 |
 
 ## Container image
 

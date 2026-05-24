@@ -3,7 +3,7 @@
 
 image:
   repository: ghcr.io/msaad00/trustops
-  tag: ""              # defaults to .Chart.appVersion when empty
+  tag: "" # defaults to .Chart.appVersion when empty
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -63,7 +63,7 @@ lake:
     enabled: true
     size: 20Gi
     accessMode: ReadWriteOnce
-    storageClassName: ""    # cluster default
+    storageClassName: "" # cluster default
   # Container path mirrored from the Dockerfile.
   mountPath: /lake
   # Mount the lake read-only for auditor-only deployments.
@@ -101,7 +101,7 @@ probes:
 # stay single-replica without owning the scheduler too.
 scheduler:
   enabled: true
-  schedule: "*/5 * * * *"   # every 5 minutes
+  schedule: "*/5 * * * *" # every 5 minutes
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
