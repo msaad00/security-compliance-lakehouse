@@ -20,7 +20,7 @@ jobs:
         working-directory: app/web
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
@@ -32,7 +32,7 @@ jobs:
       - name: Build static export
         run: npm run build
       - name: Upload built React bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: src/security_lakehouse/web/dist
@@ -70,7 +70,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - uses: pre-commit/action@v3.0.1
@@ -97,7 +97,7 @@ jobs:
         run: |
           uv export --no-emit-project --format requirements-txt --no-hashes > /tmp/reqs.txt
           uv run pip-audit --strict -r /tmp/reqs.txt
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
