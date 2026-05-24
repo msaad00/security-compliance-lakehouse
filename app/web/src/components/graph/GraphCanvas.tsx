@@ -13,12 +13,14 @@ import {
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { FrameworkBadge } from "@/components/framework/FrameworkBadge";
 import type { ComplianceGraph, GraphNode, GraphNodeKind } from "@/lib/api/types";
 
 interface GraphNodeData extends Record<string, unknown> {
   label: string;
   subtitle: string;
   kind: GraphNodeKind;
+  framework_id?: string;
   owner?: string;
   risk_score?: number;
 }
@@ -43,12 +45,17 @@ function GraphNodeCard({ data, selected }: NodeProps<FlowGraphNode>) {
       }}
       className="min-w-[180px] max-w-[220px] rounded-xl px-3 py-2.5 shadow-sm transition-colors"
     >
-      <span
-        className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide"
-        style={{ color: tone.chip, background: "#ffffff" }}
-      >
-        {data.kind.replace("_", " ")}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide"
+          style={{ color: tone.chip, background: "#ffffff" }}
+        >
+          {data.kind.replace("_", " ")}
+        </span>
+        {data.kind === "framework" && data.framework_id && (
+          <FrameworkBadge frameworkId={data.framework_id} fallbackLabel={data.label} size={24} />
+        )}
+      </div>
       <div className="mt-1.5 truncate text-sm font-black text-ink">{data.label}</div>
       <div className="truncate text-[11px] text-slate-600">{data.subtitle}</div>
       {data.owner && <div className="mt-1 truncate text-[10px] text-slate-500">owner {data.owner}</div>}
@@ -105,6 +112,7 @@ export function GraphCanvas({ graph, visibleKinds, onSelectNode }: Props) {
           label: n.label,
           subtitle: n.subtitle ?? "",
           kind: n.kind,
+          framework_id: n.framework_id,
           owner: n.owner,
           risk_score: n.risk_score,
         },

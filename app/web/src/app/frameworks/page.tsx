@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Drawer } from "@/components/ui/drawer";
 import { PageHeader } from "@/components/PageHeader";
+import { FrameworkBadge } from "@/components/framework/FrameworkBadge";
 import { useFrameworks, useReadiness } from "@/lib/api/hooks";
 import type {
   FrameworkFreshness,
@@ -33,8 +34,9 @@ function Row({ framework, onSelect }: { framework: FrameworkView; onSelect: () =
     <button
       type="button"
       onClick={onSelect}
-      className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-4 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-brand hover:shadow-card"
+      className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-brand hover:shadow-card"
     >
+      <FrameworkBadge frameworkId={framework.framework_id} fallbackLabel={framework.name} size={44} />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate font-black text-ink">{framework.name}</span>
@@ -84,6 +86,17 @@ function Detail({ framework, onClose }: { framework: FrameworkView | null; onClo
     >
       {framework && (
         <div className="grid gap-5 text-sm">
+          <div className="flex items-center gap-3">
+            <FrameworkBadge
+              frameworkId={framework.framework_id}
+              fallbackLabel={framework.name}
+              size={56}
+            />
+            <div>
+              <div className="font-black text-ink">{framework.name}</div>
+              <div className="text-xs text-muted">{framework.version}</div>
+            </div>
+          </div>
           <section
             className={[
               "rounded-xl border p-3",
@@ -188,7 +201,10 @@ function ReadinessRow({ row }: { row: FrameworkReadiness }) {
   return (
     <div className="rounded-xl border border-line bg-white p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <code className="text-sm font-black text-ink">{row.framework_id}</code>
+        <span className="flex items-center gap-2">
+          <FrameworkBadge frameworkId={row.framework_id} fallbackLabel={row.name} size={28} />
+          <code className="text-sm font-black text-ink">{row.framework_id}</code>
+        </span>
         <Badge tone={row.is_ready ? "ready" : "attention"}>
           {row.is_ready ? "ready" : `blocked at ${row.stage}`}
         </Badge>
