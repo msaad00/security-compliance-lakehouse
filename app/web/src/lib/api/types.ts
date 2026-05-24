@@ -112,3 +112,38 @@ export interface SnapshotResponse {
   snapshot_path: string;
   reason: string;
 }
+
+export type TrackingState =
+  | "open"
+  | "triaged"
+  | "in_progress"
+  | "resolved"
+  | "dismissed";
+
+export interface TrackingEvent {
+  tracking_id: string;
+  violation_id: string;
+  actor: string;
+  state: TrackingState;
+  assignee: string | null;
+  due_at: string | null;
+  note: string | null;
+  occurred_at: string;
+}
+
+export interface TriagePayload {
+  state: TrackingState;
+  actor?: string;
+  assignee?: string;
+  due_at?: string;
+  note?: string;
+}
+
+export interface VerifyResult {
+  event_id: string;
+  verified: boolean;
+  expected_sha256: string | null;
+  computed_sha256: string | null;
+  source_layer: "bronze" | "missing";
+  reason: string | null;
+}

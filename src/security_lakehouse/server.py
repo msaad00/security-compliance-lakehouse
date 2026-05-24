@@ -12,7 +12,12 @@ from urllib.parse import parse_qs, urlparse
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.io import read_jsonl
+from security_lakehouse.tracking import ALLOWED_STATES, append_event, latest_state, list_events
+from security_lakehouse.verification import verify_event
 from security_lakehouse.web import web_dist_dir, web_dist_index
+
+AUDITOR_ROLE = "auditor"
+REDACTED_FIELDS = {"asset_owner", "actor", "assignee", "note"}
 
 
 def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) -> None:
@@ -107,17 +112,128 @@ class _Handler(BaseHTTPRequestHandler):
         if parsed.path == "/api/assets":
             self._send_json({"assets": read_jsonl(self.lake_dir / "gold" / "asset_risk.jsonl")})
             return
+        if parsed.path == "/api/snapshots":
+            snapshots = self._list_snapshots()
+            self._send_json({"count": len(snapshots), "snapshots": snapshots})
+            return
+        tracking_match = self._match_violation_tracking(parsed.path)
+        if tracking_match is not None:
+            events = list_events(self.lake_dir, violation_id=tracking_match)
+            current = latest_state(self.lake_dir, violation_id=tracking_match)
+            self._send_json(
+                {
+                    "violation_id": tracking_match,
+                    "current_state": (current or {}).get("state", "open"),
+                    "events": [self._redact(e) for e in events],
+                }
+            )
+            return
         self._send_json({"error": "not_found"}, status=HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if self._role() == AUDITOR_ROLE:
+            self._send_json(
+                {"error": "forbidden", "reason": "auditor role is read-only"},
+                status=HTTPStatus.FORBIDDEN,
+            )
+            return
         if parsed.path == "/api/snapshots":
             body = self._read_json_body()
             reason = str(body.get("reason") or "api_request")
             path = write_assessment_snapshot(self.lake_dir, reason=reason)
-            self._send_json({"snapshot_path": str(path), "reason": reason}, status=HTTPStatus.CREATED)
+            self._send_json(
+                {"snapshot_path": str(path), "reason": reason},
+                status=HTTPStatus.CREATED,
+            )
+            return
+        triage_match = self._match_violation_triage(parsed.path)
+        if triage_match is not None:
+            body = self._read_json_body()
+            state = str(body.get("state") or "").lower()
+            if state not in ALLOWED_STATES:
+                self._send_json(
+                    {"error": "bad_request", "reason": f"state must be one of {sorted(ALLOWED_STATES)}"},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            record = append_event(
+                self.lake_dir,
+                violation_id=triage_match,
+                actor=str(body.get("actor") or "anonymous"),
+                state=state,
+                assignee=body.get("assignee"),
+                due_at=body.get("due_at"),
+                note=body.get("note"),
+            )
+            self._send_json({"event": record}, status=HTTPStatus.CREATED)
+            return
+        verify_match = self._match_evidence_verify(parsed.path)
+        if verify_match is not None:
+            result = verify_event(self.lake_dir, verify_match)
+            self._send_json(result)
             return
         self._send_json({"error": "not_found"}, status=HTTPStatus.NOT_FOUND)
+
+    @staticmethod
+    def _match_violation_tracking(path: str) -> str | None:
+        # /api/violations/{id}/tracking
+        if not path.startswith("/api/violations/") or not path.endswith("/tracking"):
+            return None
+        rest = path[len("/api/violations/") : -len("/tracking")]
+        return rest or None
+
+    @staticmethod
+    def _match_violation_triage(path: str) -> str | None:
+        # /api/violations/{id}/triage
+        if not path.startswith("/api/violations/") or not path.endswith("/triage"):
+            return None
+        rest = path[len("/api/violations/") : -len("/triage")]
+        return rest or None
+
+    @staticmethod
+    def _match_evidence_verify(path: str) -> str | None:
+        # /api/evidence/{id}/verify
+        if not path.startswith("/api/evidence/") or not path.endswith("/verify"):
+            return None
+        rest = path[len("/api/evidence/") : -len("/verify")]
+        return rest or None
+
+    def _list_snapshots(self) -> list[dict[str, object]]:
+        snapshots_dir = self.lake_dir / "gold" / "snapshots"
+        if not snapshots_dir.is_dir():
+            return []
+        out: list[dict[str, object]] = []
+        for path in sorted(snapshots_dir.glob("assessment-*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            posture = payload.get("posture") or {}
+            out.append(
+                {
+                    "snapshot_path": str(path),
+                    "evaluated_at": payload.get("evaluated_at"),
+                    "reason": payload.get("snapshot_reason") or "manual",
+                    "assessment_hash": payload.get("assessment_hash"),
+                    "posture_score": posture.get("score"),
+                    "open_violation_count": posture.get("open_violation_count"),
+                    "critical_violation_count": posture.get("critical_violation_count"),
+                }
+            )
+        return out
+
+    def _role(self) -> str:
+        return (self.headers.get("X-Trust-Role") or "").strip().lower()
+
+    def _redact(self, payload: object) -> object:
+        if self._role() != AUDITOR_ROLE:
+            return payload
+        if isinstance(payload, dict):
+            return {k: ("[redacted]" if k in REDACTED_FIELDS else self._redact(v)) for k, v in payload.items()}
+        if isinstance(payload, list):
+            return [self._redact(item) for item in payload]
+        return payload
 
     def log_message(self, fmt: str, *args: object) -> None:
         return
@@ -186,7 +302,7 @@ class _Handler(BaseHTTPRequestHandler):
         return payload if isinstance(payload, dict) else {}
 
     def _send_json(self, payload: object, *, status: HTTPStatus = HTTPStatus.OK) -> None:
-        body = json.dumps(payload, indent=2, sort_keys=True, default=str).encode("utf-8")
+        body = json.dumps(self._redact(payload), indent=2, sort_keys=True, default=str).encode("utf-8")
         self._send_bytes(body, status=status, content_type="application/json; charset=utf-8")
 
     def _send_bytes(

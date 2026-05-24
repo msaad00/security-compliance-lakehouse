@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -9,13 +9,12 @@ import {
   useReactTable,
   type SortingState,
 } from "@tanstack/react-table";
-import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { Toolbar, matchesQuery } from "@/components/Toolbar";
+import { ViolationDrawer } from "@/components/drawers/ViolationDrawer";
 import { useControls, useViolations } from "@/lib/api/hooks";
 import { useToolbar } from "@/lib/state/filters";
 import type { Violation } from "@/lib/api/types";
@@ -30,6 +29,8 @@ export default function ViolationsPage() {
   const controls = useControls();
   const { filters, setFilters } = useToolbar();
   const [sorting, setSorting] = useState<SortingState>([{ id: "severity_score", desc: true }]);
+  const [selected, setSelected] = useState<Violation | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const frameworks = useMemo(
     () => Array.from(new Set((controls.data ?? []).map((c) => c.framework))),
@@ -97,15 +98,6 @@ export default function ViolationsPage() {
       header: "Evidence",
       cell: (info) => <code className="text-xs">{info.getValue()}</code>,
     }),
-    helper.display({
-      id: "action",
-      header: "",
-      cell: () => (
-        <Button variant="default" size="sm" disabled>
-          Assign
-        </Button>
-      ),
-    }),
   ];
 
   const table = useReactTable({
@@ -122,7 +114,7 @@ export default function ViolationsPage() {
       <PageHeader
         eyebrow="Violations"
         title="Violation queue"
-        description="Open control failures linked to assets, owners, sources, and evidence references. Triage workflow (assign, SLA, resolve) lands in PR 3."
+        description="Open control failures with severity, asset, source, and evidence reference. Click a row to triage and persist the action server-side."
       />
       <Toolbar
         filters={filters}
@@ -134,7 +126,7 @@ export default function ViolationsPage() {
         <CardHeader>
           <CardTitle>{filtered.length} open violations</CardTitle>
           <CardDescription>
-            Sorted by severity score by default; click any column header to re-sort.
+            Click any column to re-sort. Click any row to open the triage drawer.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -163,7 +155,8 @@ export default function ViolationsPage() {
               {table.getRowModel().rows.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-line last:border-0 hover:bg-blue-50/40"
+                  onClick={() => setSelected(r.original)}
+                  className="cursor-pointer border-b border-line last:border-0 hover:bg-blue-50/40"
                 >
                   {r.getVisibleCells().map((c) => (
                     <td key={c.id} className="px-4 py-3 align-top">
@@ -183,6 +176,16 @@ export default function ViolationsPage() {
           </table>
         </div>
       </Card>
+      <ViolationDrawer
+        violation={selected}
+        onClose={() => setSelected(null)}
+        onToast={setToast}
+      />
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-lg bg-ink px-3.5 py-3 text-sm text-white shadow-hero">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

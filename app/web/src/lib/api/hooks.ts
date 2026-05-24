@@ -1,13 +1,21 @@
 "use client";
 
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
-import { api, bootstrapAssessment } from "./client";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
+import { api, bootstrapAssessment, type SnapshotSummary } from "./client";
 import type {
   Assessment,
   AssetRisk,
   ControlPosture,
   ControlTest,
   NormalizedEvent,
+  TrackingEvent,
+  TriagePayload,
+  VerifyResult,
   Violation,
 } from "./types";
 
@@ -88,3 +96,54 @@ export function useAssets(opts?: Opts<AssetRisk[]>) {
     ...opts,
   });
 }
+
+export function useSnapshots(opts?: Opts<SnapshotSummary[]>) {
+  return useQuery({
+    queryKey: ["snapshots"],
+    queryFn: async () => (await api.listSnapshots()).snapshots ?? [],
+    staleTime: STALE,
+    ...opts,
+  });
+}
+
+export function useTracking(violationId: string | null) {
+  return useQuery({
+    queryKey: ["tracking", violationId],
+    queryFn: async () => {
+      if (!violationId) return { events: [] as TrackingEvent[], current_state: "open" };
+      const data = await api.getTracking(violationId);
+      return { events: data.events, current_state: data.current_state };
+    },
+    enabled: Boolean(violationId),
+    staleTime: 5_000,
+  });
+}
+
+export function useTriageMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ violationId, payload }: { violationId: string; payload: TriagePayload }) =>
+      api.triage(violationId, payload),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["tracking", vars.violationId] });
+    },
+  });
+}
+
+export function useVerifyMutation() {
+  return useMutation({
+    mutationFn: (eventId: string) => api.verifyEvidence(eventId),
+  });
+}
+
+export function useSnapshotMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => api.createSnapshot(reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["snapshots"] });
+    },
+  });
+}
+
+export type { VerifyResult, TrackingEvent };
