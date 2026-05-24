@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
+from security_lakehouse.audit_log import build_audit_log
 from security_lakehouse.connector_state import (
     append_config_event,
     build_catalog_view,
@@ -20,8 +21,20 @@ from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.framework_provenance import build_framework_view
 from security_lakehouse.io import read_jsonl
 from security_lakehouse.tracking import ALLOWED_STATES, append_event, latest_state, list_events
+from security_lakehouse.trust_share import create_share, list_shares, revoke_share
 from security_lakehouse.verification import verify_event
 from security_lakehouse.web import web_dist_dir, web_dist_index
+from security_lakehouse.workflows import (
+    action_catalog,
+    get_workflow,
+    list_workflows,
+    run_action,
+    run_workflow,
+    save_workflow,
+)
+from security_lakehouse.workflows import (
+    list_runs as list_workflow_runs,
+)
 
 AUDITOR_ROLE = "auditor"
 REDACTED_FIELDS = {"asset_owner", "actor", "assignee", "note", "credentials"}
@@ -131,6 +144,43 @@ class _Handler(BaseHTTPRequestHandler):
             view = build_framework_view()
             self._send_json({"count": len(view), "frameworks": view})
             return
+        if parsed.path == "/api/workflows":
+            rows = list_workflows(self.lake_dir)
+            self._send_json({"count": len(rows), "workflows": rows})
+            return
+        if parsed.path == "/api/workflows/actions":
+            self._send_json({"actions": action_catalog()})
+            return
+        workflow_get_match = self._match_workflow_get(parsed.path)
+        if workflow_get_match is not None:
+            workflow = get_workflow(self.lake_dir, workflow_get_match)
+            if workflow is None:
+                self._send_json({"error": "not_found"}, status=HTTPStatus.NOT_FOUND)
+                return
+            self._send_json(workflow)
+            return
+        workflow_runs_match = self._match_workflow_runs(parsed.path)
+        if workflow_runs_match is not None:
+            rows = list_workflow_runs(self.lake_dir, workflow_runs_match)
+            self._send_json({"workflow_id": workflow_runs_match, "runs": rows})
+            return
+        if parsed.path == "/api/trust-shares":
+            include_revoked = (parse_qs(parsed.query).get("include_revoked") or ["false"])[0].lower() in {
+                "1",
+                "true",
+                "yes",
+            }
+            shares = list_shares(self.lake_dir, include_revoked=include_revoked)
+            self._send_json({"count": len(shares), "shares": shares})
+            return
+        if parsed.path == "/api/audit-log":
+            filters = parse_qs(parsed.query)
+            category = (filters.get("category") or [None])[0]
+            actor = (filters.get("actor") or [None])[0]
+            limit = int((filters.get("limit") or ["200"])[0])
+            entries = build_audit_log(self.lake_dir, category=category, actor=actor, limit=max(1, min(limit, 1000)))
+            self._send_json({"count": len(entries), "entries": entries})
+            return
         runs_match = self._match_connector_runs(parsed.path)
         if runs_match is not None:
             rows = list_runs(self.lake_dir, runs_match)
@@ -224,6 +274,85 @@ class _Handler(BaseHTTPRequestHandler):
             )
             self._send_json({"run": record}, status=HTTPStatus.CREATED)
             return
+        if parsed.path == "/api/workflows":
+            body = self._read_json_body()
+            try:
+                record = save_workflow(
+                    self.lake_dir,
+                    workflow_id=body.get("workflow_id"),
+                    name=str(body.get("name") or ""),
+                    description=str(body.get("description") or ""),
+                    nodes=body.get("nodes") or [],
+                    edges=body.get("edges") or [],
+                    actor=str(body.get("actor") or "console"),
+                )
+            except ValueError as exc:
+                self._send_json(
+                    {"error": "bad_request", "reason": str(exc)},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            self._send_json({"workflow": record}, status=HTTPStatus.CREATED)
+            return
+        if parsed.path == "/api/workflows/actions/run":
+            body = self._read_json_body()
+            try:
+                output = run_action(
+                    self.lake_dir,
+                    node_type=str(body.get("node_type") or ""),
+                    params=body.get("params") or {},
+                )
+            except ValueError as exc:
+                self._send_json(
+                    {"error": "bad_request", "reason": str(exc)},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            self._send_json({"output": output}, status=HTTPStatus.CREATED)
+            return
+        workflow_run_match = self._match_workflow_run(parsed.path)
+        if workflow_run_match is not None:
+            try:
+                run = run_workflow(
+                    self.lake_dir,
+                    workflow_id=workflow_run_match,
+                    actor=str(self._read_json_body().get("actor") or "console"),
+                )
+            except ValueError as exc:
+                self._send_json(
+                    {"error": "bad_request", "reason": str(exc)},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            self._send_json({"run": run}, status=HTTPStatus.CREATED)
+            return
+        if parsed.path == "/api/trust-shares":
+            body = self._read_json_body()
+            try:
+                share = create_share(
+                    self.lake_dir,
+                    role=str(body.get("role") or "auditor"),
+                    scope=str(body.get("scope") or "posture_full"),
+                    expires_in_hours=int(body.get("expires_in_hours") or 24),
+                    created_by=str(body.get("created_by") or "console"),
+                    framework_id=body.get("framework_id"),
+                )
+            except ValueError as exc:
+                self._send_json(
+                    {"error": "bad_request", "reason": str(exc)},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            self._send_json({"share": share}, status=HTTPStatus.CREATED)
+            return
+        revoke_match = self._match_trust_share_revoke(parsed.path)
+        if revoke_match is not None:
+            revoked = revoke_share(self.lake_dir, revoke_match)
+            if revoked is None:
+                self._send_json({"error": "not_found"}, status=HTTPStatus.NOT_FOUND)
+                return
+            self._send_json({"share": revoked}, status=HTTPStatus.CREATED)
+            return
         self._send_json({"error": "not_found"}, status=HTTPStatus.NOT_FOUND)
 
     @staticmethod
@@ -272,6 +401,44 @@ class _Handler(BaseHTTPRequestHandler):
         if not path.startswith("/api/connectors/") or not path.endswith("/runs"):
             return None
         rest = path[len("/api/connectors/") : -len("/runs")]
+        return rest or None
+
+    @staticmethod
+    def _match_workflow_get(path: str) -> str | None:
+        # /api/workflows/{id} but exclude /api/workflows/actions and /api/workflows/actions/run
+        if not path.startswith("/api/workflows/"):
+            return None
+        rest = path[len("/api/workflows/") :]
+        if rest in {"", "actions"} or rest.startswith("actions/") or "/" in rest:
+            return None
+        return rest
+
+    @staticmethod
+    def _match_workflow_run(path: str) -> str | None:
+        # /api/workflows/{id}/run
+        if not path.startswith("/api/workflows/") or not path.endswith("/run"):
+            return None
+        rest = path[len("/api/workflows/") : -len("/run")]
+        if not rest or "/" in rest or rest == "actions":
+            return None
+        return rest
+
+    @staticmethod
+    def _match_workflow_runs(path: str) -> str | None:
+        # /api/workflows/{id}/runs
+        if not path.startswith("/api/workflows/") or not path.endswith("/runs"):
+            return None
+        rest = path[len("/api/workflows/") : -len("/runs")]
+        if not rest or "/" in rest or rest == "actions":
+            return None
+        return rest
+
+    @staticmethod
+    def _match_trust_share_revoke(path: str) -> str | None:
+        # /api/trust-shares/{id}/revoke
+        if not path.startswith("/api/trust-shares/") or not path.endswith("/revoke"):
+            return None
+        rest = path[len("/api/trust-shares/") : -len("/revoke")]
         return rest or None
 
     def _list_snapshots(self) -> list[dict[str, object]]:
