@@ -345,6 +345,17 @@ function InnerGraphCanvas({
     };
   }, [graph, canvasRef]);
 
+  const handleSelectionChange = useCallback(
+    ({ nodes: selected }: { nodes: Node[] }) => {
+      const first = selected[0];
+      setSelectedId(first?.id ?? null);
+      if (!first) return onSelectNode(null);
+      const original = graph?.nodes.find((n) => n.id === first.id) ?? null;
+      onSelectNode(original);
+    },
+    [graph, onSelectNode],
+  );
+
   if (!hydrated) {
     return <div className="h-[640px] rounded-2xl border border-line bg-white" />;
   }
@@ -360,16 +371,7 @@ function InnerGraphCanvas({
         edgesReconnectable={false}
         fitView
         proOptions={{ hideAttribution: true }}
-        onSelectionChange={useCallback(
-          ({ nodes: selected }: { nodes: Node[] }) => {
-            const first = selected[0];
-            setSelectedId(first?.id ?? null);
-            if (!first) return onSelectNode(null);
-            const original = graph?.nodes.find((n) => n.id === first.id) ?? null;
-            onSelectNode(original);
-          },
-          [graph, onSelectNode],
-        )}
+        onSelectionChange={handleSelectionChange}
       >
         <Background gap={20} color="#e2e8f0" />
         <MiniMap pannable zoomable maskColor="rgba(15,23,42,0.06)" />
