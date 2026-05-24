@@ -4,11 +4,13 @@ import type {
   Assessment,
   AssetRisk,
   AuditLogEntry,
+  ComplianceGraph,
   ConfigurePayload,
   ConnectorRun,
   ConnectorView,
   ControlPosture,
   ControlTest,
+  Crosswalk,
   FrameworkView,
   Health,
   NormalizedEvent,
@@ -127,6 +129,8 @@ export const api = {
       `/trust-shares/${encodeURIComponent(share_id)}/revoke`,
       {},
     ),
+  graph: () => get<ComplianceGraph>("/graph"),
+  crosswalk: () => get<Crosswalk>("/crosswalk"),
   auditLog: (
     opts: { category?: string; actor?: string; limit?: number } = {},
   ): Promise<{ count: number; entries: AuditLogEntry[] }> => {

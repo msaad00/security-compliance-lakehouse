@@ -10,11 +10,13 @@ import { api, bootstrapAssessment, type SnapshotSummary } from "./client";
 import type {
   Assessment,
   AssetRisk,
+  ComplianceGraph,
   ConfigurePayload,
   ConnectorRun,
   ConnectorView,
   ControlPosture,
   ControlTest,
+  Crosswalk,
   FrameworkView,
   NormalizedEvent,
   TrackingEvent,
@@ -287,6 +289,22 @@ export function useRevokeTrustShare() {
   return useMutation({
     mutationFn: api.revokeTrustShare,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["trust-shares"] }),
+  });
+}
+
+export function useComplianceGraph() {
+  return useQuery({
+    queryKey: ["graph"],
+    queryFn: api.graph,
+    staleTime: STALE,
+  });
+}
+
+export function useCrosswalk() {
+  return useQuery({
+    queryKey: ["crosswalk"],
+    queryFn: api.crosswalk,
+    staleTime: 60_000,
   });
 }
 
