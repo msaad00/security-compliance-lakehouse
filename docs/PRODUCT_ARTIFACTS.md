@@ -32,11 +32,12 @@ http://127.0.0.1:8787/
 
 | Route | Purpose |
 |---|---|
-| `GET /api/posture/current` | current posture and framework scores |
-| `GET /api/violations` | open control and asset violations |
-| `GET /api/controls` | control workbench data |
-| `GET /api/assets` | asset risk queue |
-| `POST /api/snapshots` | point-in-time assessment snapshot |
+| `GET /api/v1/posture/current` | enveloped current posture and framework scores |
+| `GET /api/v1/violations` | paginated open control and asset violations |
+| `GET /api/v1/controls` | paginated control workbench data |
+| `GET /api/v1/evidence` | paginated normalized evidence facts |
+| `GET /api/v1/assets` | paginated asset risk queue |
+| `POST /api/v1/snapshots` | point-in-time assessment snapshot |
 
 See [Human and Agent API](api/AGENT_API.md).
 
