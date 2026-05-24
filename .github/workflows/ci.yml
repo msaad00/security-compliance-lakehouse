@@ -32,7 +32,7 @@ jobs:
       - name: Build static export
         run: npm run build
       - name: Upload built React bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: src/security_lakehouse/web/dist
