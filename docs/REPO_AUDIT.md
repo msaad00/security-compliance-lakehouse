@@ -10,16 +10,16 @@ security-lakehouse validate --raw build/repo-audit.jsonl
 
 The public path collects only signals GitHub exposes without credentials:
 
-| Signal | Evidence |
-|---|---|
-| metadata | visibility, default branch, archive/fork state, license, topics, languages, recent activity |
-| code ownership | `CODEOWNERS` locations when present |
-| security policy | `SECURITY.md` locations when present |
-| CI workflows | `.github/workflows/*.yml` and `.yaml` files |
-| dependency manifests | package, Python, Go, Rust, Java, Ruby, and lockfile manifests |
-| container/IaC | Dockerfiles, Terraform, Helm, and Kustomize indicators |
-| AI artifacts | model cards, eval files, prompt files, model directories |
-| code graph | repository, top-level directories, languages, and evidence-signal graph |
+| Signal               | Evidence                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| metadata             | visibility, default branch, archive/fork state, license, topics, languages, recent activity |
+| code ownership       | `CODEOWNERS` locations when present                                                         |
+| security policy      | `SECURITY.md` locations when present                                                        |
+| CI workflows         | `.github/workflows/*.yml` and `.yaml` files                                                 |
+| dependency manifests | package, Python, Go, Rust, Java, Ruby, and lockfile manifests                               |
+| container/IaC        | Dockerfiles, Terraform, Helm, and Kustomize indicators                                      |
+| AI artifacts         | model cards, eval files, prompt files, model directories                                    |
+| code graph           | repository, top-level directories, languages, and evidence-signal graph                     |
 
 Each record includes a stable `event_id`, `evidence_id`, `evidence_ref`,
 `evidence_collected_at`, and SHA-256 hash. File excerpts are short and
