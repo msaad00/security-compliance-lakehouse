@@ -210,3 +210,95 @@ export interface FrameworkView {
   pulled_age_days: number | null;
   next_pull_due: string | null;
 }
+
+// --- Workflows --------------------------------------------------------------
+
+export type ActionKind = "trigger" | "check" | "action";
+
+export interface ActionSchemaField {
+  type: "string" | "number" | "boolean";
+  label: string;
+  required?: boolean;
+  optional?: boolean;
+  default?: string | number | boolean;
+}
+
+export interface ActionSpec {
+  node_type: string;
+  kind: ActionKind;
+  label: string;
+  description: string;
+  input_schema: Record<string, ActionSchemaField>;
+  output_schema: Record<string, string>;
+}
+
+export interface WorkflowNode {
+  id: string;
+  node_type: string;
+  params: Record<string, unknown>;
+  position?: { x: number; y: number };
+}
+
+export interface WorkflowEdge {
+  source: string;
+  target: string;
+}
+
+export interface Workflow {
+  workflow_id: string;
+  version: number;
+  name: string;
+  description: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  actor: string;
+  occurred_at: string;
+  hash: string;
+}
+
+export interface WorkflowRunNode {
+  node_id: string;
+  node_type: string;
+  params: Record<string, unknown>;
+  result: "ok" | "error";
+  output?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface WorkflowRun {
+  workflow_id: string;
+  workflow_version: number;
+  actor: string;
+  result: "ok" | "error";
+  started_at: string;
+  finished_at: string;
+  node_results: WorkflowRunNode[];
+}
+
+// --- Trust shares -----------------------------------------------------------
+
+export interface TrustShare {
+  share_id: string;
+  role: "auditor";
+  scope: "posture_full" | "posture_framework";
+  framework_id: string | null;
+  expires_at: string;
+  created_at: string;
+  created_by: string;
+  revoked_at: string | null;
+  token_sha256: string;
+  token?: string; // returned only at create time
+  expired: boolean;
+}
+
+// --- Audit log --------------------------------------------------------------
+
+export interface AuditLogEntry {
+  category: "triage" | "connector" | "snapshot" | "workflow" | "trust_share";
+  actor: string;
+  occurred_at: string;
+  summary: string;
+  subject: string;
+  result: string | null;
+  payload: Record<string, unknown>;
+}

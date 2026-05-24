@@ -1,127 +1,314 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import { ArrowRight, Construction, ShieldCheck, Workflow } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Edge } from "@xyflow/react";
+import { Loader2, Play, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
-import { useControlTests } from "@/lib/api/hooks";
+import { ActionPalette } from "@/components/workflow/ActionPalette";
+import { NodeConfigDrawer } from "@/components/workflow/NodeConfigDrawer";
+import {
+  WorkflowCanvas,
+  toFlowNode,
+  type FlowNode,
+} from "@/components/workflow/WorkflowCanvas";
+import {
+  useActionCatalog,
+  useRunWorkflow,
+  useSaveWorkflow,
+  useWorkflowRuns,
+  useWorkflows,
+} from "@/lib/api/hooks";
+import type { ActionSpec, Workflow, WorkflowNode } from "@/lib/api/types";
+import { useAuditorMode } from "@/lib/state/auditor";
 
-const toneFor = (result: string) =>
-  result === "pass" ? "ready" : result === "fail" ? "critical" : "attention";
+const NEW_WORKFLOW_ID = "__new__";
+
+let counter = 0;
+const nextNodeId = () => `n${Date.now()}_${counter++}`;
+
+interface Editor {
+  workflow_id: string | null;
+  name: string;
+  description: string;
+  nodes: FlowNode[];
+  edges: Edge[];
+}
+
+function emptyEditor(): Editor {
+  return { workflow_id: null, name: "Untitled workflow", description: "", nodes: [], edges: [] };
+}
+
+function fromWorkflow(w: Workflow, catalog: ActionSpec[]): Editor {
+  const byType = new Map(catalog.map((a) => [a.node_type, a]));
+  return {
+    workflow_id: w.workflow_id,
+    name: w.name,
+    description: w.description,
+    nodes: w.nodes.map((n) => toFlowNode(n, byType.get(n.node_type))),
+    edges: w.edges.map((e) => ({
+      id: `${e.source}-${e.target}`,
+      source: e.source,
+      target: e.target,
+      animated: true,
+    })),
+  };
+}
+
+function toApiNodes(nodes: FlowNode[]): WorkflowNode[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    node_type: n.data.node_type,
+    params: n.data.params,
+    position: n.position,
+  }));
+}
 
 export default function AutomationPage() {
-  const tests = useControlTests();
-  const [stateFilter, setStateFilter] = useState<"all" | "pass" | "fail">("all");
+  const auditor = useAuditorMode();
+  const workflows = useWorkflows();
+  const catalog = useActionCatalog();
+  const save = useSaveWorkflow();
+  const run = useRunWorkflow();
+  const [activeId, setActiveId] = useState<string>(NEW_WORKFLOW_ID);
+  const [editor, setEditor] = useState<Editor>(emptyEditor);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const runs = useWorkflowRuns(editor.workflow_id);
 
-  const rows = (tests.data ?? []).filter(
-    (t) => stateFilter === "all" || t.result === stateFilter,
+  const flash = useCallback((msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 4200);
+  }, []);
+
+  // Sync the editor whenever the user selects a different workflow or the
+  // server returns a new version after save.
+  useEffect(() => {
+    if (activeId === NEW_WORKFLOW_ID) return;
+    const w = (workflows.data ?? []).find((x) => x.workflow_id === activeId);
+    if (w) setEditor(fromWorkflow(w, catalog.data ?? []));
+  }, [activeId, workflows.data, catalog.data]);
+
+  const specByType = useMemo(
+    () => new Map((catalog.data ?? []).map((a) => [a.node_type, a])),
+    [catalog.data],
   );
+
+  const addNode = useCallback(
+    (spec: ActionSpec) => {
+      const id = nextNodeId();
+      const node: FlowNode = {
+        id,
+        type: "trustops",
+        position: { x: 120 + (editor.nodes.length % 4) * 220, y: 140 + Math.floor(editor.nodes.length / 4) * 130 },
+        data: {
+          label: spec.label,
+          kind: spec.kind,
+          node_type: spec.node_type,
+          params: {},
+        },
+      };
+      setEditor((e) => ({ ...e, nodes: [...e.nodes, node] }));
+      setSelectedNode(id);
+    },
+    [editor.nodes.length],
+  );
+
+  const updateNodeParams = useCallback((id: string, params: Record<string, unknown>) => {
+    setEditor((e) => ({
+      ...e,
+      nodes: e.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, params } } : n)),
+    }));
+  }, []);
+
+  const deleteNode = useCallback((id: string) => {
+    setEditor((e) => ({
+      ...e,
+      nodes: e.nodes.filter((n) => n.id !== id),
+      edges: e.edges.filter((edge) => edge.source !== id && edge.target !== id),
+    }));
+  }, []);
+
+  const persist = async () => {
+    if (!editor.name.trim()) {
+      flash("Workflow needs a name");
+      return;
+    }
+    if (editor.nodes.length === 0) {
+      flash("Add at least one node before saving");
+      return;
+    }
+    try {
+      const { workflow } = await save.mutateAsync({
+        workflow_id: editor.workflow_id ?? undefined,
+        name: editor.name.trim(),
+        description: editor.description.trim(),
+        nodes: toApiNodes(editor.nodes),
+        edges: editor.edges.map((e) => ({ source: String(e.source), target: String(e.target) })),
+      });
+      setActiveId(workflow.workflow_id);
+      flash(`Saved ${workflow.name} v${workflow.version}.`);
+    } catch (err) {
+      flash(`Save failed: ${(err as Error).message}`);
+    }
+  };
+
+  const execute = async () => {
+    if (!editor.workflow_id) {
+      flash("Save the workflow first.");
+      return;
+    }
+    try {
+      const { run: result } = await run.mutateAsync(editor.workflow_id);
+      flash(`Run ${result.result.toUpperCase()} — ${result.node_results.length} nodes executed.`);
+    } catch (err) {
+      flash(`Run failed: ${(err as Error).message}`);
+    }
+  };
+
+  const selected = editor.nodes.find((n) => n.id === selectedNode) ?? null;
+  const selectedSpec = selected ? specByType.get(selected.data.node_type) ?? null : null;
 
   return (
     <div className="grid gap-5 px-7 py-7">
       <PageHeader
         eyebrow="Workflows"
-        title="Continuous control monitoring"
-        description="Every silver-layer evidence update re-runs the control tests below. The DAG editor for triggers, evidence checks, owner routing, and snapshot actions ships in the next release — for now use this view to inspect what runs on every update."
+        title="Workflow canvas"
+        description="Drag actions from the library onto the canvas, connect them, then save and run. Every action publishes its input/output schema so connections are typed and individual nodes are testable live against the lake."
         actions={
-          <Badge tone="info">
-            <Workflow className="mr-1 h-3 w-3" /> {tests.data?.length ?? 0} live tests
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={activeId}
+              onChange={(e) => {
+                const next = e.target.value;
+                setActiveId(next);
+                if (next === NEW_WORKFLOW_ID) setEditor(emptyEditor());
+                setSelectedNode(null);
+              }}
+              className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-extrabold focus:outline-none focus:ring-1 focus:ring-brand"
+            >
+              <option value={NEW_WORKFLOW_ID}>+ New workflow</option>
+              {(workflows.data ?? []).map((w) => (
+                <option key={w.workflow_id} value={w.workflow_id}>
+                  {w.name} · v{w.version}
+                </option>
+              ))}
+            </select>
+            {!auditor && (
+              <>
+                <Button variant="default" onClick={persist} disabled={save.isPending}>
+                  {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{" "}
+                  Save
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={execute}
+                  disabled={run.isPending || !editor.workflow_id}
+                >
+                  {run.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{" "}
+                  Run
+                </Button>
+              </>
+            )}
+          </div>
         }
       />
 
-      <Card className="overflow-hidden border-dashed bg-slate-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Construction className="h-4 w-4 text-amber-600" /> Workflow canvas — coming next release
-          </CardTitle>
-          <CardDescription>
-            Drag-and-drop DAG editor with trigger / evidence-check / owner-route / snapshot nodes, per-node
-            schemas, live action testing, versioned stories, and a template library. Persisted to{" "}
-            <code>gold/workflows.jsonl</code> via <code>POST /api/workflows</code>.
-          </CardDescription>
-        </CardHeader>
+      <Card className="overflow-hidden">
+        <div className="grid gap-3 p-4 sm:grid-cols-[1fr_2fr]">
+          <label className="grid gap-1 text-xs font-black uppercase tracking-wide text-muted">
+            Name
+            <input
+              value={editor.name}
+              onChange={(e) => setEditor((ed) => ({ ...ed, name: e.target.value }))}
+              className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-extrabold text-ink focus:outline-none focus:ring-1 focus:ring-brand"
+              disabled={auditor}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-black uppercase tracking-wide text-muted">
+            Description
+            <input
+              value={editor.description}
+              onChange={(e) => setEditor((ed) => ({ ...ed, description: e.target.value }))}
+              className="rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-brand"
+              disabled={auditor}
+            />
+          </label>
+        </div>
       </Card>
+
+      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <ActionPalette catalog={catalog.data ?? []} onAdd={addNode} />
+        <WorkflowCanvas
+          nodes={editor.nodes}
+          edges={editor.edges}
+          catalog={catalog.data ?? []}
+          onNodesChange={(n) => setEditor((e) => ({ ...e, nodes: n }))}
+          onEdgesChange={(es) => setEditor((e) => ({ ...e, edges: es }))}
+          onSelectNode={setSelectedNode}
+        />
+      </div>
 
       <Card className="overflow-hidden">
         <CardHeader>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <CardTitle>Live control test queue</CardTitle>
-              <CardDescription>
-                Each row is the latest evaluation against the gold layer. Click a row to inspect the control in
-                the workbench.
-              </CardDescription>
-            </div>
-            <select
-              value={stateFilter}
-              onChange={(e) => setStateFilter(e.target.value as typeof stateFilter)}
-              className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-extrabold focus:outline-none focus:ring-1 focus:ring-brand"
-            >
-              <option value="all">All results</option>
-              <option value="pass">Pass</option>
-              <option value="fail">Fail</option>
-            </select>
-          </div>
+          <CardTitle>Run history</CardTitle>
+          <CardDescription>
+            Latest runs for {editor.workflow_id ? <code>{editor.workflow_id}</code> : "this canvas"}.
+          </CardDescription>
         </CardHeader>
         <div className="grid gap-2 p-5 pt-0">
-          {rows.length === 0 && (
-            <div className="rounded-lg border border-dashed border-line p-4 text-sm text-muted">
-              No control tests match the current filter.
+          {(runs.data ?? []).length === 0 ? (
+            <div className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
+              No runs yet. Save the workflow then click Run.
             </div>
-          )}
-          {rows.map((t) => (
-            <Link
-              key={t.control_id}
-              href={`/controls?id=${encodeURIComponent(t.control_id)}`}
-              className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 rounded-xl border border-line bg-white p-3 text-sm transition-colors hover:border-brand hover:shadow-card"
-            >
-              <input
-                type="checkbox"
-                checked={t.result === "pass"}
-                readOnly
-                className="h-4 w-4 rounded border-line accent-brand"
-              />
-              <div className="min-w-0">
-                <div className="truncate font-black text-ink">{t.name}</div>
-                <div className="mt-0.5 text-xs text-muted">
-                  {t.control_id} · {t.next_action}
+          ) : (
+            (runs.data ?? []).slice(0, 10).map((r) => (
+              <div
+                key={r.started_at + r.actor}
+                className="rounded-lg border border-line bg-white p-3 text-xs"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-black">
+                    v{r.workflow_version} · {r.node_results.length} nodes
+                  </span>
+                  <Badge tone={r.result === "ok" ? "ready" : "critical"}>{r.result}</Badge>
+                </div>
+                <div className="mt-1 text-muted">
+                  actor <b className="text-ink">{r.actor}</b> · {r.started_at}
+                </div>
+                <div className="mt-2 grid gap-1">
+                  {r.node_results.map((nr) => (
+                    <div
+                      key={nr.node_id}
+                      className="grid grid-cols-[120px_minmax(0,1fr)_auto] items-center gap-2"
+                    >
+                      <code className="text-[10px] text-muted">{nr.node_id}</code>
+                      <code className="truncate text-[10px] text-ink">{nr.node_type}</code>
+                      <Badge tone={nr.result === "ok" ? "ready" : "critical"}>{nr.result}</Badge>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <Badge tone={toneFor(t.result)}>{t.result}</Badge>
-              <ArrowRight className="h-4 w-4 text-muted" />
-            </Link>
-          ))}
+            ))
+          )}
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ShieldCheck className="h-4 w-4 text-emerald-600" /> Evaluation pipeline
-          </CardTitle>
-          <CardDescription>
-            Every test runs deterministically over the same silver layer. Identical evidence yields identical
-            posture — agents and humans see the same gold-layer truth.
-          </CardDescription>
-        </CardHeader>
-        <div className="grid gap-2 p-5 pt-0 lg:grid-cols-4">
-          {[
-            { name: "Ingest", body: "Connector lands raw evidence to bronze with SHA-256." },
-            { name: "Normalize", body: "Silver layer maps records to OCSF + AI extensions." },
-            { name: "Evaluate", body: "Each control runs its CEL/Rego rule against silver." },
-            { name: "Materialize", body: "Gold layer emits (control × asset × time) results." },
-          ].map((s, i) => (
-            <div key={s.name} className="rounded-xl border border-line bg-white p-4">
-              <div className="text-[11px] font-black uppercase tracking-wide text-muted">step {i + 1}</div>
-              <div className="mt-1 text-sm font-black text-ink">{s.name}</div>
-              <div className="mt-1 text-xs text-muted">{s.body}</div>
-            </div>
-          ))}
+      <NodeConfigDrawer
+        node={selected}
+        spec={selectedSpec}
+        onClose={() => setSelectedNode(null)}
+        onUpdateParams={updateNodeParams}
+        onDelete={deleteNode}
+      />
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-lg bg-ink px-3.5 py-3 text-sm text-white shadow-hero">
+          {toast}
         </div>
-      </Card>
+      )}
     </div>
   );
 }

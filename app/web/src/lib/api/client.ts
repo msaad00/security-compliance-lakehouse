@@ -1,7 +1,9 @@
 import { isAuditorMode } from "@/lib/state/auditor";
 import type {
+  ActionSpec,
   Assessment,
   AssetRisk,
+  AuditLogEntry,
   ConfigurePayload,
   ConnectorRun,
   ConnectorView,
@@ -13,8 +15,13 @@ import type {
   SnapshotResponse,
   TrackingEvent,
   TriagePayload,
+  TrustShare,
   VerifyResult,
   Violation,
+  Workflow,
+  WorkflowEdge,
+  WorkflowNode,
+  WorkflowRun,
 } from "./types";
 
 const BASE = "/api";
@@ -85,6 +92,53 @@ export const api = {
     ),
   listFrameworks: () =>
     get<{ count: number; frameworks: FrameworkView[] }>("/frameworks"),
+  listWorkflows: () =>
+    get<{ count: number; workflows: Workflow[] }>("/workflows"),
+  getWorkflow: (id: string) => get<Workflow>(`/workflows/${encodeURIComponent(id)}`),
+  workflowRuns: (id: string) =>
+    get<{ workflow_id: string; runs: WorkflowRun[] }>(
+      `/workflows/${encodeURIComponent(id)}/runs`,
+    ),
+  actionCatalog: () => get<{ actions: ActionSpec[] }>("/workflows/actions"),
+  saveWorkflow: (payload: {
+    workflow_id?: string;
+    name: string;
+    description?: string;
+    nodes: WorkflowNode[];
+    edges: WorkflowEdge[];
+  }) => post<{ workflow: Workflow }>("/workflows", payload),
+  runWorkflow: (id: string) =>
+    post<{ run: WorkflowRun }>(`/workflows/${encodeURIComponent(id)}/run`, {}),
+  testAction: (node_type: string, params: Record<string, unknown>) =>
+    post<{ output: Record<string, unknown> }>("/workflows/actions/run", {
+      node_type,
+      params,
+    }),
+  listTrustShares: () =>
+    get<{ count: number; shares: TrustShare[] }>("/trust-shares"),
+  createTrustShare: (payload: {
+    role: "auditor";
+    scope?: "posture_full" | "posture_framework";
+    framework_id?: string | null;
+    expires_in_hours: number;
+  }) => post<{ share: TrustShare }>("/trust-shares", payload),
+  revokeTrustShare: (share_id: string) =>
+    post<{ share: TrustShare }>(
+      `/trust-shares/${encodeURIComponent(share_id)}/revoke`,
+      {},
+    ),
+  auditLog: (
+    opts: { category?: string; actor?: string; limit?: number } = {},
+  ): Promise<{ count: number; entries: AuditLogEntry[] }> => {
+    const qs = new URLSearchParams();
+    if (opts.category) qs.set("category", opts.category);
+    if (opts.actor) qs.set("actor", opts.actor);
+    if (opts.limit !== undefined) qs.set("limit", String(opts.limit));
+    const tail = qs.toString();
+    return get<{ count: number; entries: AuditLogEntry[] }>(
+      `/audit-log${tail ? `?${tail}` : ""}`,
+    );
+  },
 };
 
 export interface SnapshotSummary {

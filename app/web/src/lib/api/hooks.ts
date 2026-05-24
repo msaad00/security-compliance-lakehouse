@@ -200,4 +200,102 @@ export function useFrameworks(opts?: Opts<FrameworkView[]>) {
   });
 }
 
+export function useWorkflows() {
+  return useQuery({
+    queryKey: ["workflows"],
+    queryFn: async () => (await api.listWorkflows()).workflows ?? [],
+    staleTime: STALE,
+  });
+}
+
+export function useWorkflow(id: string | null) {
+  return useQuery({
+    queryKey: ["workflow", id],
+    queryFn: () => (id ? api.getWorkflow(id) : Promise.reject(new Error("no id"))),
+    enabled: Boolean(id),
+    staleTime: 5_000,
+  });
+}
+
+export function useWorkflowRuns(id: string | null) {
+  return useQuery({
+    queryKey: ["workflow-runs", id],
+    queryFn: async () => (id ? (await api.workflowRuns(id)).runs ?? [] : []),
+    enabled: Boolean(id),
+    staleTime: 5_000,
+  });
+}
+
+export function useActionCatalog() {
+  return useQuery({
+    queryKey: ["action-catalog"],
+    queryFn: async () => (await api.actionCatalog()).actions ?? [],
+    staleTime: 60_000,
+  });
+}
+
+export function useSaveWorkflow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.saveWorkflow,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["workflows"] });
+    },
+  });
+}
+
+export function useRunWorkflow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.runWorkflow,
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ["workflow-runs", id] });
+    },
+  });
+}
+
+export function useTestAction() {
+  return useMutation({
+    mutationFn: ({
+      node_type,
+      params,
+    }: {
+      node_type: string;
+      params: Record<string, unknown>;
+    }) => api.testAction(node_type, params),
+  });
+}
+
+export function useTrustShares() {
+  return useQuery({
+    queryKey: ["trust-shares"],
+    queryFn: async () => (await api.listTrustShares()).shares ?? [],
+    staleTime: 5_000,
+  });
+}
+
+export function useCreateTrustShare() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.createTrustShare,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["trust-shares"] }),
+  });
+}
+
+export function useRevokeTrustShare() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.revokeTrustShare,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["trust-shares"] }),
+  });
+}
+
+export function useAuditLog(opts?: { category?: string; actor?: string; limit?: number }) {
+  return useQuery({
+    queryKey: ["audit-log", opts?.category ?? null, opts?.actor ?? null, opts?.limit ?? null],
+    queryFn: async () => (await api.auditLog(opts ?? {})).entries ?? [],
+    staleTime: 5_000,
+  });
+}
+
 export type { VerifyResult, TrackingEvent };
