@@ -6,6 +6,8 @@ build/
 dist/
 *.egg-info/
 .DS_Store
+# Root-level safety net; per-package node_modules entries below stay too.
+node_modules/
 
 # Next.js workbench
 app/web/node_modules/
