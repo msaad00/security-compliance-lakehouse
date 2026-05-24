@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from security_lakehouse.catalog import load_control_catalog, load_framework_registry
-from security_lakehouse.models import parse_event_time, utc_iso
+from security_lakehouse.evidence_freshness import summarize_control_freshness
+from security_lakehouse.models import utc_iso
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PROGRAM_CATALOG = ROOT / "programs" / "catalog.json"
@@ -115,7 +116,12 @@ def build_control_tests(
         required_types = [str(item) for item in config.get("required_evidence_types", [])]
         observed_types = sorted({str(event["event_type"]) for event in evidence_events})
         missing_types = sorted(set(required_types) - set(observed_types))
-        freshness = _freshness_status(evidence_events, int(program.get("default_freshness_days") or 7), evaluated_at)
+        freshness = summarize_control_freshness(
+            evidence_events,
+            required_evidence_types=required_types,
+            now=evaluated_at,
+            default_slo_minutes=int(program.get("default_freshness_days") or 7) * 24 * 60,
+        )
         confidence_inputs = _confidence_inputs(control, evidence_events, missing_types, freshness, bool(config))
         confidence_score = _confidence_score(confidence_inputs)
         result = _test_result(control, evidence_events, failing_events, freshness)
@@ -145,8 +151,13 @@ def build_control_tests(
                 "open_violation_count": len(failing_events),
                 "latest_evidence_at": _latest_evidence_at(evidence_events),
                 "freshness_status": freshness["status"],
+                "stale_evidence_types": freshness["stale_evidence_types"],
+                "expired_evidence_types": freshness["expired_evidence_types"],
+                "evidence_freshness": freshness,
                 "remediation_sla_hours": int(config.get("remediation_sla_hours") or 72),
-                "next_action": _next_action(result, missing_types, str(config.get("owner") or control["owner"])),
+                "next_action": _next_action(
+                    result, missing_types, freshness, str(config.get("owner") or control["owner"])
+                ),
                 "api_refs": {
                     "control": f"/api/controls?control_id={control_id}",
                     "violations": f"/api/violations?control_id={control_id}",
@@ -156,21 +167,6 @@ def build_control_tests(
             }
         )
     return sorted(rows, key=lambda item: (item["result"] == "pass", -int(item["confidence_score"]), item["control_id"]))
-
-
-def _freshness_status(events: list[dict[str, Any]], freshness_days: int, now: datetime) -> dict[str, Any]:
-    latest = _latest_evidence_at(events)
-    if latest is None:
-        return {"status": "missing", "score": 0, "latest_evidence_at": None, "freshness_days": freshness_days}
-    parsed = parse_event_time(latest)
-    cutoff = now.astimezone(UTC) - timedelta(days=freshness_days)
-    fresh = parsed >= cutoff
-    return {
-        "status": "fresh" if fresh else "stale",
-        "score": 100 if fresh else 30,
-        "latest_evidence_at": utc_iso(parsed),
-        "freshness_days": freshness_days,
-    }
 
 
 def _confidence_inputs(
@@ -216,7 +212,7 @@ def _test_result(
         return "needs_evidence"
     if failing_events or control.get("status") == "fail":
         return "fail"
-    if freshness["status"] == "stale":
+    if freshness["status"] in {"stale", "expired", "missing"}:
         return "needs_evidence"
     return "pass"
 
@@ -231,11 +227,16 @@ def _lifecycle_status(result: str, confidence_score: int) -> str:
     return "ready"
 
 
-def _next_action(result: str, missing_types: list[str], owner: str) -> str:
+def _next_action(result: str, missing_types: list[str], freshness: dict[str, Any], owner: str) -> str:
     if result == "pass":
         return "keep monitoring evidence freshness and source health"
     if missing_types:
         return f"request {', '.join(missing_types)} evidence from {owner}"
+    stale_types = list(freshness.get("stale_evidence_types") or []) + list(
+        freshness.get("expired_evidence_types") or []
+    )
+    if stale_types:
+        return f"refresh stale {', '.join(sorted(stale_types))} evidence from {owner}"
     return f"open remediation workflow for {owner}"
 
 

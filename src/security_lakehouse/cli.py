@@ -88,6 +88,15 @@ def _parser() -> argparse.ArgumentParser:
         "--result", default=None, choices=["pass", "fail", "needs_evidence"], help="optional result filter"
     )
     tests.set_defaults(func=_assessment_tests)
+    stale_evidence = assessment_sub.add_parser("stale-evidence", help="list stale, expired, or missing evidence")
+    stale_evidence.add_argument("--lake", required=True, help="security data lake output directory")
+    stale_evidence.add_argument(
+        "--status",
+        default=None,
+        choices=["fresh", "stale", "expired", "missing"],
+        help="optional freshness status filter",
+    )
+    stale_evidence.set_defaults(func=_assessment_stale_evidence)
 
     fixtures = sub.add_parser("fixtures", help="mockup company fixture commands")
     fixtures_sub = fixtures.add_subparsers(dest="fixtures_command", required=True)
@@ -271,6 +280,22 @@ def _assessment_tests(args: argparse.Namespace) -> int:
     if args.result:
         rows = [row for row in rows if row["result"] == args.result]
     print(json.dumps({"count": len(rows), "control_tests": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _assessment_stale_evidence(args: argparse.Namespace) -> int:
+    path = Path(args.lake) / "gold" / "evidence_freshness.jsonl"
+    if path.exists():
+        rows = read_jsonl(path)
+    else:
+        from security_lakehouse.evidence_freshness import build_evidence_freshness
+
+        rows = build_evidence_freshness(read_jsonl(Path(args.lake) / "silver" / "normalized_events.jsonl"))
+    if args.status:
+        rows = [row for row in rows if row["status"] == args.status]
+    else:
+        rows = [row for row in rows if row["status"] in {"stale", "expired", "missing"}]
+    print(json.dumps({"count": len(rows), "evidence": rows}, indent=2, sort_keys=True))
     return 0
 
 
