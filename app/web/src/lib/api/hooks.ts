@@ -2,7 +2,14 @@
 
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { api, bootstrapAssessment } from "./client";
-import type { Assessment, ControlTest } from "./types";
+import type {
+  Assessment,
+  AssetRisk,
+  ControlPosture,
+  ControlTest,
+  NormalizedEvent,
+  Violation,
+} from "./types";
 
 const STALE = 15_000;
 
@@ -26,7 +33,8 @@ export function useHealth(opts?: Opts<{ ok: boolean }>) {
 }
 
 export function usePosture(opts?: Opts<Assessment>) {
-  const initialData = typeof window !== "undefined" ? bootstrapAssessment() ?? undefined : undefined;
+  const initialData =
+    typeof window !== "undefined" ? (bootstrapAssessment() ?? undefined) : undefined;
   return useQuery({
     queryKey: ["posture", "current"],
     queryFn: api.posture,
@@ -36,13 +44,46 @@ export function usePosture(opts?: Opts<Assessment>) {
   });
 }
 
+export function useControls(opts?: Opts<ControlPosture[]>) {
+  return useQuery({
+    queryKey: ["controls"],
+    queryFn: async () => (await api.controls()).controls ?? [],
+    staleTime: STALE,
+    ...opts,
+  });
+}
+
 export function useControlTests(opts?: Opts<ControlTest[]>) {
   return useQuery({
     queryKey: ["control-tests"],
-    queryFn: async () => {
-      const r = await api.controlTests();
-      return r.control_tests ?? [];
-    },
+    queryFn: async () => (await api.controlTests()).control_tests ?? [],
+    staleTime: STALE,
+    ...opts,
+  });
+}
+
+export function useViolations(opts?: Opts<Violation[]>) {
+  return useQuery({
+    queryKey: ["violations"],
+    queryFn: async () => (await api.violations()).violations ?? [],
+    staleTime: STALE,
+    ...opts,
+  });
+}
+
+export function useEvidence(opts?: Opts<NormalizedEvent[]>) {
+  return useQuery({
+    queryKey: ["evidence"],
+    queryFn: async () => (await api.evidence()).evidence ?? [],
+    staleTime: STALE,
+    ...opts,
+  });
+}
+
+export function useAssets(opts?: Opts<AssetRisk[]>) {
+  return useQuery({
+    queryKey: ["assets"],
+    queryFn: async () => (await api.assets()).assets ?? [],
     staleTime: STALE,
     ...opts,
   });

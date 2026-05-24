@@ -1,10 +1,188 @@
-import { Placeholder } from "@/components/Placeholder";
+"use client";
+
+import { useMemo } from "react";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
+import { useState } from "react";
+import { ArrowUpDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
+import { Toolbar, matchesQuery } from "@/components/Toolbar";
+import { useControls, useViolations } from "@/lib/api/hooks";
+import { useToolbar } from "@/lib/state/filters";
+import type { Violation } from "@/lib/api/types";
+
+const helper = createColumnHelper<Violation>();
+
+const toneForSeverity = (s: string) =>
+  s === "critical" ? "critical" : s === "high" ? "attention" : "info";
 
 export default function ViolationsPage() {
+  const violations = useViolations();
+  const controls = useControls();
+  const { filters, setFilters } = useToolbar();
+  const [sorting, setSorting] = useState<SortingState>([{ id: "severity_score", desc: true }]);
+
+  const frameworks = useMemo(
+    () => Array.from(new Set((controls.data ?? []).map((c) => c.framework))),
+    [controls.data],
+  );
+
+  const controlFramework = useMemo(() => {
+    const map = new Map<string, string>();
+    (controls.data ?? []).forEach((c) => map.set(c.control_id, c.framework));
+    return map;
+  }, [controls.data]);
+
+  const filtered = useMemo(
+    () =>
+      (violations.data ?? []).filter((v) => {
+        if (filters.framework !== "all" && controlFramework.get(v.control_id) !== filters.framework)
+          return false;
+        if (filters.severity !== "all" && v.severity !== filters.severity) return false;
+        return matchesQuery(v, filters.query);
+      }),
+    [violations.data, filters, controlFramework],
+  );
+
+  const columns = [
+    helper.accessor("violation_id", {
+      header: "Violation",
+      cell: (info) => (
+        <div>
+          <code className="text-xs text-ink">{info.getValue()}</code>
+          <div className="text-xs text-muted">{info.row.original.event_type}</div>
+        </div>
+      ),
+    }),
+    helper.accessor("control_id", {
+      header: "Control",
+      cell: (info) => <code className="text-xs">{info.getValue()}</code>,
+    }),
+    helper.accessor("asset_id", {
+      header: "Asset",
+      cell: (info) => (
+        <div>
+          <code className="text-xs text-ink">{info.getValue()}</code>
+          <div className="text-xs text-muted">{info.row.original.asset_owner}</div>
+        </div>
+      ),
+    }),
+    helper.accessor("severity", {
+      header: "Severity",
+      cell: (info) => {
+        const v = info.getValue() as string;
+        return (
+          <div>
+            <Badge tone={toneForSeverity(v)}>{v}</Badge>
+            <div className="mt-1 text-xs text-muted">score {info.row.original.severity_score}</div>
+          </div>
+        );
+      },
+    }),
+    helper.accessor("severity_score", { header: "Score", cell: (info) => info.getValue() }),
+    helper.accessor("source", {
+      header: "Source",
+      cell: (info) => <Badge>{info.getValue()}</Badge>,
+    }),
+    helper.accessor("evidence_ref", {
+      header: "Evidence",
+      cell: (info) => <code className="text-xs">{info.getValue()}</code>,
+    }),
+    helper.display({
+      id: "action",
+      header: "",
+      cell: () => (
+        <Button variant="default" size="sm" disabled>
+          Assign
+        </Button>
+      ),
+    }),
+  ];
+
+  const table = useReactTable({
+    data: filtered,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   return (
-    <Placeholder
-      title="Violation queue"
-      body="Actionable control failures grouped by owner, asset, source, and evidence reference with triage workflow."
-    />
+    <div className="grid gap-5 px-7 py-7">
+      <PageHeader
+        eyebrow="Violations"
+        title="Violation queue"
+        description="Open control failures linked to assets, owners, sources, and evidence references. Triage workflow (assign, SLA, resolve) lands in PR 3."
+      />
+      <Toolbar
+        filters={filters}
+        frameworks={frameworks}
+        onChange={setFilters}
+        placeholder="Search by violation, asset, source, owner…"
+      />
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>{filtered.length} open violations</CardTitle>
+          <CardDescription>
+            Sorted by severity score by default; click any column header to re-sort.
+          </CardDescription>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id} className="border-y border-line bg-slate-50/60">
+                  {hg.headers.map((h) => (
+                    <th
+                      key={h.id}
+                      onClick={h.column.getToggleSortingHandler()}
+                      className="cursor-pointer px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-muted"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        {h.column.getCanSort() && (
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        )}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((r) => (
+                <tr
+                  key={r.id}
+                  className="border-b border-line last:border-0 hover:bg-blue-50/40"
+                >
+                  {r.getVisibleCells().map((c) => (
+                    <td key={c.id} className="px-4 py-3 align-top">
+                      {flexRender(c.column.columnDef.cell, c.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td className="px-4 py-8 text-center text-sm text-muted" colSpan={columns.length}>
+                    No violations match the current filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   );
 }
