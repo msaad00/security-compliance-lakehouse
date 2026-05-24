@@ -7,6 +7,8 @@ control tests, owner workflows, snapshots, and agent-readable APIs.
 
 ![TrustOps workflow](docs/images/trustops-readme-banner.svg)
 
+![TrustOps framework badges](docs/images/trustops-framework-badges.svg)
+
 ![TrustOps console](docs/images/trustops-console.png)
 
 ## What This Is
@@ -172,17 +174,24 @@ Snowflake and ClickHouse remain the production architecture.
 
 ## Implemented Framework Scope
 
-Current implemented controls are intentionally small and source-linked:
+Current framework support is intentionally source-linked and readiness-gated:
 
 | Framework | Status |
 |---|---|
-| SOC 2-oriented controls | implemented seed controls |
-| NIST AI RMF | implemented seed controls |
-| PCI DSS | guarded analyst skill only |
-| ISO/IEC 27001 | guarded analyst skill only |
+| SOC 2 Trust Services Criteria | implemented limited mapping |
+| NIST AI RMF 1.0 | implemented limited mapping |
+| ISO/IEC 27001:2022 | implemented limited mapping |
+| HIPAA Security Rule | implemented limited mapping |
+| PCI DSS v4.0 | implemented limited mapping |
+| GDPR 2016/679 | implemented limited mapping |
+| EU AI Act 2024/1689 | implemented limited mapping |
+| ISO/IEC 42001:2023 | implemented limited mapping |
 
-PCI DSS and ISO/IEC 27001 controls are not marked implemented until versioned
-catalog mappings and regression tests are added.
+The SVG badges above are TrustOps-owned framework marks, not official
+certification seals. A framework is not treated as ready until its official
+source is pulled, source hash is recorded, reviewed control/article mappings
+exist, evidence requirements are declared, evaluation rules are versioned, and
+coverage gates pass.
 
 ## Data Model
 

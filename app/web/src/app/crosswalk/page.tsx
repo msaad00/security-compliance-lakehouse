@@ -3,6 +3,7 @@
 import { ExternalLink, FileCheck2, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FrameworkMark } from "@/components/framework/FrameworkMark";
 import { PageHeader } from "@/components/PageHeader";
 import { useCrosswalk, useMappings, useReviewedCrosswalk } from "@/lib/api/hooks";
 
@@ -58,7 +59,12 @@ export default function CrosswalkPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-black text-ink">{mapping.control_id}</code>
-                    <Badge>{mapping.framework_id}</Badge>
+                    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-slate-50 px-2 py-1">
+                      <FrameworkMark frameworkId={mapping.framework_id} size="sm" />
+                      <span className="text-[11px] font-black text-slate-700">
+                        {mapping.framework_id}
+                      </span>
+                    </span>
                   </div>
                   <div className="mt-1 text-xs text-muted">{article.rationale}</div>
                   <div className="mt-1 text-[10px] text-muted">
@@ -105,7 +111,7 @@ export default function CrosswalkPage() {
                     key={f}
                     className="border-l border-line bg-slate-50 px-3 py-2 text-left text-[11px] font-black uppercase tracking-wide text-muted"
                   >
-                    {f}
+                    <FrameworkMark frameworkId={f} size="sm" showLabel />
                   </th>
                 ))}
               </tr>
@@ -114,7 +120,7 @@ export default function CrosswalkPage() {
               {reviewedMatrix.map((row) => (
                 <tr key={row.framework_id} className="border-t border-line">
                   <th className="bg-slate-50 px-3 py-3 text-left text-xs font-black text-ink">
-                    {row.framework_id}
+                    <FrameworkMark frameworkId={row.framework_id} size="sm" showLabel />
                     <div className="text-[10px] font-normal text-muted">
                       {row.mapping_count} mappings · {row.article_count} articles
                     </div>
@@ -192,7 +198,7 @@ export default function CrosswalkPage() {
                     key={f}
                     className="border-l border-line bg-slate-50 px-3 py-2 text-left text-[11px] font-black uppercase tracking-wide text-muted"
                   >
-                    {f}
+                    <FrameworkMark frameworkId={f} size="sm" showLabel />
                   </th>
                 ))}
               </tr>
@@ -201,7 +207,7 @@ export default function CrosswalkPage() {
               {heuristicMatrix.map((row) => (
                 <tr key={row.framework_id} className="border-t border-line">
                   <th className="bg-slate-50 px-3 py-3 text-left text-xs font-black text-ink">
-                    {row.framework_id}
+                    <FrameworkMark frameworkId={row.framework_id} size="sm" showLabel />
                   </th>
                   {row.cells.map((cell) => (
                     <td

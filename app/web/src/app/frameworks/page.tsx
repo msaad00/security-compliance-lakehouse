@@ -5,6 +5,7 @@ import { Calendar, ExternalLink, FileCheck2, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Drawer } from "@/components/ui/drawer";
+import { FrameworkMark, frameworkLabel } from "@/components/framework/FrameworkMark";
 import { PageHeader } from "@/components/PageHeader";
 import { useFrameworks, useReadiness } from "@/lib/api/hooks";
 import type {
@@ -33,8 +34,9 @@ function Row({ framework, onSelect }: { framework: FrameworkView; onSelect: () =
     <button
       type="button"
       onClick={onSelect}
-      className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-4 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-brand hover:shadow-card"
+      className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-brand hover:shadow-card"
     >
+      <FrameworkMark frameworkId={framework.framework_id} size="md" />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate font-black text-ink">{framework.name}</span>
@@ -84,6 +86,16 @@ function Detail({ framework, onClose }: { framework: FrameworkView | null; onClo
     >
       {framework && (
         <div className="grid gap-5 text-sm">
+          <section className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+            <FrameworkMark frameworkId={framework.framework_id} size="lg" />
+            <div className="min-w-0">
+              <div className="text-base font-black text-ink">
+                {frameworkLabel(framework.framework_id)}
+              </div>
+              <div className="truncate text-xs text-muted">{framework.framework_id}</div>
+            </div>
+          </section>
+
           <section
             className={[
               "rounded-xl border p-3",
@@ -188,7 +200,7 @@ function ReadinessRow({ row }: { row: FrameworkReadiness }) {
   return (
     <div className="rounded-xl border border-line bg-white p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <code className="text-sm font-black text-ink">{row.framework_id}</code>
+        <FrameworkMark frameworkId={row.framework_id} size="sm" showLabel />
         <Badge tone={row.is_ready ? "ready" : "attention"}>
           {row.is_ready ? "ready" : `blocked at ${row.stage}`}
         </Badge>
