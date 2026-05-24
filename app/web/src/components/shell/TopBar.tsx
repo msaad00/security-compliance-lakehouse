@@ -1,17 +1,35 @@
 "use client";
 
-import { Search, RefreshCw, Camera } from "lucide-react";
+import { useEffect } from "react";
+import { Camera, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "./NotificationBell";
+import { UserMenu } from "./UserMenu";
 import { useHealth } from "@/lib/api/hooks";
 
 interface Props {
   onRefresh: () => void;
   onSnapshot: () => void;
+  onOpenPalette: () => void;
 }
 
-export function TopBar({ onRefresh, onSnapshot }: Props) {
+export function TopBar({ onRefresh, onSnapshot, onOpenPalette }: Props) {
   const { data } = useHealth();
   const live = data?.ok ?? null;
+
+  // cmd/ctrl + K opens the palette anywhere in the app.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const isPalette =
+        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
+      if (isPalette) {
+        event.preventDefault();
+        onOpenPalette();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onOpenPalette]);
 
   return (
     <header className="flex h-[78px] items-center justify-between gap-4 border-b border-railLine bg-rail px-7 text-slate-100">
@@ -21,17 +39,19 @@ export function TopBar({ onRefresh, onSnapshot }: Props) {
         </span>
         TrustOps
       </div>
-      <div className="relative flex-1 min-w-[420px] max-w-[720px]">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5b6a7e]" />
-        <input
-          className="w-full rounded-lg border border-[#27364a] bg-[#101926] py-3 pl-10 pr-4 text-[#b9c6d6] placeholder:text-[#5b6a7e] focus:outline-none focus:ring-1 focus:ring-brand"
-          placeholder="Search controls, evidence, owners, assets…"
-        />
-      </div>
+      <button
+        type="button"
+        onClick={onOpenPalette}
+        className="group flex flex-1 max-w-[640px] items-center gap-3 rounded-lg border border-[#27364a] bg-[#101926] py-2.5 pl-3.5 pr-2 text-left text-sm text-[#7d8ca3] hover:border-[#3b4d68]"
+      >
+        <Search className="h-4 w-4 text-[#5b6a7e]" />
+        <span className="flex-1 truncate">Search controls, evidence, owners, assets, workflows…</span>
+        <kbd className="rounded border border-[#27364a] bg-[#0b1118] px-1.5 py-0.5 text-[10px] font-bold text-[#9aa9bc]">
+          ⌘K
+        </kbd>
+      </button>
       <div className="flex items-center gap-2.5">
-        <span className="rounded-lg border border-[#27364a] bg-[#101926] px-3 py-2.5 text-sm font-extrabold text-[#d9e4f2]">
-          Acme Co · Prod
-        </span>
+        <UserMenu />
         <span
           className={[
             "inline-flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-extrabold",
@@ -48,11 +68,12 @@ export function TopBar({ onRefresh, onSnapshot }: Props) {
           />
           {live === null ? "API checking" : live ? "API live" : "static mode"}
         </span>
+        <NotificationBell />
         <Button variant="default" onClick={onRefresh}>
           <RefreshCw className="h-4 w-4" /> Refresh
         </Button>
         <Button variant="primary" onClick={onSnapshot}>
-          <Camera className="h-4 w-4" /> Create snapshot
+          <Camera className="h-4 w-4" /> Snapshot
         </Button>
       </div>
     </header>

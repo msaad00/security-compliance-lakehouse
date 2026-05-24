@@ -3,15 +3,19 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { CommandPalette } from "./CommandPalette";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { AuditorBanner } from "@/components/AuditorBanner";
 import { SnapshotModal } from "@/components/modals/SnapshotModal";
+import { api } from "@/lib/api/client";
 
 export function Shell({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const [toast, setToast] = useState<string | null>(null);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -23,16 +27,32 @@ export function Shell({ children }: { children: ReactNode }) {
     flash("Posture refreshed from assessment data");
   }, [qc, flash]);
 
-  const onSnapshot = useCallback(() => setSnapshotOpen(true), []);
+  const onSnapshot = useCallback(async () => {
+    setSnapshotOpen(true);
+    // Pre-warm the snapshot list so the modal already has the latest record.
+    try {
+      await api.listSnapshots();
+    } catch {
+      /* non-blocking */
+    }
+  }, []);
 
   return (
-    <div className="grid min-h-screen grid-rows-[78px_auto_1fr] bg-rail">
-      <TopBar onRefresh={onRefresh} onSnapshot={onSnapshot} />
+    <div className="grid min-h-screen grid-rows-[78px_auto_auto_1fr] bg-rail">
+      <TopBar
+        onRefresh={onRefresh}
+        onSnapshot={onSnapshot}
+        onOpenPalette={() => setPaletteOpen(true)}
+      />
       <AuditorBanner />
-      <div className="grid grid-cols-[286px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)]">
         <Sidebar />
-        <main className="overflow-auto bg-panel">{children}</main>
+        <div className="grid grid-rows-[auto_1fr] overflow-hidden">
+          <Breadcrumbs />
+          <main className="overflow-auto bg-panel">{children}</main>
+        </div>
       </div>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <SnapshotModal
         open={snapshotOpen}
         onClose={() => setSnapshotOpen(false)}
