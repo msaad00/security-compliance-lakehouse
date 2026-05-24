@@ -88,6 +88,15 @@ def _parser() -> argparse.ArgumentParser:
         "--result", default=None, choices=["pass", "fail", "needs_evidence"], help="optional result filter"
     )
     tests.set_defaults(func=_assessment_tests)
+
+    fixtures = sub.add_parser("fixtures", help="mockup company fixture commands")
+    fixtures_sub = fixtures.add_subparsers(dest="fixtures_command", required=True)
+    fixtures_list = fixtures_sub.add_parser("list", help="list available mockup company fixtures")
+    fixtures_list.set_defaults(func=_fixtures_list)
+    fixtures_load = fixtures_sub.add_parser("load", help="pipe a mockup company fixture through the pipeline")
+    fixtures_load.add_argument("--company", required=True, help="company directory under mockup_companies/")
+    fixtures_load.add_argument("--out", required=True, help="security data lake output directory")
+    fixtures_load.set_defaults(func=_fixtures_load)
     return parser
 
 
@@ -216,6 +225,44 @@ def _assessment_violations(args: argparse.Namespace) -> int:
         if args.framework is None or framework_controls.get(violation["control_id"]) == args.framework
     ]
     print(json.dumps({"count": len(rows), "violations": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _fixtures_list(_args: argparse.Namespace) -> int:
+    from security_lakehouse.fixtures import list_fixtures
+
+    rows = [
+        {
+            "company": fixture.company,
+            "raw_path": str(fixture.raw_path),
+            "event_count": fixture.event_count,
+            "sources": fixture.sources,
+            "controls": fixture.controls,
+        }
+        for fixture in list_fixtures()
+    ]
+    print(json.dumps({"count": len(rows), "fixtures": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _fixtures_load(args: argparse.Namespace) -> int:
+    from security_lakehouse.fixtures import find_fixture
+
+    fixture = find_fixture(args.company)
+    if fixture is None:
+        raise ValueError(f"unknown fixture {args.company!r}; run `security-lakehouse fixtures list` to see the options")
+    result = run_pipeline(fixture.raw_path, args.out)
+    print(
+        json.dumps(
+            {
+                "company": fixture.company,
+                "loaded_from": str(fixture.raw_path),
+                **result.__dict__,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 

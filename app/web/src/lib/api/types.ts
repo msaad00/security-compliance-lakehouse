@@ -302,3 +302,54 @@ export interface AuditLogEntry {
   result: string | null;
   payload: Record<string, unknown>;
 }
+
+// --- Compliance graph -------------------------------------------------------
+
+export type GraphNodeKind = "framework" | "control" | "evidence_type" | "asset";
+
+export type GraphEdgeKind =
+  | "framework_has_control"
+  | "control_requires_evidence"
+  | "evidence_covers_asset";
+
+export interface GraphNode {
+  id: string;
+  kind: GraphNodeKind;
+  label: string;
+  subtitle?: string;
+  framework_id?: string;
+  owner?: string;
+  environment?: string;
+  risk_score?: number;
+  event_count?: number;
+}
+
+export interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  kind: GraphEdgeKind;
+}
+
+export interface ComplianceGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  counts: Record<GraphNodeKind, number>;
+}
+
+export interface CrosswalkCell {
+  framework_id: string;
+  shared_risk_domains: string[];
+  shared_owners: string[];
+  is_self: boolean;
+}
+
+export interface CrosswalkRow {
+  framework_id: string;
+  cells: CrosswalkCell[];
+}
+
+export interface Crosswalk {
+  frameworks: string[];
+  matrix: CrosswalkRow[];
+}

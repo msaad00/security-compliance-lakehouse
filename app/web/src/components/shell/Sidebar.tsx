@@ -13,6 +13,8 @@ import {
   Bot,
   BookOpen,
   Activity,
+  Network,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +32,11 @@ const ITEMS: RailItem[] = [
   { href: "/violations", label: "Violations", Icon: AlertOctagon, group: "Operate" },
   { href: "/evidence", label: "Evidence", Icon: FileSearch, group: "Operate" },
   { href: "/automation", label: "Workflows", Icon: Zap, group: "Operate" },
+  { href: "/graph", label: "Graph", Icon: Network, group: "Operate" },
   { href: "/audit-log", label: "Audit log", Icon: Activity, group: "Operate" },
   { href: "/connectors", label: "Connectors", Icon: Plug, group: "Configure" },
   { href: "/frameworks", label: "Frameworks", Icon: BookOpen, group: "Configure" },
+  { href: "/crosswalk", label: "Crosswalk", Icon: Layers, group: "Configure" },
   { href: "/trust-center", label: "Trust center", Icon: Sparkles, group: "Configure" },
   { href: "/agents", label: "Agent API", Icon: Bot, badge: "JSON", group: "Configure" },
 ];
