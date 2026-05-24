@@ -1,0 +1,103 @@
+"use client";
+
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import {
+  Building2,
+  ChevronDown,
+  LogOut,
+  Monitor,
+  Moon,
+  Settings,
+  Sun,
+  User,
+} from "lucide-react";
+import { useAuditorMode } from "@/lib/state/auditor";
+import { usePersistentState } from "@/lib/state/preferences";
+
+type Theme = "light" | "dark" | "system";
+
+export function UserMenu() {
+  const auditor = useAuditorMode();
+  const [theme, setTheme] = usePersistentState<Theme>("trustops:theme", "system");
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-lg border border-[#27364a] bg-[#101926] px-3 py-2 text-sm font-extrabold text-[#d9e4f2] hover:bg-[#152030]"
+        >
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand to-brand-cyan text-[11px] text-white">
+            A
+          </span>
+          Acme Co · {auditor ? "auditor" : "Prod"}
+          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={6}
+          className="z-[60] grid min-w-[240px] gap-0.5 rounded-xl border border-line bg-white p-1.5 shadow-hero"
+        >
+          <DropdownMenu.Label className="px-2 py-2 text-[10px] font-black uppercase tracking-wider text-muted">
+            Organization
+          </DropdownMenu.Label>
+          <DropdownMenu.Item
+            className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-slate-50"
+          >
+            <Building2 className="h-4 w-4 text-muted" />
+            <span className="truncate text-ink">Acme Co — Prod</span>
+            <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-700">
+              active
+            </span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted outline-none data-[highlighted]:bg-slate-50">
+            <Building2 className="h-4 w-4" />
+            Acme Co — Staging
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator className="my-1 h-px bg-line" />
+          <DropdownMenu.Label className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted">
+            Theme
+          </DropdownMenu.Label>
+          <div className="grid grid-cols-3 gap-1 px-1.5 pb-1.5">
+            {(["light", "dark", "system"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setTheme(mode)}
+                className={[
+                  "inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-extrabold",
+                  theme === mode
+                    ? "border-ink bg-ink text-white"
+                    : "border-line bg-white text-muted hover:bg-slate-50",
+                ].join(" ")}
+              >
+                {mode === "light" && <Sun className="h-3 w-3" />}
+                {mode === "dark" && <Moon className="h-3 w-3" />}
+                {mode === "system" && <Monitor className="h-3 w-3" />}
+                {mode}
+              </button>
+            ))}
+          </div>
+          <DropdownMenu.Separator className="my-1 h-px bg-line" />
+          <DropdownMenu.Label className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted">
+            You
+          </DropdownMenu.Label>
+          <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-slate-50">
+            <User className="h-4 w-4 text-muted" />
+            Profile
+          </DropdownMenu.Item>
+          <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-slate-50">
+            <Settings className="h-4 w-4 text-muted" />
+            Settings
+          </DropdownMenu.Item>
+          <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink outline-none data-[highlighted]:bg-slate-50">
+            <LogOut className="h-4 w-4 text-muted" />
+            Sign out
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
