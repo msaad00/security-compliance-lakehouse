@@ -103,7 +103,9 @@ class PublicGitHubClient:
 
     @staticmethod
     def _json(url: str) -> dict[str, Any]:
-        request = urllib.request.Request(url, headers={"accept": "application/vnd.github+json", "user-agent": "trustops-security-data-lake"})
+        request = urllib.request.Request(
+            url, headers={"accept": "application/vnd.github+json", "user-agent": "trustops-security-data-lake"}
+        )
         with urllib.request.urlopen(request, timeout=20) as resp:  # noqa: S310
             payload = json.loads(resp.read().decode("utf-8"))
         if not isinstance(payload, dict):
@@ -322,7 +324,12 @@ def _classify_paths(paths: list[str]) -> dict[str, list[str]]:
             signals["dependency_manifest"].append(path)
         if name == "Dockerfile" or lower.endswith(".dockerfile"):
             signals["container_build"].append(path)
-        if lower.endswith(".tf") or "/helm/" in lower or lower.startswith("deploy/helm/") or lower.endswith(("kustomization.yaml", "kustomization.yml")):
+        if (
+            lower.endswith(".tf")
+            or "/helm/" in lower
+            or lower.startswith("deploy/helm/")
+            or lower.endswith(("kustomization.yaml", "kustomization.yml"))
+        ):
             signals["iac"].append(path)
         if name.lower() in AI_ARTIFACT_NAMES or lower.startswith(("evals/", "prompts/", "models/")):
             signals["ai_artifact"].append(path)
