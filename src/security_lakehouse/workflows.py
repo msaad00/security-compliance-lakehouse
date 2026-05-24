@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -309,43 +310,132 @@ def get_workflow(lake_dir: str | Path, workflow_id: str) -> dict[str, Any] | Non
     return None
 
 
+_VAR_RE = re.compile(r"\{\{\s*([A-Za-z0-9_]+)\.output\.([A-Za-z0-9_]+)\s*\}\}")
+
+
+def _substitute_variables(
+    params: dict[str, Any],
+    outputs_by_node: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Replace ``{{nodeId.output.field}}`` references in string params."""
+
+    def resolve(value: Any) -> Any:
+        if isinstance(value, str):
+
+            def repl(match: re.Match[str]) -> str:
+                node_id = match.group(1)
+                field = match.group(2)
+                source = outputs_by_node.get(node_id)
+                if not source:
+                    return match.group(0)
+                replacement = source.get(field)
+                if replacement is None:
+                    return ""
+                return str(replacement)
+
+            return _VAR_RE.sub(repl, value)
+        if isinstance(value, list):
+            return [resolve(item) for item in value]
+        if isinstance(value, dict):
+            return {k: resolve(v) for k, v in value.items()}
+        return value
+
+    return {k: resolve(v) for k, v in params.items()}
+
+
+def _edge_allows(edge: dict[str, Any], parent_result: dict[str, Any] | None) -> bool:
+    """Return True if `edge` should fire given the parent node's run result."""
+    condition = str(edge.get("condition") or "always").lower()
+    if condition == "always":
+        return True
+    if parent_result is None or parent_result.get("result") != "ok":
+        return False
+    output = parent_result.get("output") or {}
+    passed = bool(output.get("passed"))
+    if condition == "passed":
+        return passed
+    if condition == "failed":
+        return not passed
+    return True
+
+
 def run_workflow(
     lake_dir: str | Path,
     *,
     workflow_id: str,
     actor: str = "console",
 ) -> dict[str, Any]:
-    """Execute every node in a workflow (topological order) and persist the run."""
+    """Execute every node in a workflow (topological order) and persist the run.
+
+    Variable references ``{{nodeId.output.field}}`` in params are substituted
+    from upstream node outputs before each action runs. Edges with
+    ``condition: "passed"|"failed"`` gate the target node based on the parent
+    check's ``output.passed`` boolean.
+    """
     if actor not in _RUN_ACTORS:
         actor = "console"
     workflow = get_workflow(lake_dir, workflow_id)
     if workflow is None:
         raise ValueError(f"unknown workflow_id {workflow_id!r}")
     nodes_by_id = {str(n.get("id")): n for n in workflow["nodes"]}
+    edges: list[dict[str, Any]] = list(workflow.get("edges") or [])
+    parents: dict[str, list[dict[str, Any]]] = {nid: [] for nid in nodes_by_id}
     incoming: dict[str, list[str]] = {nid: [] for nid in nodes_by_id}
-    for edge in workflow["edges"]:
+    for edge in edges:
         src = str(edge.get("source"))
         dst = str(edge.get("target"))
         if dst in incoming:
             incoming[dst].append(src)
+            parents[dst].append(edge)
     order = _topo_sort(nodes_by_id, incoming)
     started_at = _utc_now_iso()
     node_results: list[dict[str, Any]] = []
+    outputs_by_node: dict[str, dict[str, Any]] = {}
+    results_by_node: dict[str, dict[str, Any]] = {}
     failed = False
     for node_id in order:
         node = nodes_by_id[node_id]
         node_type = str(node.get("node_type") or "")
-        params = node.get("params") or {}
-        result_entry: dict[str, Any] = {"node_id": node_id, "node_type": node_type, "params": params}
+        raw_params = node.get("params") or {}
+        # Gate on incoming edge conditions: skip the node if *any* parent
+        # edge declines (failed condition with the parent's `passed=true`,
+        # or vice versa). This mirrors how Tines edges flow conditionally.
+        skip_reason: str | None = None
+        for edge in parents.get(node_id, []):
+            parent_id = str(edge.get("source"))
+            parent_result = results_by_node.get(parent_id)
+            if not _edge_allows(edge, parent_result):
+                condition = str(edge.get("condition") or "always")
+                skip_reason = f"edge from {parent_id} declined (condition={condition})"
+                break
+        if skip_reason:
+            entry = {
+                "node_id": node_id,
+                "node_type": node_type,
+                "params": raw_params,
+                "result": "skipped",
+                "reason": skip_reason,
+            }
+            node_results.append(entry)
+            results_by_node[node_id] = entry
+            continue
+        params = _substitute_variables(raw_params, outputs_by_node)
+        result_entry: dict[str, Any] = {
+            "node_id": node_id,
+            "node_type": node_type,
+            "params": params,
+        }
         try:
             output = run_action(lake_dir, node_type=node_type, params=params)
             result_entry["result"] = "ok"
             result_entry["output"] = output
-        except Exception as exc:  # surface every failure mode in the run log
+            outputs_by_node[node_id] = output
+        except Exception as exc:  # surface every failure in the run log
             failed = True
             result_entry["result"] = "error"
             result_entry["error"] = str(exc)
         node_results.append(result_entry)
+        results_by_node[node_id] = result_entry
         if failed:
             break
     run = {

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Edge } from "@xyflow/react";
-import { Loader2, Play, Save } from "lucide-react";
+import { LayoutTemplate, Loader2, Play, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
 import { ActionPalette } from "@/components/workflow/ActionPalette";
-import { NodeConfigDrawer } from "@/components/workflow/NodeConfigDrawer";
+import { NodeConfigPanel } from "@/components/workflow/NodeConfigPanel";
+import { TemplateGallery } from "@/components/workflow/TemplateGallery";
 import {
   WorkflowCanvas,
   toFlowNode,
@@ -21,8 +22,9 @@ import {
   useWorkflowRuns,
   useWorkflows,
 } from "@/lib/api/hooks";
-import type { ActionSpec, Workflow, WorkflowNode } from "@/lib/api/types";
+import type { ActionSpec, Workflow, WorkflowNode, WorkflowRun } from "@/lib/api/types";
 import { useAuditorMode } from "@/lib/state/auditor";
+import type { WorkflowTemplate } from "@/lib/workflow/templates";
 
 const NEW_WORKFLOW_ID = "__new__";
 
@@ -53,6 +55,26 @@ function fromWorkflow(w: Workflow, catalog: ActionSpec[]): Editor {
       source: e.source,
       target: e.target,
       animated: true,
+      label: e.condition && e.condition !== "always" ? e.condition : undefined,
+      data: { condition: e.condition ?? "always" },
+    })),
+  };
+}
+
+function fromTemplate(template: WorkflowTemplate, catalog: ActionSpec[]): Editor {
+  const byType = new Map(catalog.map((a) => [a.node_type, a]));
+  return {
+    workflow_id: null,
+    name: template.name,
+    description: template.description,
+    nodes: template.nodes.map((n) => toFlowNode(n, byType.get(n.node_type))),
+    edges: template.edges.map((e, idx) => ({
+      id: `${e.source}-${e.target}-${idx}`,
+      source: e.source,
+      target: e.target,
+      animated: true,
+      label: e.condition && e.condition !== "always" ? e.condition : undefined,
+      data: { condition: e.condition ?? "always" },
     })),
   };
 }
@@ -66,6 +88,16 @@ function toApiNodes(nodes: FlowNode[]): WorkflowNode[] {
   }));
 }
 
+function toApiEdges(edges: Edge[]) {
+  return edges.map((e) => ({
+    source: String(e.source),
+    target: String(e.target),
+    condition:
+      (e.data as { condition?: "always" | "passed" | "failed" } | undefined)?.condition ??
+      "always",
+  }));
+}
+
 export default function AutomationPage() {
   const auditor = useAuditorMode();
   const workflows = useWorkflows();
@@ -76,6 +108,8 @@ export default function AutomationPage() {
   const [editor, setEditor] = useState<Editor>(emptyEditor);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [lastRun, setLastRun] = useState<WorkflowRun | null>(null);
   const runs = useWorkflowRuns(editor.workflow_id);
 
   const flash = useCallback((msg: string) => {
@@ -83,12 +117,14 @@ export default function AutomationPage() {
     window.setTimeout(() => setToast(null), 4200);
   }, []);
 
-  // Sync the editor whenever the user selects a different workflow or the
-  // server returns a new version after save.
+  // Sync the editor whenever the user selects a different workflow.
   useEffect(() => {
     if (activeId === NEW_WORKFLOW_ID) return;
     const w = (workflows.data ?? []).find((x) => x.workflow_id === activeId);
-    if (w) setEditor(fromWorkflow(w, catalog.data ?? []));
+    if (w) {
+      setEditor(fromWorkflow(w, catalog.data ?? []));
+      setLastRun(null);
+    }
   }, [activeId, workflows.data, catalog.data]);
 
   const specByType = useMemo(
@@ -96,13 +132,33 @@ export default function AutomationPage() {
     [catalog.data],
   );
 
+  // Merge last-run results into each node's render data so the canvas paints
+  // a green/red halo around fired nodes after Run.
+  const nodesWithRunState = useMemo<FlowNode[]>(() => {
+    if (!lastRun) return editor.nodes;
+    const byId = new Map(lastRun.node_results.map((r) => [r.node_id, r]));
+    return editor.nodes.map((node) => {
+      const result = byId.get(node.id);
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          runResult: result ? result.result : null,
+        },
+      };
+    });
+  }, [editor.nodes, lastRun]);
+
   const addNode = useCallback(
     (spec: ActionSpec) => {
       const id = nextNodeId();
       const node: FlowNode = {
         id,
         type: "trustops",
-        position: { x: 120 + (editor.nodes.length % 4) * 220, y: 140 + Math.floor(editor.nodes.length / 4) * 130 },
+        position: {
+          x: 120 + (editor.nodes.length % 4) * 220,
+          y: 140 + Math.floor(editor.nodes.length / 4) * 130,
+        },
         data: {
           label: spec.label,
           kind: spec.kind,
@@ -131,6 +187,14 @@ export default function AutomationPage() {
     }));
   }, []);
 
+  const loadTemplate = (template: WorkflowTemplate) => {
+    setEditor(fromTemplate(template, catalog.data ?? []));
+    setActiveId(NEW_WORKFLOW_ID);
+    setLastRun(null);
+    setSelectedNode(null);
+    flash(`Loaded "${template.name}" — save to persist.`);
+  };
+
   const persist = async () => {
     if (!editor.name.trim()) {
       flash("Workflow needs a name");
@@ -146,7 +210,7 @@ export default function AutomationPage() {
         name: editor.name.trim(),
         description: editor.description.trim(),
         nodes: toApiNodes(editor.nodes),
-        edges: editor.edges.map((e) => ({ source: String(e.source), target: String(e.target) })),
+        edges: toApiEdges(editor.edges),
       });
       setActiveId(workflow.workflow_id);
       flash(`Saved ${workflow.name} v${workflow.version}.`);
@@ -162,21 +226,28 @@ export default function AutomationPage() {
     }
     try {
       const { run: result } = await run.mutateAsync(editor.workflow_id);
+      setLastRun(result);
       flash(`Run ${result.result.toUpperCase()} — ${result.node_results.length} nodes executed.`);
     } catch (err) {
       flash(`Run failed: ${(err as Error).message}`);
     }
   };
 
-  const selected = editor.nodes.find((n) => n.id === selectedNode) ?? null;
-  const selectedSpec = selected ? specByType.get(selected.data.node_type) ?? null : null;
+  const selected = nodesWithRunState.find((n) => n.id === selectedNode) ?? null;
+  const selectedSpec = selected ? (specByType.get(selected.data.node_type) ?? null) : null;
+  const selectedRunResult = useMemo(() => {
+    if (!lastRun || !selectedNode) return null;
+    const match = lastRun.node_results.find((r) => r.node_id === selectedNode);
+    if (!match) return null;
+    return { result: match.result, output: match.output, error: match.error };
+  }, [lastRun, selectedNode]);
 
   return (
     <div className="grid gap-5 px-7 py-7">
       <PageHeader
         eyebrow="Workflows"
         title="Workflow canvas"
-        description="Drag actions from the library onto the canvas, connect them, then save and run. Every action publishes its input/output schema so connections are typed and individual nodes are testable live against the lake."
+        description="Drag actions from the library, connect them, then save and run. Every action publishes its input/output schema; downstream params can reference upstream output with `{{nodeId.output.field}}`. Conditional edges (passed / failed) gate next steps on check results."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -186,6 +257,7 @@ export default function AutomationPage() {
                 setActiveId(next);
                 if (next === NEW_WORKFLOW_ID) setEditor(emptyEditor());
                 setSelectedNode(null);
+                setLastRun(null);
               }}
               className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-extrabold focus:outline-none focus:ring-1 focus:ring-brand"
             >
@@ -196,10 +268,17 @@ export default function AutomationPage() {
                 </option>
               ))}
             </select>
+            <Button variant="default" onClick={() => setTemplatesOpen(true)}>
+              <LayoutTemplate className="h-4 w-4" /> Templates
+            </Button>
             {!auditor && (
               <>
                 <Button variant="default" onClick={persist} disabled={save.isPending}>
-                  {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{" "}
+                  {save.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}{" "}
                   Save
                 </Button>
                 <Button
@@ -207,7 +286,11 @@ export default function AutomationPage() {
                   onClick={execute}
                   disabled={run.isPending || !editor.workflow_id}
                 >
-                  {run.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{" "}
+                  {run.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}{" "}
                   Run
                 </Button>
               </>
@@ -239,15 +322,23 @@ export default function AutomationPage() {
         </div>
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_auto]">
         <ActionPalette catalog={catalog.data ?? []} onAdd={addNode} />
         <WorkflowCanvas
-          nodes={editor.nodes}
+          nodes={nodesWithRunState}
           edges={editor.edges}
           catalog={catalog.data ?? []}
           onNodesChange={(n) => setEditor((e) => ({ ...e, nodes: n }))}
           onEdgesChange={(es) => setEditor((e) => ({ ...e, edges: es }))}
           onSelectNode={setSelectedNode}
+        />
+        <NodeConfigPanel
+          node={selected}
+          spec={selectedSpec}
+          lastResult={selectedRunResult}
+          onClose={() => setSelectedNode(null)}
+          onUpdateParams={updateNodeParams}
+          onDelete={deleteNode}
         />
       </div>
 
@@ -265,9 +356,11 @@ export default function AutomationPage() {
             </div>
           ) : (
             (runs.data ?? []).slice(0, 10).map((r) => (
-              <div
+              <button
                 key={r.started_at + r.actor}
-                className="rounded-lg border border-line bg-white p-3 text-xs"
+                type="button"
+                onClick={() => setLastRun(r)}
+                className="grid w-full gap-1 rounded-lg border border-line bg-white p-3 text-left text-xs hover:border-brand"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-black">
@@ -275,33 +368,19 @@ export default function AutomationPage() {
                   </span>
                   <Badge tone={r.result === "ok" ? "ready" : "critical"}>{r.result}</Badge>
                 </div>
-                <div className="mt-1 text-muted">
+                <div className="text-muted">
                   actor <b className="text-ink">{r.actor}</b> · {r.started_at}
                 </div>
-                <div className="mt-2 grid gap-1">
-                  {r.node_results.map((nr) => (
-                    <div
-                      key={nr.node_id}
-                      className="grid grid-cols-[120px_minmax(0,1fr)_auto] items-center gap-2"
-                    >
-                      <code className="text-[10px] text-muted">{nr.node_id}</code>
-                      <code className="truncate text-[10px] text-ink">{nr.node_type}</code>
-                      <Badge tone={nr.result === "ok" ? "ready" : "critical"}>{nr.result}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              </button>
             ))
           )}
         </div>
       </Card>
 
-      <NodeConfigDrawer
-        node={selected}
-        spec={selectedSpec}
-        onClose={() => setSelectedNode(null)}
-        onUpdateParams={updateNodeParams}
-        onDelete={deleteNode}
+      <TemplateGallery
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        onPick={loadTemplate}
       />
 
       {toast && (

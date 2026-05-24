@@ -218,6 +218,54 @@ def test_run_workflow_topological_order(tmp_path: Path) -> None:
     assert runs[0]["result"] == "ok"
 
 
+def test_run_workflow_substitutes_variable_references(tmp_path: Path) -> None:
+    """{{nodeId.output.field}} in downstream params resolves from upstream output."""
+    _bootstrap_silver(tmp_path)
+    nodes = [
+        {
+            "id": "n1",
+            "node_type": "check.evidence_exists",
+            "params": {"control_id": "SOC2-CC6.1", "minimum": 1},
+        },
+        {
+            "id": "n2",
+            "node_type": "action.snapshot",
+            "params": {"reason": "evidence_count_was_{{n1.output.matched_count}}"},
+        },
+    ]
+    edges = [{"source": "n1", "target": "n2"}]
+    saved = save_workflow(tmp_path, workflow_id=None, name="vars", description="", nodes=nodes, edges=edges)
+    run = run_workflow(tmp_path, workflow_id=saved["workflow_id"])
+    assert run["result"] == "ok"
+    snapshot_node = next(r for r in run["node_results"] if r["node_id"] == "n2")
+    # n1 saw 3 evidence rows in _bootstrap_silver; substitution should embed "3".
+    assert snapshot_node["params"]["reason"] == "evidence_count_was_3"
+
+
+def test_run_workflow_respects_conditional_edges(tmp_path: Path) -> None:
+    """Edges with condition='failed' only fire when the parent check returns passed=false."""
+    _bootstrap_silver(tmp_path)
+    nodes = [
+        {
+            "id": "n1",
+            "node_type": "check.evidence_exists",
+            "params": {"control_id": "SOC2-CC6.1", "minimum": 99},  # forces passed=false
+        },
+        {"id": "ok", "node_type": "action.snapshot", "params": {"reason": "passed_branch"}},
+        {"id": "fail", "node_type": "action.snapshot", "params": {"reason": "failed_branch"}},
+    ]
+    edges = [
+        {"source": "n1", "target": "ok", "condition": "passed"},
+        {"source": "n1", "target": "fail", "condition": "failed"},
+    ]
+    saved = save_workflow(tmp_path, workflow_id=None, name="cond", description="", nodes=nodes, edges=edges)
+    run = run_workflow(tmp_path, workflow_id=saved["workflow_id"])
+    by_id = {r["node_id"]: r for r in run["node_results"]}
+    assert by_id["n1"]["result"] == "ok"
+    assert by_id["ok"]["result"] == "skipped"  # passed branch declined
+    assert by_id["fail"]["result"] == "ok"  # failed branch fired
+
+
 def test_run_workflow_unknown_id_raises(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
         run_workflow(tmp_path, workflow_id="not-a-workflow")
