@@ -7,7 +7,6 @@ from typing import Any
 
 from security_lakehouse.io import read_json
 
-
 DEFAULT_MAPPING_PATH = Path(__file__).resolve().parents[2] / "mappings" / "control_map.json"
 DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[2] / "controls" / "catalog.json"
 

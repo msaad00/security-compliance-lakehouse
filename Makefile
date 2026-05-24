@@ -1,10 +1,30 @@
-.PHONY: test validate pipeline dashboard smoke
+.PHONY: compile lint format-check diff-check test validate validate-json validate-generated pipeline dashboard api-smoke smoke ci
 
 test:
 	PYTHONPATH=src python -m pytest -q
 
+compile:
+	PYTHONPATH=src python -m compileall -q src tests tools
+
+lint:
+	PYTHONPATH=src python -m ruff check src tests tools
+
+format-check:
+	PYTHONPATH=src python -m ruff format --check src tests tools
+
+diff-check:
+	git diff --check
+
 validate:
 	PYTHONPATH=src python -m security_lakehouse.cli validate --raw data/raw/security_events.jsonl
+	PYTHONPATH=src python -m security_lakehouse.cli connectors validate
+	PYTHONPATH=src python -c "from security_lakehouse.catalog import validate_catalog; from security_lakehouse.programs import validate_program_catalog; errors = validate_catalog() + validate_program_catalog(); assert not errors, errors"
+
+validate-json:
+	PYTHONPATH=src python tools/validate_ci_artifacts.py
+
+validate-generated:
+	PYTHONPATH=src python tools/validate_ci_artifacts.py --generated
 
 pipeline:
 	PYTHONPATH=src python -m security_lakehouse.cli pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
@@ -12,4 +32,9 @@ pipeline:
 dashboard:
 	PYTHONPATH=src python -m security_lakehouse.cli dashboard --lake build/lakehouse --out build/dashboard/index.html
 
-smoke: validate pipeline dashboard test
+api-smoke:
+	PYTHONPATH=src python tools/api_smoke.py
+
+smoke: validate validate-json pipeline validate-generated dashboard api-smoke test
+
+ci: diff-check compile lint format-check smoke

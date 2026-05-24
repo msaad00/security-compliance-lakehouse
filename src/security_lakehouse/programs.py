@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from security_lakehouse.catalog import load_control_catalog, load_framework_registry
 from security_lakehouse.models import parse_event_time, utc_iso
-
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PROGRAM_CATALOG = ROOT / "programs" / "catalog.json"
@@ -60,7 +59,9 @@ def validate_program_catalog(path: str | Path | None = None) -> list[str]:
         framework_ids = {str(item) for item in program.get("framework_ids", [])}
         unknown_frameworks = framework_ids - set(frameworks)
         if unknown_frameworks:
-            errors.append(f"program {program_id} references unknown frameworks: {', '.join(sorted(unknown_frameworks))}")
+            errors.append(
+                f"program {program_id} references unknown frameworks: {', '.join(sorted(unknown_frameworks))}"
+            )
 
         tests = program.get("control_tests")
         if not isinstance(tests, list) or not tests:
@@ -96,11 +97,9 @@ def build_control_tests(
 ) -> list[dict[str, Any]]:
     catalog = load_program_catalog(program_path)
     control_catalog = load_control_catalog()
-    evaluated_at = now or datetime.now(timezone.utc)
+    evaluated_at = now or datetime.now(UTC)
     test_configs = {
-        str(test["control_id"]): (program, test)
-        for program in catalog["programs"]
-        for test in program["control_tests"]
+        str(test["control_id"]): (program, test) for program in catalog["programs"] for test in program["control_tests"]
     }
     events_by_control: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for event in silver_rows:
@@ -164,7 +163,7 @@ def _freshness_status(events: list[dict[str, Any]], freshness_days: int, now: da
     if latest is None:
         return {"status": "missing", "score": 0, "latest_evidence_at": None, "freshness_days": freshness_days}
     parsed = parse_event_time(latest)
-    cutoff = now.astimezone(timezone.utc) - timedelta(days=freshness_days)
+    cutoff = now.astimezone(UTC) - timedelta(days=freshness_days)
     fresh = parsed >= cutoff
     return {
         "status": "fresh" if fresh else "stale",

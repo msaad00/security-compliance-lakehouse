@@ -5,27 +5,62 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+      - name: Install package
+        run: python -m pip install -e ".[dev]"
+      - name: Check patch whitespace
+        run: git diff --check
+      - name: Compile Python
+        run: python -m compileall -q src tests tools
+      - name: Lint Python
+        run: ruff check src tests tools
+      - name: Check Python formatting
+        run: ruff format --check src tests tools
+      - name: Validate schemas and JSON artifacts
+        run: python tools/validate_ci_artifacts.py
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
       - name: Install package
         run: python -m pip install -e ".[dev]"
       - name: Validate sample evidence
         run: security-lakehouse validate --raw data/raw/security_events.jsonl
       - name: Validate catalog and mappings
-        run: python -c "from security_lakehouse.catalog import validate_catalog; errors = validate_catalog(); assert not errors, errors"
+        run: python -c "from security_lakehouse.catalog import validate_catalog; from security_lakehouse.programs import validate_program_catalog; errors = validate_catalog() + validate_program_catalog(); assert not errors, errors"
       - name: Validate connector access contracts
         run: security-lakehouse connectors validate
       - name: Run pipeline smoke
         run: security-lakehouse pipeline run --raw data/raw/security_events.jsonl --out build/lakehouse
+      - name: Validate generated lake artifacts
+        run: python tools/validate_ci_artifacts.py --generated
       - name: Validate current posture API payload
         run: security-lakehouse assessment status --lake build/lakehouse
       - name: Render dashboard
         run: security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
+      - name: Verify dashboard artifact
+        run: test -s build/dashboard/index.html && grep -q "Assessment workbench" build/dashboard/index.html
+      - name: Run live API smoke
+        run: python tools/api_smoke.py
       - name: Run tests
         run: python -m pytest -q

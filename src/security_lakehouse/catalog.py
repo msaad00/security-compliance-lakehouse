@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FRAMEWORK_REGISTRY = ROOT / "frameworks" / "registry.json"
 DEFAULT_CONTROL_CATALOG = ROOT / "controls" / "catalog.json"

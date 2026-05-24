@@ -6,7 +6,6 @@ from typing import Any
 
 from security_lakehouse.models import parse_event_time
 
-
 REQUIRED_FIELDS = {"event_id", "tenant_id", "event_time", "source", "event_type", "entity"}
 VALID_SEVERITIES = {"critical", "high", "medium", "low", "info", "none"}
 
