@@ -107,6 +107,14 @@ def _parser() -> argparse.ArgumentParser:
     fixtures_load.add_argument("--out", required=True, help="security data lake output directory")
     fixtures_load.set_defaults(func=_fixtures_load)
 
+    repo = sub.add_parser("repo", help="public repository audit commands")
+    repo_sub = repo.add_subparsers(dest="repo_command", required=True)
+    repo_audit = repo_sub.add_parser("audit", help="audit a public GitHub repository without credentials")
+    repo_audit.add_argument("repo", help="public GitHub URL or OWNER/REPO")
+    repo_audit.add_argument("--out", required=True, help="raw evidence JSONL output path")
+    repo_audit.add_argument("--fixture-dir", default=None, help="local fixture directory for offline tests and demos")
+    repo_audit.set_defaults(func=_repo_audit)
+
     frameworks = sub.add_parser("frameworks", help="framework registry commands")
     frameworks_sub = frameworks.add_subparsers(dest="frameworks_command", required=True)
     frameworks_sync = frameworks_sub.add_parser(
@@ -297,6 +305,15 @@ def _fixtures_load(args: argparse.Namespace) -> int:
             sort_keys=True,
         )
     )
+    return 0
+
+
+def _repo_audit(args: argparse.Namespace) -> int:
+    from security_lakehouse.repo_audit import audit_public_repo
+
+    rows = audit_public_repo(args.repo, out=args.out, fixture_dir=args.fixture_dir)
+    signals = sorted({row["event_type"] for row in rows})
+    print(json.dumps({"count": len(rows), "out": args.out, "signals": signals}, indent=2, sort_keys=True))
     return 0
 
 
