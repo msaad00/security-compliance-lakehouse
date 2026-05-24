@@ -5,6 +5,7 @@
 ## Verification
 
 - [ ] `make ci`
+- [ ] `make web-ci`
 - [ ] `make smoke`
 - [ ] `python -m ruff check src tests tools`
 - [ ] `python -m ruff format --check src tests tools`
