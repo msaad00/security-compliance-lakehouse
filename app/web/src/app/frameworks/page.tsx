@@ -6,8 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Drawer } from "@/components/ui/drawer";
 import { PageHeader } from "@/components/PageHeader";
-import { useFrameworks } from "@/lib/api/hooks";
-import type { FrameworkFreshness, FrameworkView } from "@/lib/api/types";
+import { useFrameworks, useReadiness } from "@/lib/api/hooks";
+import type {
+  FrameworkFreshness,
+  FrameworkReadiness,
+  FrameworkView,
+  ReadinessStage,
+} from "@/lib/api/types";
 
 const TONE: Record<FrameworkFreshness, "ready" | "attention" | "critical" | "default"> = {
   fresh: "ready",
@@ -163,10 +168,65 @@ function Detail({ framework, onClose }: { framework: FrameworkView | null; onClo
   );
 }
 
+const STAGE_ORDER: ReadinessStage[] = [
+  "source_pulled",
+  "mapped",
+  "evidence_defined",
+  "rule_versioned",
+  "coverage_certified",
+];
+
+const STAGE_LABEL: Record<ReadinessStage, string> = {
+  source_pulled: "Source pulled",
+  mapped: "Mapped to articles",
+  evidence_defined: "Evidence defined",
+  rule_versioned: "Rule versioned",
+  coverage_certified: "Coverage certified",
+};
+
+function ReadinessRow({ row }: { row: FrameworkReadiness }) {
+  return (
+    <div className="rounded-xl border border-line bg-white p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <code className="text-sm font-black text-ink">{row.framework_id}</code>
+        <Badge tone={row.is_ready ? "ready" : "attention"}>
+          {row.is_ready ? "ready" : `blocked at ${row.stage}`}
+        </Badge>
+      </div>
+      <div className="mt-1 text-xs text-muted">
+        {row.mapped_control_count}/{row.control_count} controls mapped · {row.coverage_pct}% coverage
+      </div>
+      <div className="mt-3 grid grid-cols-5 gap-1">
+        {STAGE_ORDER.map((stage) => {
+          const passed = row.gates[stage];
+          return (
+            <div
+              key={stage}
+              className={[
+                "rounded-md px-2 py-1.5 text-[10px] font-black uppercase tracking-wide",
+                passed
+                  ? "bg-emerald-100 text-emerald-700"
+                  : stage === row.stage
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-slate-100 text-slate-500",
+              ].join(" ")}
+              title={STAGE_LABEL[stage]}
+            >
+              {STAGE_LABEL[stage]}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function FrameworksPage() {
   const frameworks = useFrameworks();
+  const readiness = useReadiness();
   const [selected, setSelected] = useState<FrameworkView | null>(null);
   const data = frameworks.data ?? [];
+  const readinessRows = readiness.data ?? [];
 
   return (
     <div className="grid gap-5 px-7 py-7">
@@ -180,6 +240,27 @@ export default function FrameworksPage() {
           </span>
         }
       />
+
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>Staged readiness</CardTitle>
+          <CardDescription>
+            Coverage is only certified after every gate is green: source pulled, controls mapped to source
+            articles, evidence requirements declared, evaluation rules versioned, and mapping coverage ≥ 95%.
+            The earliest unmet gate is highlighted amber.
+          </CardDescription>
+        </CardHeader>
+        <div className="grid gap-2 p-5 pt-0">
+          {readinessRows.length === 0 && (
+            <div className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
+              Loading readiness…
+            </div>
+          )}
+          {readinessRows.map((row) => (
+            <ReadinessRow key={row.framework_id} row={row} />
+          ))}
+        </div>
+      </Card>
 
       <Card className="overflow-hidden">
         <CardHeader>

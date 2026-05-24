@@ -1,0 +1,194 @@
+"""Cron scheduler for ``trigger.cron`` workflow nodes.
+
+A workflow whose triggers include ``trigger.cron`` (with a ``schedule`` param)
+becomes eligible for periodic execution. The scheduler ticks once per call,
+fires every due workflow exactly once, and persists the last-fired timestamp
+to ``gold/scheduler_state.jsonl`` so successive ticks don't double-fire.
+
+Two execution surfaces:
+  * ``security-lakehouse scheduler tick --lake build/lakehouse`` runs the
+    tick once and exits (intended for system cron / k8s CronJob).
+  * ``security-lakehouse scheduler run --lake build/lakehouse`` runs a
+    long-lived daemon ticking every N seconds.
+
+Schedule grammar (intentionally small):
+  * ``@hourly``       — every hour on the hour
+  * ``@daily``        — every day at 00:00 UTC
+  * ``every Nm``      — every N minutes (1..59)
+  * ``every Nh``      — every N hours (1..23)
+
+This keeps the in-process scheduler portable; production deployments that
+need full crontab grammar should call ``scheduler tick`` from a real cron.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import time
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+from security_lakehouse.workflows import list_workflows, run_workflow
+
+STATE_FILE = "scheduler_state.jsonl"
+DEFAULT_TICK_SECONDS = 60
+
+_INTERVAL_RE = re.compile(r"^every\s+(\d+)\s*(m|h)$", re.IGNORECASE)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _utc_iso(dt: datetime) -> str:
+    return dt.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _gold(lake_dir: str | Path) -> Path:
+    return Path(lake_dir) / "gold"
+
+
+def parse_schedule(schedule: str) -> timedelta | None:
+    """Return the period for a schedule expression, or None if unrecognised."""
+    if not schedule:
+        return None
+    text = schedule.strip().lower()
+    if text == "@hourly":
+        return timedelta(hours=1)
+    if text == "@daily":
+        return timedelta(days=1)
+    match = _INTERVAL_RE.match(text)
+    if not match:
+        return None
+    value, unit = int(match.group(1)), match.group(2)
+    if value <= 0:
+        return None
+    if unit == "m":
+        return timedelta(minutes=value)
+    if unit == "h":
+        return timedelta(hours=value)
+    return None
+
+
+@dataclass(frozen=True)
+class ScheduledWorkflow:
+    workflow_id: str
+    schedule: str
+    period: timedelta
+
+
+def _scheduled_from_workflows(workflows: list[dict[str, Any]]) -> list[ScheduledWorkflow]:
+    out: list[ScheduledWorkflow] = []
+    for workflow in workflows:
+        for node in workflow.get("nodes", []) or []:
+            if str(node.get("node_type") or "") != "trigger.cron":
+                continue
+            schedule = str((node.get("params") or {}).get("schedule") or "")
+            period = parse_schedule(schedule)
+            if period is None:
+                continue
+            out.append(
+                ScheduledWorkflow(
+                    workflow_id=str(workflow.get("workflow_id") or ""),
+                    schedule=schedule,
+                    period=period,
+                )
+            )
+            break  # one trigger.cron per workflow is enough
+    return out
+
+
+def _read_state(lake_dir: str | Path) -> dict[str, datetime]:
+    path = _gold(lake_dir) / STATE_FILE
+    if not path.is_file():
+        return {}
+    latest: dict[str, datetime] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        wid = str(row.get("workflow_id") or "")
+        last = row.get("last_fired_at")
+        if not wid or not last:
+            continue
+        try:
+            parsed = datetime.fromisoformat(str(last).replace("Z", "+00:00")).astimezone(UTC)
+        except ValueError:
+            continue
+        existing = latest.get(wid)
+        if existing is None or parsed > existing:
+            latest[wid] = parsed
+    return latest
+
+
+def _write_state(lake_dir: str | Path, workflow_id: str, fired_at: datetime) -> None:
+    gold = _gold(lake_dir)
+    gold.mkdir(parents=True, exist_ok=True)
+    record = {"workflow_id": workflow_id, "last_fired_at": _utc_iso(fired_at)}
+    with (gold / STATE_FILE).open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+
+def tick(
+    lake_dir: str | Path,
+    *,
+    now: datetime | None = None,
+    runner: Any | None = None,
+) -> list[dict[str, Any]]:
+    """Fire every due workflow once. Returns one record per attempted run."""
+    moment = (now or _utc_now()).astimezone(UTC)
+    scheduled = _scheduled_from_workflows(list_workflows(lake_dir))
+    state = _read_state(lake_dir)
+    results: list[dict[str, Any]] = []
+    for entry in scheduled:
+        last_fired = state.get(entry.workflow_id)
+        due_at = (last_fired + entry.period) if last_fired else moment
+        if last_fired is not None and moment < due_at:
+            continue
+        try:
+            run = (runner or run_workflow)(lake_dir, workflow_id=entry.workflow_id, actor="scheduler")
+            outcome = run.get("result") if isinstance(run, dict) else "ok"
+            _write_state(lake_dir, entry.workflow_id, moment)
+            results.append(
+                {
+                    "workflow_id": entry.workflow_id,
+                    "schedule": entry.schedule,
+                    "fired_at": _utc_iso(moment),
+                    "result": outcome,
+                    "error": None,
+                }
+            )
+        except Exception as exc:  # surface every failure in the tick log
+            results.append(
+                {
+                    "workflow_id": entry.workflow_id,
+                    "schedule": entry.schedule,
+                    "fired_at": _utc_iso(moment),
+                    "result": "error",
+                    "error": str(exc),
+                }
+            )
+    return results
+
+
+def run_forever(
+    lake_dir: str | Path,
+    *,
+    tick_seconds: int = DEFAULT_TICK_SECONDS,
+    iterations: int | None = None,
+    sleeper: Any | None = None,
+) -> int:
+    """Daemon loop. ``iterations`` caps the loop for tests."""
+    count = 0
+    sleep = sleeper or time.sleep
+    while iterations is None or count < iterations:
+        tick(lake_dir)
+        sleep(tick_seconds)
+        count += 1
+    return count

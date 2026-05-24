@@ -12,6 +12,7 @@ import type {
   ControlTest,
   ControlArticleMapping,
   Crosswalk,
+  FrameworkReadiness,
   FrameworkView,
   ReviewedCrosswalk,
   Health,
@@ -132,6 +133,8 @@ export const api = {
       {},
     ),
   graph: () => get<ComplianceGraph>("/graph"),
+  readiness: () =>
+    get<{ count: number; frameworks: FrameworkReadiness[] }>("/readiness"),
   crosswalk: () => get<Crosswalk>("/crosswalk"),
   reviewedCrosswalk: () => get<ReviewedCrosswalk>("/crosswalk/reviewed"),
   mappings: () =>

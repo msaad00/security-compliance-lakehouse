@@ -324,6 +324,14 @@ export function useMappings() {
   });
 }
 
+export function useReadiness() {
+  return useQuery({
+    queryKey: ["readiness"],
+    queryFn: async () => (await api.readiness()).frameworks ?? [],
+    staleTime: 30_000,
+  });
+}
+
 export function useAuditLog(opts?: { category?: string; actor?: string; limit?: number }) {
   return useQuery({
     queryKey: ["audit-log", opts?.category ?? null, opts?.actor ?? null, opts?.limit ?? null],

@@ -106,6 +106,31 @@ def _parser() -> argparse.ArgumentParser:
     fixtures_load.add_argument("--company", required=True, help="company directory under mockup_companies/")
     fixtures_load.add_argument("--out", required=True, help="security data lake output directory")
     fixtures_load.set_defaults(func=_fixtures_load)
+
+    frameworks = sub.add_parser("frameworks", help="framework registry commands")
+    frameworks_sub = frameworks.add_subparsers(dest="frameworks_command", required=True)
+    frameworks_sync = frameworks_sub.add_parser(
+        "sync", help="re-fetch official sources, recompute sha256, advance pulled_at"
+    )
+    frameworks_sync.add_argument(
+        "--allow-network",
+        action="store_true",
+        help="fetch official sources (default is offline = mark every framework skipped)",
+    )
+    frameworks_sync.set_defaults(func=_frameworks_sync)
+    frameworks_readiness = frameworks_sub.add_parser("readiness", help="show staged readiness gates per framework")
+    frameworks_readiness.set_defaults(func=_frameworks_readiness)
+
+    scheduler = sub.add_parser("scheduler", help="trigger.cron workflow scheduler")
+    scheduler_sub = scheduler.add_subparsers(dest="scheduler_command", required=True)
+    scheduler_tick_cmd = scheduler_sub.add_parser("tick", help="fire every due cron workflow once")
+    scheduler_tick_cmd.add_argument("--lake", required=True, help="security data lake output directory")
+    scheduler_tick_cmd.set_defaults(func=_scheduler_tick)
+    scheduler_run_cmd = scheduler_sub.add_parser("run", help="run the scheduler daemon")
+    scheduler_run_cmd.add_argument("--lake", required=True, help="security data lake output directory")
+    scheduler_run_cmd.add_argument("--tick-seconds", type=int, default=60, help="seconds between ticks (default 60)")
+    scheduler_run_cmd.set_defaults(func=_scheduler_run)
+
     return parser
 
 
@@ -272,6 +297,49 @@ def _fixtures_load(args: argparse.Namespace) -> int:
             sort_keys=True,
         )
     )
+    return 0
+
+
+def _frameworks_sync(args: argparse.Namespace) -> int:
+    from security_lakehouse.framework_sync import sync_frameworks
+
+    results = sync_frameworks(allow_network=args.allow_network)
+    rows = [
+        {
+            "framework_id": r.framework_id,
+            "state": r.state,
+            "old_sha": r.old_sha,
+            "new_sha": r.new_sha,
+            "pulled_at": r.pulled_at,
+            "reason": r.reason,
+        }
+        for r in results
+    ]
+    print(json.dumps({"count": len(rows), "results": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _frameworks_readiness(_args: argparse.Namespace) -> int:
+    from security_lakehouse.readiness import build_readiness_view
+
+    rows = build_readiness_view()
+    print(json.dumps({"count": len(rows), "frameworks": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _scheduler_tick(args: argparse.Namespace) -> int:
+    from security_lakehouse.scheduler import tick
+
+    results = tick(args.lake)
+    print(json.dumps({"fired": len(results), "results": results}, indent=2, sort_keys=True))
+    return 0
+
+
+def _scheduler_run(args: argparse.Namespace) -> int:
+    from security_lakehouse.scheduler import run_forever
+
+    print(f"scheduler running every {args.tick_seconds}s against {args.lake}; Ctrl-C to stop")
+    run_forever(args.lake, tick_seconds=args.tick_seconds)
     return 0
 
 
