@@ -1,0 +1,29 @@
+# Build context exclusions (keep image small + reproducible).
+.git
+.github
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+build/
+dist/
+.DS_Store
+
+# Local lakes — never bake customer evidence into the image.
+build/lakehouse/
+build/lakehouse-*
+build/dashboard/
+
+# Web build outputs (the Dockerfile builds these fresh inside web-build).
+app/web/node_modules/
+app/web/.next/
+app/web/out/
+src/security_lakehouse/web/dist/*
+!src/security_lakehouse/web/dist/.gitkeep
+
+# Editor + scratch
+.idea/
+.vscode/
+*.swp

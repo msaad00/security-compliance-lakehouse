@@ -1,4 +1,4 @@
-.PHONY: compile lint format-check diff-check test validate validate-json validate-generated pipeline dashboard api-smoke smoke ci web-install web-dev web-typecheck web-build web-clean web-ci
+.PHONY: compile lint format-check diff-check test validate validate-json validate-generated pipeline dashboard api-smoke smoke ci web-install web-dev web-typecheck web-build web-clean web-ci docker-build helm-lint helm-template terraform-fmt terraform-validate deploy-check
 
 test:
 	PYTHONPATH=src python -m pytest -q
@@ -61,3 +61,25 @@ web-clean:
 	rm -rf src/security_lakehouse/web/dist/* src/security_lakehouse/web/dist/.* 2>/dev/null || true
 	mkdir -p src/security_lakehouse/web/dist
 	touch src/security_lakehouse/web/dist/.gitkeep
+
+# --- Deploy targets -------------------------------------------------------
+# Container image, Helm chart, EKS Terraform reference IaC.
+
+docker-build:
+	docker build -t trustops:dev .
+
+helm-lint:
+	helm lint deploy/helm/trustops
+
+helm-template:
+	helm template trustops deploy/helm/trustops > /tmp/trustops-helm-render.yaml
+	@echo "wrote /tmp/trustops-helm-render.yaml ($$(wc -l < /tmp/trustops-helm-render.yaml) lines)"
+
+terraform-fmt:
+	terraform -chdir=deploy/eks-terraform fmt -check
+
+terraform-validate:
+	terraform -chdir=deploy/eks-terraform init -backend=false -input=false
+	terraform -chdir=deploy/eks-terraform validate
+
+deploy-check: helm-lint helm-template terraform-fmt terraform-validate

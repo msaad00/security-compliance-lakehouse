@@ -14,7 +14,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
+from security_lakehouse.catalog import _data_root
+
+ROOT = _data_root()
 DEFAULT_MAPPINGS = ROOT / "mappings" / "control_articles.json"
 
 

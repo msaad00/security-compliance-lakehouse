@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and fill in your values.
+region              = "us-east-1"
+cluster_name        = "trustops"
+namespace           = "trustops"
+
+# The S3 bucket where your existing evidence lives. The IRSA role TrustOps
+# runs as gets read-only on this bucket — nothing else, no Put/Delete.
+evidence_bucket_name = "acme-trustops-evidence"
+
+# Optional second bucket (Iceberg catalog, etc.) granted read-only.
+# evidence_bucket_arn_prefix = "arn:aws:s3:::acme-iceberg-catalog"
+
+# Optional ALB ingress.
+# ingress_host = "trustops.acme.io"
+
+# Pin the image. Empty defaults to chart appVersion.
+# image_repository = "ghcr.io/msaad00/trustops"
+# image_tag        = "0.1.0"

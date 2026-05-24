@@ -17,3 +17,12 @@ app/web/*.tsbuildinfo
 # keep the package directory + .gitkeep, ignore everything generated.
 src/security_lakehouse/web/dist/*
 !src/security_lakehouse/web/dist/.gitkeep
+
+# Terraform state + provider cache
+deploy/eks-terraform/.terraform/
+deploy/eks-terraform/.terraform.lock.hcl
+deploy/eks-terraform/terraform.tfstate*
+deploy/eks-terraform/*.tfvars
+!deploy/eks-terraform/terraform.tfvars.example
+deploy/eks-terraform/crash.log
+deploy/eks-terraform/crash.*.log

@@ -44,16 +44,47 @@ def render_dashboard(lake_dir: str | Path, out_path: str | Path) -> Path:
 
 
 def _load_app_data(lake: Path) -> dict[str, Any]:
-    dashboard = read_json(lake / "gold" / "dashboard_data.json")
+    # First-boot tolerance: when the container mounts an empty lake, every
+    # gold/silver file is absent. Return an empty payload rather than
+    # crashing — the React app renders fine against empty arrays and the
+    # operator pipes evidence in afterwards.
+    dashboard_path = lake / "gold" / "dashboard_data.json"
+    dashboard = read_json(dashboard_path) if dashboard_path.is_file() else {}
     posture_path = lake / "gold" / "current_posture.json"
-    posture = read_json(posture_path) if posture_path.exists() else build_current_posture(lake)
+    silver_path = lake / "silver" / "normalized_events.jsonl"
+    if posture_path.is_file():
+        posture = read_json(posture_path)
+    elif silver_path.is_file():
+        posture = build_current_posture(lake)
+    else:
+        posture = {
+            "schema_version": "trustops.assessment.v1",
+            "assessment_type": "current_posture",
+            "evaluated_at": None,
+            "posture": {
+                "score": 0,
+                "state": "attention_required",
+                "framework_count": 0,
+                "control_count": 0,
+                "asset_count": 0,
+                "open_violation_count": 0,
+                "critical_violation_count": 0,
+                "high_violation_count": 0,
+                "stale_control_count": 0,
+            },
+            "frameworks": [],
+            "violations": [],
+            "top_risk_assets": [],
+            "stale_controls": [],
+            "assessment_hash": "",
+        }
     return {
         "generated_at": dashboard.get("generated_at"),
         "metrics": dashboard.get("metrics", {}),
         "controls": dashboard.get("control_posture", []),
         "control_tests": dashboard.get("control_tests", []),
         "assets": dashboard.get("asset_risk", []),
-        "events": read_jsonl(lake / "silver" / "normalized_events.jsonl"),
+        "events": read_jsonl(silver_path) if silver_path.is_file() else [],
         "posture": posture,
         "sources": dashboard.get("source_mix", []),
         "routes": dashboard.get("backend_routes", []),

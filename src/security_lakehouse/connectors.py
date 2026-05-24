@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
+from security_lakehouse.catalog import _data_root  # noqa: PLC2701 (reused root lookup)
+
+ROOT = _data_root()
 DEFAULT_CONNECTOR_CATALOG = ROOT / "connectors" / "catalog.json"
 
 VALID_COLLECTION_MODES = {"existing_lake_read", "direct_api_read", "managed_evidence_object"}
