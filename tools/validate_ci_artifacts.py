@@ -13,6 +13,7 @@ JSON_FILES = [
     "data/schemas/raw-security-event.schema.json",
     "data/schemas/normalized-event.schema.json",
     "data/schemas/current-posture.schema.json",
+    "data/schemas/evidence-freshness.schema.json",
     "data/schemas/violation.schema.json",
     "controls/catalog.json",
     "frameworks/registry.json",
@@ -41,6 +42,9 @@ def main() -> int:
         lake = ROOT / "build" / "lakehouse"
         _validate_rows(
             schemas["normalized-event.schema.json"], _read_jsonl(lake / "silver" / "normalized_events.jsonl")
+        )
+        _validate_rows(
+            schemas["evidence-freshness.schema.json"], _read_jsonl(lake / "gold" / "evidence_freshness.jsonl")
         )
         current_posture_schema = copy.deepcopy(schemas["current-posture.schema.json"])
         current_posture_schema["properties"]["violations"] = {

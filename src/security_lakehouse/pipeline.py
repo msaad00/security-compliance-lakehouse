@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from security_lakehouse.controls import expand_controls, load_control_map
+from security_lakehouse.evidence_freshness import build_evidence_freshness, summarize_source_freshness
 from security_lakehouse.io import read_jsonl, write_json, write_jsonl
 from security_lakehouse.models import SEVERITY_SCORE, PipelineResult, parse_event_time, utc_iso
 from security_lakehouse.programs import build_control_tests
@@ -39,8 +40,10 @@ def run_pipeline(
     control_map = load_control_map(mapping_path)
     control_rows = _build_control_rows(silver_rows, control_map)
     asset_rows = _build_asset_rows(silver_rows)
+    evidence_freshness_rows = build_evidence_freshness(silver_rows)
     control_test_rows = build_control_tests(silver_rows, control_rows)
     metrics = _build_metrics(silver_rows, control_rows, asset_rows)
+    metrics.update(_build_freshness_metrics(evidence_freshness_rows))
     metrics.update(_build_control_test_metrics(control_test_rows))
     dashboard_data = {
         "generated_at": utc_iso(datetime.now(UTC)),
@@ -63,6 +66,8 @@ def run_pipeline(
         "source_mix": _build_source_mix(silver_rows),
         "severity_mix": _build_severity_mix(silver_rows),
         "backend_routes": _build_backend_routes(silver_rows),
+        "source_freshness": summarize_source_freshness(evidence_freshness_rows),
+        "evidence_freshness": evidence_freshness_rows,
         "control_posture": control_rows,
         "control_tests": control_test_rows,
         "asset_risk": asset_rows,
@@ -73,6 +78,7 @@ def run_pipeline(
     write_jsonl(silver_dir / "normalized_events.jsonl", silver_rows)
     write_jsonl(gold_dir / "control_posture.jsonl", control_rows)
     write_jsonl(gold_dir / "control_tests.jsonl", control_test_rows)
+    write_jsonl(gold_dir / "evidence_freshness.jsonl", evidence_freshness_rows)
     write_jsonl(gold_dir / "asset_risk.jsonl", asset_rows)
     write_json(gold_dir / "metrics.json", metrics)
     write_json(gold_dir / "dashboard_data.json", dashboard_data)
@@ -83,6 +89,7 @@ def run_pipeline(
         silver_rows,
         control_rows,
         control_test_rows,
+        evidence_freshness_rows,
         asset_rows,
         metrics,
     )
@@ -97,6 +104,7 @@ def run_pipeline(
                 "gold_metrics": str(gold_dir / "metrics.json"),
                 "gold_control_posture": str(gold_dir / "control_posture.jsonl"),
                 "gold_control_tests": str(gold_dir / "control_tests.jsonl"),
+                "gold_evidence_freshness": str(gold_dir / "evidence_freshness.jsonl"),
                 "gold_asset_risk": str(gold_dir / "asset_risk.jsonl"),
             },
             "marts": {
@@ -112,7 +120,15 @@ def run_pipeline(
         },
     )
 
-    _write_sqlite_mart(sqlite_mart_path, silver_rows, control_rows, control_test_rows, asset_rows, metrics)
+    _write_sqlite_mart(
+        sqlite_mart_path,
+        silver_rows,
+        control_rows,
+        control_test_rows,
+        evidence_freshness_rows,
+        asset_rows,
+        metrics,
+    )
     from security_lakehouse.assessment import write_current_posture
 
     write_current_posture(out)
@@ -268,6 +284,19 @@ def _build_control_test_metrics(control_test_rows: list[dict[str, Any]]) -> dict
     }
 
 
+def _build_freshness_metrics(evidence_freshness_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    stale_rows = [row for row in evidence_freshness_rows if row["status"] in {"stale", "expired", "missing"}]
+    expired_rows = [row for row in evidence_freshness_rows if row["status"] == "expired"]
+    return {
+        "evidence_freshness_count": len(evidence_freshness_rows),
+        "stale_evidence_count": len(stale_rows),
+        "expired_evidence_count": len(expired_rows),
+        "fresh_evidence_rate": round(1 - (len(stale_rows) / len(evidence_freshness_rows)), 4)
+        if evidence_freshness_rows
+        else 1,
+    }
+
+
 def _build_pipeline_stages(
     raw_rows: list[dict[str, Any]],
     bronze_rows: list[dict[str, Any]],
@@ -344,6 +373,7 @@ def _write_sqlite_mart(
     silver_rows: list[dict[str, Any]],
     control_rows: list[dict[str, Any]],
     control_test_rows: list[dict[str, Any]],
+    evidence_freshness_rows: list[dict[str, Any]],
     asset_rows: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> None:
@@ -430,10 +460,35 @@ def _write_sqlite_mart(
                 open_violation_count INTEGER NOT NULL,
                 latest_evidence_at TEXT,
                 freshness_status TEXT NOT NULL,
+                stale_evidence_types_json TEXT NOT NULL,
+                expired_evidence_types_json TEXT NOT NULL,
+                evidence_freshness_json TEXT NOT NULL,
                 remediation_sla_hours INTEGER NOT NULL,
                 next_action TEXT NOT NULL,
                 api_refs_json TEXT NOT NULL,
                 evaluated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE evidence_freshness (
+                event_id TEXT PRIMARY KEY,
+                evidence_id TEXT NOT NULL,
+                evidence_ref TEXT NOT NULL,
+                source TEXT NOT NULL,
+                connector_id TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                asset_id TEXT NOT NULL,
+                control_ids_json TEXT NOT NULL,
+                evidence_collected_at TEXT NOT NULL,
+                evaluated_at TEXT NOT NULL,
+                freshness_slo_minutes INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                age_minutes INTEGER,
+                expires_at TEXT,
+                reason TEXT NOT NULL
             )
             """
         )
@@ -465,11 +520,23 @@ def _write_sqlite_mart(
                 :confidence_score, :confidence_inputs_json, :required_evidence_types_json,
                 :observed_evidence_types_json, :missing_evidence_types_json,
                 :evidence_count, :failing_evidence_count, :open_violation_count,
-                :latest_evidence_at, :freshness_status, :remediation_sla_hours,
-                :next_action, :api_refs_json, :evaluated_at
+                :latest_evidence_at, :freshness_status, :stale_evidence_types_json,
+                :expired_evidence_types_json, :evidence_freshness_json,
+                :remediation_sla_hours, :next_action, :api_refs_json, :evaluated_at
             )
             """,
             [_control_test_sql_row(row) for row in control_test_rows],
+        )
+        conn.executemany(
+            """
+            INSERT INTO evidence_freshness VALUES (
+                :event_id, :evidence_id, :evidence_ref, :source, :connector_id,
+                :event_type, :asset_id, :control_ids_json, :evidence_collected_at,
+                :evaluated_at, :freshness_slo_minutes, :status, :score,
+                :age_minutes, :expires_at, :reason
+            )
+            """,
+            [_evidence_freshness_sql_row(row) for row in evidence_freshness_rows],
         )
         conn.executemany("INSERT INTO metrics VALUES (?, ?)", [(key, str(value)) for key, value in metrics.items()])
         conn.commit()
@@ -482,7 +549,17 @@ def _control_test_sql_row(row: dict[str, Any]) -> dict[str, Any]:
         "required_evidence_types_json": json.dumps(row["required_evidence_types"], sort_keys=True),
         "observed_evidence_types_json": json.dumps(row["observed_evidence_types"], sort_keys=True),
         "missing_evidence_types_json": json.dumps(row["missing_evidence_types"], sort_keys=True),
+        "stale_evidence_types_json": json.dumps(row["stale_evidence_types"], sort_keys=True),
+        "expired_evidence_types_json": json.dumps(row["expired_evidence_types"], sort_keys=True),
+        "evidence_freshness_json": json.dumps(row["evidence_freshness"], sort_keys=True),
         "api_refs_json": json.dumps(row["api_refs"], sort_keys=True),
+    }
+
+
+def _evidence_freshness_sql_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **row,
+        "control_ids_json": json.dumps(row["control_ids"], sort_keys=True),
     }
 
 
@@ -491,6 +568,7 @@ def _write_duckdb_mart_if_available(
     silver_rows: list[dict[str, Any]],
     control_rows: list[dict[str, Any]],
     control_test_rows: list[dict[str, Any]],
+    evidence_freshness_rows: list[dict[str, Any]],
     asset_rows: list[dict[str, Any]],
     metrics: dict[str, Any],
 ) -> bool:
@@ -582,10 +660,35 @@ def _write_duckdb_mart_if_available(
                 open_violation_count INTEGER,
                 latest_evidence_at TIMESTAMP,
                 freshness_status VARCHAR,
+                stale_evidence_types_json VARCHAR,
+                expired_evidence_types_json VARCHAR,
+                evidence_freshness_json VARCHAR,
                 remediation_sla_hours INTEGER,
                 next_action VARCHAR,
                 api_refs_json VARCHAR,
                 evaluated_at TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE evidence_freshness (
+                event_id VARCHAR,
+                evidence_id VARCHAR,
+                evidence_ref VARCHAR,
+                source VARCHAR,
+                connector_id VARCHAR,
+                event_type VARCHAR,
+                asset_id VARCHAR,
+                control_ids_json VARCHAR,
+                evidence_collected_at TIMESTAMP,
+                evaluated_at TIMESTAMP,
+                freshness_slo_minutes INTEGER,
+                status VARCHAR,
+                score INTEGER,
+                age_minutes INTEGER,
+                expires_at TIMESTAMP,
+                reason VARCHAR
             )
             """
         )
@@ -657,7 +760,7 @@ def _write_duckdb_mart_if_available(
             ],
         )
         conn.executemany(
-            "INSERT INTO control_tests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO control_tests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 (
                     row["test_id"],
@@ -681,12 +784,39 @@ def _write_duckdb_mart_if_available(
                     row["open_violation_count"],
                     row["latest_evidence_at"],
                     row["freshness_status"],
+                    json.dumps(row["stale_evidence_types"], sort_keys=True),
+                    json.dumps(row["expired_evidence_types"], sort_keys=True),
+                    json.dumps(row["evidence_freshness"], sort_keys=True),
                     row["remediation_sla_hours"],
                     row["next_action"],
                     json.dumps(row["api_refs"], sort_keys=True),
                     row["evaluated_at"],
                 )
                 for row in control_test_rows
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO evidence_freshness VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    row["event_id"],
+                    row["evidence_id"],
+                    row["evidence_ref"],
+                    row["source"],
+                    row["connector_id"],
+                    row["event_type"],
+                    row["asset_id"],
+                    json.dumps(row["control_ids"], sort_keys=True),
+                    row["evidence_collected_at"],
+                    row["evaluated_at"],
+                    row["freshness_slo_minutes"],
+                    row["status"],
+                    row["score"],
+                    row["age_minutes"],
+                    row["expires_at"],
+                    row["reason"],
+                )
+                for row in evidence_freshness_rows
             ],
         )
         conn.executemany("INSERT INTO metrics VALUES (?, ?)", [(key, str(value)) for key, value in metrics.items()])

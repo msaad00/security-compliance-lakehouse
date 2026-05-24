@@ -13,12 +13,17 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from security_lakehouse.evidence_freshness import (
+    build_evidence_freshness,
+    stale_control_ids,
+    summarize_source_freshness,
+)
 from security_lakehouse.io import read_jsonl, write_json
-from security_lakehouse.models import parse_event_time, utc_iso
+from security_lakehouse.models import utc_iso
 
 VIOLATION_STATUSES = {"open", "failed", "blocked", "noncompliant"}
 
@@ -36,7 +41,13 @@ def build_current_posture(
     controls = read_jsonl(lake / "gold" / "control_posture.jsonl")
     assets = read_jsonl(lake / "gold" / "asset_risk.jsonl")
     violations = _build_violations(events)
-    stale_controls = _stale_control_ids(events, freshness_days=freshness_days, now=evaluated_at)
+    evidence_freshness = build_evidence_freshness(
+        events,
+        now=evaluated_at,
+        default_slo_minutes=freshness_days * 24 * 60,
+    )
+    stale_controls = stale_control_ids(evidence_freshness)
+    stale_evidence = [row for row in evidence_freshness if row["status"] in {"stale", "expired", "missing"}]
     framework_scores = _framework_scores(controls, violations, stale_controls)
     open_violations = [item for item in violations if item["state"] == "open"]
     critical_violations = [item for item in open_violations if item["severity"] == "critical"]
@@ -57,11 +68,18 @@ def build_current_posture(
             "critical_violation_count": len(critical_violations),
             "high_violation_count": len(high_violations),
             "stale_control_count": len(stale_controls),
+            "stale_evidence_count": len(stale_evidence),
         },
         "frameworks": framework_scores,
         "violations": open_violations,
         "top_risk_assets": assets[:10],
         "stale_controls": sorted(stale_controls),
+        "evidence_freshness": {
+            "count": len(evidence_freshness),
+            "stale_count": len(stale_evidence),
+            "sources": summarize_source_freshness(evidence_freshness),
+            "stale_evidence": stale_evidence[:50],
+        },
     }
     assessment["assessment_hash"] = _assessment_hash(assessment)
     return assessment
@@ -162,18 +180,6 @@ def _framework_scores(
             }
         )
     return sorted(rows, key=lambda item: (float(item["score"]), item["framework"]))
-
-
-def _stale_control_ids(events: list[dict[str, Any]], *, freshness_days: int, now: datetime) -> set[str]:
-    latest_by_control: dict[str, datetime] = {}
-    for event in events:
-        collected = parse_event_time(str(event["evidence_collected_at"]))
-        for control_id in event["control_ids"]:
-            current = latest_by_control.get(control_id)
-            if current is None or collected > current:
-                latest_by_control[control_id] = collected
-    cutoff = now.astimezone(UTC) - timedelta(days=freshness_days)
-    return {control_id for control_id, collected in latest_by_control.items() if collected < cutoff}
 
 
 def _weighted_posture_score(frameworks: list[dict[str, Any]]) -> float:

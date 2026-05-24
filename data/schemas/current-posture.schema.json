@@ -17,11 +17,15 @@
         "control_count": {"type": "integer"},
         "open_violation_count": {"type": "integer"},
         "critical_violation_count": {"type": "integer"},
-        "high_violation_count": {"type": "integer"}
+        "high_violation_count": {"type": "integer"},
+        "stale_control_count": {"type": "integer"},
+        "stale_evidence_count": {"type": "integer"}
       }
     },
     "frameworks": {"type": "array", "items": {"type": "object"}},
     "violations": {"type": "array", "items": {"$ref": "violation.schema.json"}},
+    "stale_controls": {"type": "array", "items": {"type": "string"}},
+    "evidence_freshness": {"type": "object"},
     "assessment_hash": {"type": "string", "minLength": 64, "maxLength": 64}
   }
 }
