@@ -26,6 +26,7 @@ interface NodeData extends Record<string, unknown> {
   kind: "trigger" | "check" | "action";
   node_type: string;
   params: Record<string, unknown>;
+  runResult?: "ok" | "error" | null;
 }
 
 export type FlowNode = Node<NodeData, "trustops">;
@@ -38,6 +39,18 @@ const KIND_STYLE: Record<NodeData["kind"], { border: string; bg: string; chip: s
 
 function NodeCard({ data, selected }: NodeProps<FlowNode>) {
   const tone = KIND_STYLE[data.kind];
+  const runRing =
+    data.runResult === "ok"
+      ? "shadow-[0_0_0_3px_rgba(22,179,100,0.55)]"
+      : data.runResult === "error"
+        ? "shadow-[0_0_0_3px_rgba(217,45,32,0.55)]"
+        : "shadow-sm";
+  const runChip =
+    data.runResult === "ok"
+      ? { bg: "#dcfae6", fg: "#067647", label: "ok" }
+      : data.runResult === "error"
+        ? { bg: "#fee4e2", fg: "#b42318", label: "error" }
+        : null;
   return (
     <div
       style={{
@@ -45,7 +58,7 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         background: tone.bg,
         borderWidth: selected ? 2 : 1.5,
       }}
-      className="min-w-[200px] rounded-xl px-3 py-2.5 text-left shadow-sm transition-colors"
+      className={`min-w-[200px] rounded-xl px-3 py-2.5 text-left transition-colors ${runRing}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span
@@ -54,7 +67,16 @@ function NodeCard({ data, selected }: NodeProps<FlowNode>) {
         >
           {data.kind}
         </span>
-        <code className="text-[10px] text-slate-500">{data.node_type}</code>
+        {runChip ? (
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide"
+            style={{ color: runChip.fg, background: runChip.bg }}
+          >
+            {runChip.label}
+          </span>
+        ) : (
+          <code className="text-[10px] text-slate-500">{data.node_type}</code>
+        )}
       </div>
       <div className="mt-1.5 text-sm font-black text-ink">{data.label}</div>
       {Object.keys(data.params).length > 0 && (

@@ -242,6 +242,13 @@ export interface WorkflowNode {
 export interface WorkflowEdge {
   source: string;
   target: string;
+  /**
+   * Edge condition. `always` (default) fires the target whenever the source
+   * runs; `passed`/`failed` only fire when the source's output includes a
+   * truthy/falsy `passed` field. Used by the backend's topological runner
+   * to gate downstream actions on check results.
+   */
+  condition?: "always" | "passed" | "failed";
 }
 
 export interface Workflow {

@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ActionSpec } from "@/lib/api/types";
 
@@ -24,8 +25,18 @@ const KIND_TONE: Record<ActionSpec["kind"], "info" | "attention" | "ready"> = {
 };
 
 export function ActionPalette({ catalog, onAdd }: Props) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!query) return catalog;
+    const lower = query.toLowerCase();
+    return catalog.filter((a) =>
+      `${a.label} ${a.description} ${a.node_type}`.toLowerCase().includes(lower),
+    );
+  }, [catalog, query]);
+
   const byKind = (kind: ActionSpec["kind"]) =>
-    catalog.filter((a) => a.kind === kind);
+    filtered.filter((a) => a.kind === kind);
 
   return (
     <Card className="overflow-hidden">
@@ -33,6 +44,17 @@ export function ActionPalette({ catalog, onAdd }: Props) {
         <CardTitle>Action library</CardTitle>
         <CardDescription>Click any action to drop it into the canvas.</CardDescription>
       </CardHeader>
+      <div className="px-5 pb-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search actions…"
+            className="w-full rounded-lg border border-line bg-white py-2 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-brand"
+          />
+        </div>
+      </div>
       <div className="grid gap-4 p-5 pt-0">
         {KIND_ORDER.map((kind) => (
           <section key={kind}>
