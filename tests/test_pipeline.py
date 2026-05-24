@@ -130,6 +130,17 @@ def test_pipeline_writes_bronze_silver_gold_and_mart(tmp_path: Path) -> None:
     assert top_asset == "container:rag-api@sha256:91ab"
 
 
+def test_dashboard_render_tolerates_empty_lake(tmp_path: Path) -> None:
+    # First-boot scenario: the container mounts an empty lake. Render must
+    # still produce a self-contained HTML (no crash on missing gold files).
+    empty_lake = tmp_path / "empty"
+    empty_lake.mkdir()
+    out = render_dashboard(empty_lake, tmp_path / "empty.html")
+    html = out.read_text(encoding="utf-8")
+    assert "Assessment workbench" in html
+    assert "TrustOps" in html
+
+
 def test_dashboard_render_uses_gold_data(tmp_path: Path) -> None:
     run_pipeline(RAW, tmp_path / "lake")
 

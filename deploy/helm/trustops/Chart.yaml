@@ -1,0 +1,29 @@
+apiVersion: v2
+name: trustops
+description: |
+  TrustOps Security Data Lake — continuous compliance assessment workbench.
+  Ships the API + React workbench in one OCI image. Customer evidence stays
+  in customer object storage (S3 / GCS / Azure Blob) via the Iceberg+Polaris
+  read-only access pattern; nothing leaves the customer cloud.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0"
+home: https://github.com/msaad00/trustops-security-data-lake
+sources:
+  - https://github.com/msaad00/trustops-security-data-lake
+maintainers:
+  - name: TrustOps maintainers
+    url: https://github.com/msaad00/trustops-security-data-lake
+keywords:
+  - compliance
+  - soc2
+  - iso27001
+  - hipaa
+  - pci
+  - gdpr
+  - eu-ai-act
+  - iso42001
+  - security
+  - data-lake
+  - workbench

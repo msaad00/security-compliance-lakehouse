@@ -1,0 +1,67 @@
+{{- if .Values.scheduler.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "trustops.fullname" . }}-scheduler
+  labels:
+    {{- include "trustops.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.scheduler.schedule | quote }}
+  concurrencyPolicy: {{ .Values.scheduler.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.scheduler.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.scheduler.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "trustops.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: {{ include "trustops.serviceAccountName" . }}
+          {{- with .Values.image.pullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: scheduler
+              image: {{ include "trustops.image" . | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              args:
+                - scheduler
+                - tick
+                - --lake
+                - {{ .Values.lake.mountPath | quote }}
+              env:
+                - name: TRUSTOPS_LAKE
+                  value: {{ .Values.lake.mountPath | quote }}
+                {{- with .Values.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}
+              volumeMounts:
+                - name: lake
+                  mountPath: {{ .Values.lake.mountPath }}
+                  readOnly: false
+                - name: tmp
+                  mountPath: /tmp
+                - name: home
+                  mountPath: /home/trustops
+          volumes:
+            - name: lake
+              {{- if .Values.lake.persistence.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ include "trustops.fullname" . }}-lake
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+            - name: tmp
+              emptyDir: {}
+            - name: home
+              emptyDir: {}
+{{- end }}

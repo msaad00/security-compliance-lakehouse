@@ -3,10 +3,27 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
+
+def _data_root() -> Path:
+    """Return the directory holding ``frameworks/``, ``controls/``, ``mappings/``.
+
+    Resolution order:
+      1. ``TRUSTOPS_DATA_DIR`` environment variable — set by the Docker
+         image and Helm chart so the wheel can find the JSON catalogs.
+      2. ``parents[2]`` of this module — the developer checkout where the
+         data lives alongside ``src/``.
+    """
+    override = os.environ.get("TRUSTOPS_DATA_DIR")
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[2]
+
+
+ROOT = _data_root()
 DEFAULT_FRAMEWORK_REGISTRY = ROOT / "frameworks" / "registry.json"
 DEFAULT_CONTROL_CATALOG = ROOT / "controls" / "catalog.json"
 
