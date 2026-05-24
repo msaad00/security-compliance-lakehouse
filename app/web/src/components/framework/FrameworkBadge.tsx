@@ -2,10 +2,10 @@
 
 /**
  * Per-framework badge components. These are stylized monograms designed for
- * the workbench — NOT reproductions of trademarked logos. Each badge
- * captures the regulator's recognised color palette and short name so the
- * workbench has the same visual hand-feel as Vanta/Drata without
- * misappropriating any mark.
+ * the workbench — NOT reproductions of trademarked logos, certification seals,
+ * or regulator marks. Each badge uses a TrustOps-owned shape language and
+ * short identifier so the product has clear framework recognition without
+ * implying certification.
  *
  * Add a new framework: extend the `framework_id → component` map at the
  * bottom and `FrameworkBadge` resolves it. Unknown framework_ids fall back
@@ -254,7 +254,7 @@ function Gdpr({ size = 32, className }: BadgeProps) {
       aria-label="GDPR (EU Regulation 2016/679)"
     >
       <rect x="2" y="2" width="44" height="44" rx="22" fill="#003399" />
-      {/* Stylised ring of stars (EU motif, not the official flag rendering) */}
+      {/* Abstract readiness dots; not the official EU flag rendering. */}
       {Array.from({ length: 12 }).map((_, i) => {
         const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
         const cx = 24 + Math.cos(angle) * 16;
