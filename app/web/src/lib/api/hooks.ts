@@ -308,6 +308,22 @@ export function useCrosswalk() {
   });
 }
 
+export function useReviewedCrosswalk() {
+  return useQuery({
+    queryKey: ["crosswalk", "reviewed"],
+    queryFn: api.reviewedCrosswalk,
+    staleTime: 60_000,
+  });
+}
+
+export function useMappings() {
+  return useQuery({
+    queryKey: ["mappings"],
+    queryFn: async () => (await api.mappings()).mappings ?? [],
+    staleTime: 60_000,
+  });
+}
+
 export function useAuditLog(opts?: { category?: string; actor?: string; limit?: number }) {
   return useQuery({
     queryKey: ["audit-log", opts?.category ?? null, opts?.actor ?? null, opts?.limit ?? null],

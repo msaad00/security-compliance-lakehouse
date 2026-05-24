@@ -21,6 +21,7 @@ from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.framework_provenance import build_framework_view
 from security_lakehouse.graph import build_compliance_graph, build_framework_crosswalk
 from security_lakehouse.io import read_jsonl
+from security_lakehouse.mappings import build_reviewed_crosswalk, load_control_article_mappings
 from security_lakehouse.tracking import ALLOWED_STATES, append_event, latest_state, list_events
 from security_lakehouse.trust_share import create_share, list_shares, revoke_share
 from security_lakehouse.verification import verify_event
@@ -150,6 +151,13 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/crosswalk":
             self._send_json(build_framework_crosswalk())
+            return
+        if parsed.path == "/api/crosswalk/reviewed":
+            self._send_json(build_reviewed_crosswalk())
+            return
+        if parsed.path == "/api/mappings":
+            mappings = load_control_article_mappings()
+            self._send_json({"count": len(mappings), "mappings": list(mappings.values())})
             return
         if parsed.path == "/api/workflows":
             rows = list_workflows(self.lake_dir)

@@ -353,3 +353,37 @@ export interface Crosswalk {
   frameworks: string[];
   matrix: CrosswalkRow[];
 }
+
+export interface ReviewedArticle {
+  article_id: string;
+  title: string;
+  official_source_url: string;
+  reviewed_by: string;
+  reviewed_at: string;
+  rationale: string;
+}
+
+export interface ControlArticleMapping {
+  control_id: string;
+  framework_id: string;
+  articles: ReviewedArticle[];
+}
+
+export interface ReviewedCrosswalkCell {
+  framework_id: string;
+  is_self: boolean;
+  shared_articles: string[];
+  shared_controls: string[];
+}
+
+export interface ReviewedCrosswalkRow {
+  framework_id: string;
+  mapping_count: number;
+  article_count: number;
+  cells: ReviewedCrosswalkCell[];
+}
+
+export interface ReviewedCrosswalk {
+  frameworks: string[];
+  matrix: ReviewedCrosswalkRow[];
+}

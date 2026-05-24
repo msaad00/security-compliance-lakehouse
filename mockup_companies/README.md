@@ -18,6 +18,8 @@ The shipped companies are:
 | --- | --- |
 | `saas` | Mid-size SaaS company — typical SOC 2 surface (IAM, GitHub, AWS, Okta, Jira). |
 | `ai_lab` | AI/ML lab — model registry + runtime inference + MCP server evidence in addition to the SaaS baseline. |
+| `fintech` | Payments + ledger workload — KMS keys, audit log retention, payments egress controls, dependency scanner. |
+| `healthcare` | Care + AI triage workload — PHI buckets, FHIR runtime gateway, model lineage, runtime PHI redaction. |
 
 Add a new company by dropping a directory with `raw/security_events.jsonl`
 (must reference only control IDs that exist in `controls/catalog.json`).
