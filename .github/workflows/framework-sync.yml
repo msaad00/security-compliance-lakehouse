@@ -1,0 +1,49 @@
+name: framework-sync
+
+on:
+  schedule:
+    # 06:13 UTC every Monday — staggered to dodge regulator burst load
+    - cron: "13 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package
+        run: python -m pip install -e ".[dev]"
+      - name: Sync framework sources
+        run: security-lakehouse frameworks sync --allow-network | tee sync.json
+      - name: Detect drift
+        id: drift
+        run: |
+          if git diff --quiet -- frameworks/registry.json; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Open PR with drift
+        if: steps.drift.outputs.drift == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(frameworks): sync official sources"
+          title: "chore(frameworks): sync official sources"
+          body: |
+            Automated framework sync detected drift in `frameworks/registry.json`.
+            Reviewer should verify each updated `source_sha256` against the
+            regulator's site before merging.
+
+            ```
+            $(cat sync.json)
+            ```
+          branch: chore/framework-sync
+          delete-branch: true

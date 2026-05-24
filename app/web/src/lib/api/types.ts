@@ -387,3 +387,22 @@ export interface ReviewedCrosswalk {
   frameworks: string[];
   matrix: ReviewedCrosswalkRow[];
 }
+
+export type ReadinessStage =
+  | "source_pulled"
+  | "mapped"
+  | "evidence_defined"
+  | "rule_versioned"
+  | "coverage_certified";
+
+export interface FrameworkReadiness {
+  framework_id: string;
+  name: string;
+  version: string;
+  control_count: number;
+  mapped_control_count: number;
+  coverage_pct: number;
+  gates: Record<ReadinessStage, boolean>;
+  stage: ReadinessStage;
+  is_ready: boolean;
+}
