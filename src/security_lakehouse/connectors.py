@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONNECTOR_CATALOG = ROOT / "connectors" / "catalog.json"
 

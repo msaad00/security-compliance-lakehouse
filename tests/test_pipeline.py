@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
-from security_lakehouse.catalog import load_control_catalog, load_framework_registry, validate_catalog, validate_evidence_controls
+from security_lakehouse.catalog import (
+    load_control_catalog,
+    load_framework_registry,
+    validate_catalog,
+    validate_evidence_controls,
+)
 from security_lakehouse.connectors import load_connector_catalog, validate_connector_catalog
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.io import read_json, read_jsonl
 from security_lakehouse.pipeline import run_pipeline
 from security_lakehouse.programs import validate_program_catalog
 from security_lakehouse.validation import validate_raw_events
-
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw" / "security_events.jsonl"
@@ -131,7 +135,7 @@ def test_assessment_engine_builds_current_and_point_in_time_posture(tmp_path: Pa
 
     posture = build_current_posture(
         tmp_path / "lake",
-        now=datetime(2026, 5, 22, 12, 0, tzinfo=timezone.utc),
+        now=datetime(2026, 5, 22, 12, 0, tzinfo=UTC),
     )
     snapshot = write_assessment_snapshot(
         tmp_path / "lake",
