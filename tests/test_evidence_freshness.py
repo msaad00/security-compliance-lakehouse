@@ -4,7 +4,11 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
-from security_lakehouse.evidence_freshness import build_evidence_freshness, summarize_control_freshness
+from security_lakehouse.evidence_freshness import (
+    build_evidence_freshness,
+    summarize_control_freshness,
+    summarize_source_freshness,
+)
 from security_lakehouse.io import read_json, read_jsonl
 from security_lakehouse.pipeline import run_pipeline
 from security_lakehouse.programs import build_control_tests
@@ -46,6 +50,43 @@ def test_evidence_freshness_uses_connector_slo() -> None:
     assert records[0]["freshness_slo_minutes"] == 5
     assert records[0]["status"] == "stale"
     assert records[0]["score"] == 30
+    assert records[0]["next_action"] == "refresh stale runtime-gateway evidence and rerun affected control tests"
+
+
+def test_source_freshness_surfaces_workflow_action() -> None:
+    rows = [
+        _event(
+            source="runtime-gateway",
+            event_type="runtime.tool_call",
+            evidence_collected_at="2026-05-24T00:00:00Z",
+        ),
+        _event(
+            event_id="evt-runtime-missing",
+            source="runtime-gateway",
+            event_type="runtime.policy_decision",
+            evidence_ref="",
+        ),
+    ]
+
+    records = build_evidence_freshness(rows, now=datetime(2026, 5, 24, 0, 6, tzinfo=UTC))
+    sources = summarize_source_freshness(records)
+
+    assert sources == [
+        {
+            "source": "runtime-gateway",
+            "connector_id": "runtime-gateway",
+            "fresh_count": 0,
+            "stale_count": 1,
+            "expired_count": 0,
+            "missing_count": 1,
+            "evidence_count": 2,
+            "latest_evidence_at": "2026-05-24T00:00:00Z",
+            "freshness_slo_minutes": 5,
+            "state": "action_required",
+            "status": "missing",
+            "next_action": "request missing runtime-gateway evidence and confirm collection metadata",
+        }
+    ]
 
 
 def test_control_test_moves_to_needs_evidence_when_required_evidence_is_stale() -> None:
@@ -111,6 +152,8 @@ def test_pipeline_writes_evidence_freshness_gold_and_mart(tmp_path: Path) -> Non
     assert metrics["evidence_freshness_count"] == result.silver_count
     assert "stale_evidence_count" in metrics
     assert posture["evidence_freshness"]["count"] == result.silver_count
+    assert all("next_action" in row for row in posture["evidence_freshness"]["stale_evidence"])
+    assert all("next_action" in row for row in posture["evidence_freshness"]["sources"])
     assert manifest["zones"]["gold_evidence_freshness"].endswith("evidence_freshness.jsonl")
 
     with sqlite3.connect(result.mart_path) as conn:
