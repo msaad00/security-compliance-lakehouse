@@ -41,11 +41,11 @@ export TRUSTOPS_SESSION_SECRET="replace-with-32-byte-random-secret"
 
 Endpoints:
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/v1/auth/login` | Start OIDC login |
+| Endpoint                    | Purpose                                           |
+| --------------------------- | ------------------------------------------------- |
+| `GET /api/v1/auth/login`    | Start OIDC login                                  |
 | `GET /api/v1/auth/callback` | Complete OIDC login and issue the browser session |
-| `POST /api/v1/auth/logout` | Revoke the browser session |
+| `POST /api/v1/auth/logout`  | Revoke the browser session                        |
 
 ## SAML
 
@@ -65,11 +65,11 @@ export TRUSTOPS_SAML_AUTO_PROVISION="false"
 
 Endpoints:
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/v1/auth/saml/login` | Start SAML login |
-| `POST /api/v1/auth/saml/acs` | Assertion consumer service; validates the SAML response |
-| `GET /api/v1/auth/saml/metadata` | Service-provider metadata for identity-provider setup |
+| Endpoint                         | Purpose                                                 |
+| -------------------------------- | ------------------------------------------------------- |
+| `GET /api/v1/auth/saml/login`    | Start SAML login                                        |
+| `POST /api/v1/auth/saml/acs`     | Assertion consumer service; validates the SAML response |
+| `GET /api/v1/auth/saml/metadata` | Service-provider metadata for identity-provider setup   |
 
 If any SAML environment variable is present, all required SAML variables must
 be present. The server fails closed instead of starting with a partial SSO
@@ -77,13 +77,13 @@ boundary.
 
 ## Roles
 
-| Role | Access |
-|---|---|
-| `admin` | Full access, including user and API key administration |
-| `security_admin` | Connector, workflow, snapshot, and control operations |
-| `contributor` | Evidence request, workflow action, and triage operations |
-| `auditor` | Read-only, with owner, credential, and note fields redacted |
-| `read_only` | Internal read-only view without mutation |
+| Role             | Access                                                      |
+| ---------------- | ----------------------------------------------------------- |
+| `admin`          | Full access, including user and API key administration      |
+| `security_admin` | Connector, workflow, snapshot, and control operations       |
+| `contributor`    | Evidence request, workflow action, and triage operations    |
+| `auditor`        | Read-only, with owner, credential, and note fields redacted |
+| `read_only`      | Internal read-only view without mutation                    |
 
 All non-health `/api/v1/*` requests are audited with a correlation ID, actor,
 tenant, route, method, decision, status, and timestamp.
