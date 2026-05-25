@@ -40,6 +40,17 @@ List configured connector contracts:
 security-lakehouse connectors list
 ```
 
+Repository evidence has two concrete collection paths:
+
+```bash
+security-lakehouse repo audit https://github.com/OWNER/REPO --out build/repo-audit.jsonl
+GITHUB_TOKEN=... security-lakehouse repo governance-sync OWNER/REPO --out build/repo-governance.jsonl
+```
+
+The public audit path requires no credentials. The governance sync path uses a
+read-only token or fixture bundle for private branch rules, collaborators,
+teams, workflow permissions, and security-setting summaries.
+
 The validator rejects:
 
 - missing collection mode, access boundary, route, permissions, or freshness SLO

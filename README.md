@@ -250,12 +250,18 @@ security-lakehouse assessment violations --lake build/lakehouse
 security-lakehouse assessment snapshot --lake build/lakehouse --reason vendor_due_diligence
 security-lakehouse query --lake build/lakehouse "select * from control_posture order by risk_score desc"
 security-lakehouse repo audit https://github.com/OWNER/REPO --out build/repo-audit.jsonl
+GITHUB_TOKEN=... security-lakehouse repo governance-sync OWNER/REPO --out build/repo-governance.jsonl
 ```
 
 Public repository audit mode works without credentials for public GitHub repos.
 It emits normalized raw evidence for metadata, code ownership, security policy,
 workflows, manifests, IaC, AI artifacts, and a repo code graph. See
 [Public Repository Audit](docs/REPO_AUDIT.md).
+
+Authenticated repository governance sync uses a read-only GitHub token or
+fixture bundle for private and organization-only signals: branch protection,
+collaborators, teams, workflow permissions, and security settings. See
+[Repository Governance Connector](docs/REPO_GOVERNANCE_CONNECTOR.md).
 
 ## Repo Map
 
