@@ -15,6 +15,9 @@ control tests, owner workflows, snapshots, and agent-readable APIs.
 
 TrustOps is an assessment layer, not just an ingestion demo.
 
+For a concise shipped-versus-planned walkthrough, start with
+[Product Walkthrough](docs/PRODUCT_WALKTHROUGH.md).
+
 It can run in two modes:
 
 | Mode                  | Use when                                                                               | What it does                                                      |
