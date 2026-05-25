@@ -89,6 +89,15 @@ Validate connector access contracts:
 ```bash
 security-lakehouse connectors validate
 security-lakehouse connectors list
+security-lakehouse connectors configure \
+  --lake build/lakehouse \
+  --connector-id github-security \
+  --state enabled
+security-lakehouse connectors sync \
+  --lake build/lakehouse \
+  --connector-id github-security \
+  --repo OWNER/REPO \
+  --fixture-dir tests/fixtures/github-governance
 ```
 
 Open:

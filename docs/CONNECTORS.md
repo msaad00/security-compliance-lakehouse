@@ -40,6 +40,45 @@ List configured connector contracts:
 security-lakehouse connectors list
 ```
 
+## Connector Runner
+
+The first executable runner is `github-security`. It uses the authenticated
+repository governance collector and writes valid raw evidence into:
+
+```text
+<lake>/raw/connector_events.jsonl
+```
+
+Enable the connector, then sync it:
+
+```bash
+security-lakehouse connectors configure \
+  --lake build/lakehouse \
+  --connector-id github-security \
+  --state enabled
+
+security-lakehouse connectors sync \
+  --lake build/lakehouse \
+  --connector-id github-security \
+  --repo OWNER/REPO \
+  --fixture-dir tests/fixtures/github-governance
+```
+
+For live collection, omit `--fixture-dir` and provide a read-only token through
+the selected token environment variable:
+
+```bash
+GITHUB_TOKEN=... security-lakehouse connectors sync \
+  --lake build/lakehouse \
+  --connector-id github-security \
+  --repo OWNER/REPO
+```
+
+By default the runner rebuilds bronze, silver, gold, marts, and current posture
+from the managed raw connector file. Use `--no-materialize` when you only want
+to collect raw evidence. Every sync attempt is recorded in
+`gold/connector_runs.jsonl`.
+
 Repository evidence has two concrete collection paths:
 
 ```bash

@@ -48,6 +48,27 @@ def _parser() -> argparse.ArgumentParser:
     connectors_list = connectors_sub.add_parser("list", help="list connector access contracts")
     connectors_list.add_argument("--catalog", default=None, help="optional connector catalog JSON")
     connectors_list.set_defaults(func=_connectors_list)
+    connectors_configure = connectors_sub.add_parser("configure", help="enable or disable a connector")
+    connectors_configure.add_argument("--lake", required=True, help="security data lake output directory")
+    connectors_configure.add_argument("--connector-id", required=True, help="connector id from connectors/catalog.json")
+    connectors_configure.add_argument("--state", required=True, choices=["enabled", "disabled"], help="connector state")
+    connectors_configure.add_argument("--actor", default="cli", help="actor recorded on the configuration event")
+    connectors_configure.set_defaults(func=_connectors_configure)
+    connectors_sync = connectors_sub.add_parser("sync", help="run a configured connector into the managed raw lake")
+    connectors_sync.add_argument("--lake", required=True, help="security data lake output directory")
+    connectors_sync.add_argument("--connector-id", required=True, help="connector id from connectors/catalog.json")
+    connectors_sync.add_argument("--repo", default=None, help="GitHub OWNER/REPO for github-security")
+    connectors_sync.add_argument(
+        "--fixture-dir", default=None, help="local fixture directory for offline connector sync"
+    )
+    connectors_sync.add_argument("--token-env", default="GITHUB_TOKEN", help="environment variable containing token")
+    connectors_sync.add_argument("--actor", default="cli", help="actor recorded on the connector run")
+    connectors_sync.add_argument(
+        "--no-materialize",
+        action="store_true",
+        help="collect raw evidence only; do not rebuild bronze/silver/gold outputs",
+    )
+    connectors_sync.set_defaults(func=_connectors_sync)
 
     dashboard = sub.add_parser("dashboard", help="render static dashboard HTML")
     dashboard.add_argument("--lake", required=True, help="security data lake output directory")
@@ -261,6 +282,35 @@ def _connectors_list(args: argparse.Namespace) -> int:
         for connector in connectors.values()
     ]
     print(json.dumps({"connectors": rows, "count": len(rows)}, indent=2, sort_keys=True))
+    return 0
+
+
+def _connectors_configure(args: argparse.Namespace) -> int:
+    from security_lakehouse.connector_state import append_config_event
+
+    event = append_config_event(
+        args.lake,
+        connector_id=args.connector_id,
+        state=args.state,
+        actor=args.actor,
+    )
+    print(json.dumps({"event": event}, indent=2, sort_keys=True))
+    return 0
+
+
+def _connectors_sync(args: argparse.Namespace) -> int:
+    from security_lakehouse.connector_runner import run_connector_sync
+
+    result = run_connector_sync(
+        args.lake,
+        connector_id=args.connector_id,
+        actor=args.actor,
+        repo=args.repo,
+        fixture_dir=args.fixture_dir,
+        token_env=args.token_env,
+        materialize=not args.no_materialize,
+    )
+    print(json.dumps(result.__dict__, indent=2, sort_keys=True))
     return 0
 
 
