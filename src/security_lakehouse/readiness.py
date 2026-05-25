@@ -9,7 +9,7 @@ Stages (advance left → right):
   mapped               every control has a reviewed control_id ↔ article mapping
   evidence_defined     every control declares an evidence_requirement (catalog)
   rule_versioned       every control declares an evaluation_rule (catalog)
-  coverage_certified   mapping_coverage_pct ≥ 95 AND every prior gate is closed
+  coverage_verified    mapping_coverage_pct ≥ 95 AND every prior gate is closed
 
 The earliest unmet gate is reported per framework so the UI surface "what to
 fix next" is unambiguous.
@@ -28,7 +28,7 @@ STAGES = (
     "mapped",
     "evidence_defined",
     "rule_versioned",
-    "coverage_certified",
+    "coverage_verified",
 )
 
 COVERAGE_THRESHOLD = 95.0
@@ -74,7 +74,7 @@ def build_readiness_view() -> list[dict[str, Any]]:
 
         # Gate 5: coverage threshold
         coverage_pct = (mapped_count / control_count * 100.0) if control_count else 0.0
-        coverage_certified = (
+        coverage_verified = (
             source_pulled and mapped and evidence_defined and rule_versioned and coverage_pct >= COVERAGE_THRESHOLD
         )
 
@@ -83,7 +83,7 @@ def build_readiness_view() -> list[dict[str, Any]]:
             "mapped": mapped,
             "evidence_defined": evidence_defined,
             "rule_versioned": rule_versioned,
-            "coverage_certified": coverage_certified,
+            "coverage_verified": coverage_verified,
         }
         earliest_unmet = next((stage for stage in STAGES if not gates[stage]), None)
 
@@ -96,8 +96,8 @@ def build_readiness_view() -> list[dict[str, Any]]:
                 "mapped_control_count": mapped_count,
                 "coverage_pct": round(coverage_pct, 1),
                 "gates": gates,
-                "stage": earliest_unmet or "coverage_certified",
-                "is_ready": gates["coverage_certified"],
+                "stage": earliest_unmet or "coverage_verified",
+                "is_ready": gates["coverage_verified"],
             }
         )
     out.sort(key=lambda r: r["framework_id"])

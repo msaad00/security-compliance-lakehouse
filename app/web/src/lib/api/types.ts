@@ -400,7 +400,7 @@ export type ReadinessStage =
   | "mapped"
   | "evidence_defined"
   | "rule_versioned"
-  | "coverage_certified";
+  | "coverage_verified";
 
 export interface FrameworkReadiness {
   framework_id: string;

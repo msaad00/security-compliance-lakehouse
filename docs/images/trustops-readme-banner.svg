@@ -20,7 +20,7 @@
   <circle cx="1050" cy="350" r="120" fill="none" stroke="#30c7d2" stroke-opacity=".20" stroke-width="2"/>
   <text x="52" y="72" fill="#7dd3fc" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="3">CONTINUOUS TRUST OPERATIONS</text>
   <text x="52" y="128" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="900">TrustOps Assessment</text>
-  <text x="52" y="168" fill="#c7d2e1" font-family="Inter, Arial, sans-serif" font-size="23">Realtime posture with confidence from evidence, controls, snapshots, and agents.</text>
+  <text x="52" y="168" fill="#c7d2e1" font-family="Inter, Arial, sans-serif" font-size="23">Current posture with confidence from evidence, controls, snapshots, and agents.</text>
 
   <g filter="url(#shadow)">
     <rect x="52" y="224" width="250" height="112" rx="16" fill="#132033" stroke="#2c4058"/>
