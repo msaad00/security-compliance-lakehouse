@@ -24,13 +24,13 @@ Use a read-only fine-grained GitHub token or GitHub App installation token.
 The connector does not need write, delete, admin, secret value, or package
 publish permissions.
 
-| Scope or permission           | Unlocks                                                         |
-| ----------------------------- | --------------------------------------------------------------- |
-| `metadata:read`               | repository identity, default branch, visibility, source health  |
-| `contents:read`               | repo-level metadata needed to link evidence to the repo asset   |
-| `administration:read`         | branch protection, collaborators, teams, workflow permissions   |
-| `security_events:read`        | security setting and alert availability summaries where allowed |
-| fixture bundle                | deterministic local evidence with `credential_fingerprint=fixture` |
+| Scope or permission    | Unlocks                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| `metadata:read`        | repository identity, default branch, visibility, source health     |
+| `contents:read`        | repo-level metadata needed to link evidence to the repo asset      |
+| `administration:read`  | branch protection, collaborators, teams, workflow permissions      |
+| `security_events:read` | security setting and alert availability summaries where allowed    |
+| fixture bundle         | deterministic local evidence with `credential_fingerprint=fixture` |
 
 Token values are never emitted. TrustOps stores only a short SHA-256 credential
 fingerprint so operators can tell which credential boundary produced evidence
@@ -38,13 +38,13 @@ without exposing the credential itself.
 
 ## Evidence Signals
 
-| Event type                                     | Why it matters                                      |
-| ---------------------------------------------- | --------------------------------------------------- |
-| `repository.governance.branch_protection`      | required reviews, status checks, admin enforcement  |
-| `repository.governance.collaborators`          | direct user access and role inventory               |
-| `repository.governance.teams`                  | team-based maintainers and approver boundaries      |
-| `repository.governance.workflow_permissions`   | GitHub Actions default token behavior               |
-| `repository.governance.security_settings`      | security alert availability where the API permits   |
+| Event type                                   | Why it matters                                     |
+| -------------------------------------------- | -------------------------------------------------- |
+| `repository.governance.branch_protection`    | required reviews, status checks, admin enforcement |
+| `repository.governance.collaborators`        | direct user access and role inventory              |
+| `repository.governance.teams`                | team-based maintainers and approver boundaries     |
+| `repository.governance.workflow_permissions` | GitHub Actions default token behavior              |
+| `repository.governance.security_settings`    | security alert availability where the API permits  |
 
 Each emitted record includes:
 
