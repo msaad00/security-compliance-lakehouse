@@ -7,11 +7,10 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-from security_lakehouse.db import models  # noqa: F401 - import registers tables on Base.metadata
-from security_lakehouse.db.base import Base
+from security_lakehouse.db.models import Tenant
 
 config = context.config
-target_metadata = Base.metadata
+target_metadata = Tenant.metadata
 
 
 def _ensure_sqlite_parent(url: str) -> None:

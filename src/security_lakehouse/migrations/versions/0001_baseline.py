@@ -18,7 +18,13 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _alembic_revision_markers() -> tuple[str, str | None, str | Sequence[str] | None, str | Sequence[str] | None]:
+    """Expose Alembic revision globals to static analysis without renaming them."""
+    return revision, down_revision, branch_labels, depends_on
+
+
 def upgrade() -> None:
+    _alembic_revision_markers()
     op.create_table(
         "tenants",
         sa.Column("id", sa.String(length=36), nullable=False),
@@ -45,6 +51,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    _alembic_revision_markers()
     op.drop_index("ix_users_tenant_id", table_name="users")
     op.drop_table("users")
     op.drop_table("tenants")
