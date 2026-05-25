@@ -152,6 +152,16 @@ def _parser() -> argparse.ArgumentParser:
     scheduler_run_cmd.add_argument("--tick-seconds", type=int, default=60, help="seconds between ticks (default 60)")
     scheduler_run_cmd.set_defaults(func=_scheduler_run)
 
+    db = sub.add_parser("db", help="server-mode application-state database (requires the 'server' extra)")
+    db_sub = db.add_subparsers(dest="db_command", required=True)
+    db_upgrade = db_sub.add_parser("upgrade", help="create/upgrade the application-state schema")
+    db_upgrade.add_argument("--lake", required=True, help="security data lake output directory")
+    db_upgrade.add_argument("--revision", default="head", help="target Alembic revision (default head)")
+    db_upgrade.set_defaults(func=_db_upgrade)
+    db_current = db_sub.add_parser("current", help="print the current application-state schema revision")
+    db_current.add_argument("--lake", required=True, help="security data lake output directory")
+    db_current.set_defaults(func=_db_current)
+
     return parser
 
 
@@ -256,6 +266,29 @@ def _serve(args: argparse.Namespace) -> int:
 
         print(f"serving TrustOps console: http://{args.host}:{args.port}/")
     serve(args.lake, host=args.host, port=args.port)
+    return 0
+
+
+def _db_upgrade(args: argparse.Namespace) -> int:
+    try:
+        from security_lakehouse.db import migrate
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "the db commands require the 'server' extra: pip install 'trustops-security-data-lake[server]'"
+        ) from exc
+    url = migrate.upgrade(args.lake, revision=args.revision)
+    print(f"application-state database upgraded to {args.revision}: {url}")
+    return 0
+
+
+def _db_current(args: argparse.Namespace) -> int:
+    try:
+        from security_lakehouse.db import migrate
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "the db commands require the 'server' extra: pip install 'trustops-security-data-lake[server]'"
+        ) from exc
+    print(migrate.current(args.lake) or "(no revision applied)")
     return 0
 
 
