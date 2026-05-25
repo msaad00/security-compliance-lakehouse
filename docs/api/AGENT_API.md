@@ -45,7 +45,8 @@ List routes support:
 | `POST` | `/api/v1/snapshots`       | create a point-in-time assessment snapshot                                    |
 
 The unversioned `/api/*` routes remain for the bundled console and local
-compatibility.
+compatibility. Server mode serves the same unversioned surface behind the same
+identity and RBAC boundary as `/api/v1/*`.
 
 ## Agent Usage
 

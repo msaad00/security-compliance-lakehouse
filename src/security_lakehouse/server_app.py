@@ -121,8 +121,8 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         correlation_id = str(uuid.uuid4())
         response = await call_next(request)
         path = request.url.path
-        # Audit authorization decisions on the secured surface only; health is open.
-        if path.startswith("/api/v1/") and path != "/api/v1/healthz":
+        # Audit authorization decisions on the secured API surfaces only; health is open.
+        if path.startswith("/api/") and path not in {"/api/healthz", "/api/v1/healthz"}:
             append_request_audit(
                 lake,
                 method=request.method,
@@ -355,12 +355,19 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         return JSONResponse(_redact_payload(body, identity), status_code=int(_status))
 
     @app.post("/api/{rest:path}")
-    async def legacy_post(rest: str, request: Request, identity: Identity = Depends(_require_write)) -> JSONResponse:
+    async def legacy_post(rest: str, request: Request, identity: Identity = Depends(_require_read)) -> JSONResponse:
         try:
             body = await request.json()
         except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
             body = {}
-        _status, payload = api_legacy.handle_post(f"/api/{rest}", body, lake, role=identity.role)
+        legacy_path = f"/api/{rest}"
+        required_scope = api_legacy.required_post_scope(legacy_path)
+        if not identity.has_scope(required_scope):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"requires scope: {required_scope}",
+            )
+        _status, payload = api_legacy.handle_post(legacy_path, body, lake, role=identity.role)
         return JSONResponse(payload, status_code=int(_status))
 
     @app.get("/", response_class=HTMLResponse)

@@ -5,9 +5,9 @@ same pattern as :mod:`security_lakehouse.api_v1` — lets both the zero-dependen
 stdlib server and the optional FastAPI server serve the *identical* surface, so
 the console works the same in local mode and authenticated server mode.
 
-Handlers return ``(HTTPStatus, body)``. ``role`` carries the caller's trust role
-so auditor reads are redacted and auditor writes are refused, regardless of
-transport.
+Handlers return ``(HTTPStatus, body)``. Transports apply read redaction and
+authenticate callers; this module centralizes route dispatch and mutation
+scope requirements so local mode and server mode cannot drift.
 """
 
 from __future__ import annotations

@@ -18,6 +18,7 @@ pytest.importorskip("sqlalchemy")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from security_lakehouse.audit_log import build_audit_log  # noqa: E402
 from security_lakehouse.db.base import session_scope  # noqa: E402
 from security_lakehouse.db.repository import create_api_key, create_tenant, create_user  # noqa: E402
 from security_lakehouse.server_app import create_app  # noqa: E402
@@ -63,22 +64,66 @@ def test_legacy_requires_auth_in_server_mode(tmp_path: Path) -> None:
     _seed_lake(tmp_path)
     client = TestClient(create_app(tmp_path))  # auth required
     assert client.get("/api/controls").status_code == HTTPStatus.UNAUTHORIZED
+    entries = build_audit_log(tmp_path, category="request")
+    assert entries[0]["payload"]["route"] == "/api/controls"
+    assert entries[0]["result"] == "deny"
 
 
-def test_legacy_post_enforces_write_scope(tmp_path: Path) -> None:
+def test_legacy_post_enforces_route_specific_scopes(tmp_path: Path) -> None:
     _seed_lake(tmp_path)
     app = create_app(tmp_path)
     client = TestClient(app)
     tokens: dict[str, str] = {}
     with session_scope(app.state.sessionmaker) as session:
         tenant = create_tenant(session, slug="acme", name="Acme")
-        for role in ("read_only", "contributor"):
+        for role in ("read_only", "contributor", "security_admin"):
             user = create_user(session, tenant_id=tenant.id, email=f"{role}@acme.test", role=role)
             _key, token = create_api_key(session, tenant_id=tenant.id, user_id=user.id)
             tokens[role] = token
 
     # read_only may read but not write
     assert client.get("/api/controls", headers=_bearer(tokens["read_only"])).status_code == HTTPStatus.OK
-    assert client.post("/api/scheduler/tick", headers=_bearer(tokens["read_only"])).status_code == HTTPStatus.FORBIDDEN
-    # contributor has write scope
-    assert client.post("/api/scheduler/tick", headers=_bearer(tokens["contributor"])).status_code == HTTPStatus.CREATED
+    assert (
+        client.post(
+            "/api/violations/v1/triage",
+            json={"state": "triaged"},
+            headers=_bearer(tokens["read_only"]),
+        ).status_code
+        == HTTPStatus.FORBIDDEN
+    )
+
+    # contributor can triage but cannot manage connector credentials or snapshots.
+    assert (
+        client.post(
+            "/api/violations/v1/triage",
+            json={"state": "triaged"},
+            headers=_bearer(tokens["contributor"]),
+        ).status_code
+        == HTTPStatus.CREATED
+    )
+    assert (
+        client.post(
+            "/api/connectors/github-security/configure",
+            json={"state": "enabled"},
+            headers=_bearer(tokens["contributor"]),
+        ).status_code
+        == HTTPStatus.FORBIDDEN
+    )
+    assert (
+        client.post("/api/snapshots", json={"reason": "audit"}, headers=_bearer(tokens["contributor"])).status_code
+        == HTTPStatus.FORBIDDEN
+    )
+
+    # security_admin owns connector/workflow/snapshot operations.
+    assert (
+        client.post(
+            "/api/connectors/github-security/configure",
+            json={"state": "enabled"},
+            headers=_bearer(tokens["security_admin"]),
+        ).status_code
+        == HTTPStatus.CREATED
+    )
+    assert (
+        client.post("/api/snapshots", json={"reason": "audit"}, headers=_bearer(tokens["security_admin"])).status_code
+        == HTTPStatus.CREATED
+    )
