@@ -7,9 +7,9 @@ import mimetypes
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from security_lakehouse import api_v1
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
 from security_lakehouse.audit_log import build_audit_log
 from security_lakehouse.connector_state import (
@@ -141,7 +141,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._send_json({"assets": read_jsonl(self.lake_dir / "gold" / "asset_risk.jsonl")})
             return
         if parsed.path == "/api/snapshots":
-            snapshots = self._list_snapshots()
+            snapshots = api_v1.list_snapshots(self.lake_dir)
             self._send_json({"count": len(snapshots), "snapshots": snapshots})
             return
         if parsed.path == "/api/connectors":
@@ -392,186 +392,16 @@ class _Handler(BaseHTTPRequestHandler):
 
         The legacy `/api/*` routes remain UI-compatible. `/api/v1/*` wraps
         resources in a stable envelope and applies common collection controls.
+        The contract itself lives in :mod:`security_lakehouse.api_v1` so the
+        stdlib server and the optional FastAPI server stay byte-for-byte equal.
         """
-        if path == "/api/v1/healthz":
-            self._send_v1("healthz", {"ok": True, "service": "trustops-assessment"})
-            return
-        if path == "/api/v1/posture/current":
-            self._send_v1("posture.current", build_current_posture(self.lake_dir))
-            return
-        if path == "/api/v1/controls":
-            self._send_v1_collection(
-                "controls",
-                read_jsonl(self.lake_dir / "gold" / "control_posture.jsonl"),
-                query,
-            )
-            return
-        if path == "/api/v1/control-tests":
-            self._send_v1_collection(
-                "control-tests",
-                read_jsonl(self.lake_dir / "gold" / "control_tests.jsonl"),
-                query,
-            )
-            return
-        if path == "/api/v1/evidence":
-            self._send_v1_collection(
-                "evidence",
-                read_jsonl(self.lake_dir / "silver" / "normalized_events.jsonl"),
-                query,
-            )
-            return
-        if path == "/api/v1/assets":
-            self._send_v1_collection(
-                "assets",
-                read_jsonl(self.lake_dir / "gold" / "asset_risk.jsonl"),
-                query,
-            )
-            return
-        if path == "/api/v1/violations":
-            self._send_v1_collection("violations", build_current_posture(self.lake_dir)["violations"], query)
-            return
-        if path == "/api/v1/snapshots":
-            self._send_v1_collection("snapshots", self._list_snapshots(), query)
-            return
-        self._send_v1_error("not_found", status=HTTPStatus.NOT_FOUND, detail=f"unknown route {path}")
+        status, body = api_v1.handle_get(path, query, self.lake_dir)
+        self._send_json(body, status=status)
 
     def _handle_v1_post(self, path: str) -> None:
-        if path == "/api/v1/snapshots":
-            body = self._read_json_body()
-            reason = str(body.get("reason") or "api_request")
-            snapshot_path = write_assessment_snapshot(self.lake_dir, reason=reason)
-            self._send_v1(
-                "snapshots",
-                {"snapshot_path": str(snapshot_path), "reason": reason},
-                status=HTTPStatus.CREATED,
-            )
-            return
-        self._send_v1_error("not_found", status=HTTPStatus.NOT_FOUND, detail=f"unknown route {path}")
-
-    def _send_v1(
-        self,
-        resource: str,
-        data: object,
-        *,
-        status: HTTPStatus = HTTPStatus.OK,
-        meta: dict[str, object] | None = None,
-    ) -> None:
-        payload = {
-            "data": data,
-            "meta": {
-                "api_version": "v1",
-                "resource": resource,
-                **(meta or {}),
-            },
-            "errors": [],
-        }
+        body = self._read_json_body() if path == "/api/v1/snapshots" else {}
+        status, payload = api_v1.handle_post(path, body, self.lake_dir)
         self._send_json(payload, status=status)
-
-    def _send_v1_error(
-        self,
-        code: str,
-        *,
-        status: HTTPStatus,
-        detail: str,
-        resource: str = "unknown",
-    ) -> None:
-        self._send_json(
-            {
-                "data": None,
-                "meta": {"api_version": "v1", "resource": resource},
-                "errors": [{"code": code, "detail": detail}],
-            },
-            status=status,
-        )
-
-    def _send_v1_collection(self, resource: str, rows: list[dict[str, Any]], query: dict[str, list[str]]) -> None:
-        try:
-            filtered_rows, applied_filters = self._filter_collection(rows, query)
-            sorted_rows, sort = self._sort_collection(filtered_rows, query)
-            page_rows, limit, offset = self._paginate_collection(sorted_rows, query)
-        except ValueError as exc:
-            self._send_v1_error("bad_request", status=HTTPStatus.BAD_REQUEST, detail=str(exc), resource=resource)
-            return
-        self._send_v1(
-            resource,
-            page_rows,
-            meta={
-                "count": len(filtered_rows),
-                "returned": len(page_rows),
-                "limit": limit,
-                "offset": offset,
-                "sort": sort,
-                "filters": applied_filters,
-            },
-        )
-
-    @staticmethod
-    def _filter_collection(
-        rows: list[dict[str, Any]],
-        query: dict[str, list[str]],
-    ) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
-        reserved = {"limit", "offset", "sort"}
-        filters = {
-            key: [value for raw in values for value in raw.split(",") if value]
-            for key, values in query.items()
-            if key not in reserved
-        }
-        if not filters:
-            return rows, {}
-
-        def matches(row: dict[str, Any]) -> bool:
-            for field, expected_values in filters.items():
-                actual = row.get(field)
-                if actual is None:
-                    return False
-                if isinstance(actual, list):
-                    actual_values = {str(item) for item in actual}
-                    if not any(expected in actual_values for expected in expected_values):
-                        return False
-                elif str(actual) not in expected_values:
-                    return False
-            return True
-
-        return [row for row in rows if matches(row)], filters
-
-    @staticmethod
-    def _sort_collection(
-        rows: list[dict[str, Any]],
-        query: dict[str, list[str]],
-    ) -> tuple[list[dict[str, Any]], str | None]:
-        sort = (query.get("sort") or [None])[0]
-        if not sort:
-            return rows, None
-        reverse = sort.startswith("-")
-        field = sort[1:] if reverse else sort
-        if not field:
-            raise ValueError("sort must name a field, optionally prefixed with '-'")
-        sortable = [row for row in rows if row.get(field) is not None]
-        missing = [row for row in rows if row.get(field) is None]
-
-        def sort_key(row: dict[str, Any]) -> tuple[int, float | str]:
-            value = row[field]
-            if isinstance(value, int | float):
-                return (0, float(value))
-            return (1, str(value))
-
-        return sorted(sortable, key=sort_key, reverse=reverse) + missing, sort
-
-    @staticmethod
-    def _paginate_collection(
-        rows: list[dict[str, Any]],
-        query: dict[str, list[str]],
-    ) -> tuple[list[dict[str, Any]], int, int]:
-        try:
-            limit = int((query.get("limit") or ["100"])[0])
-            offset = int((query.get("offset") or ["0"])[0])
-        except ValueError as exc:
-            raise ValueError("limit and offset must be integers") from exc
-        if limit < 1 or limit > 1000:
-            raise ValueError("limit must be between 1 and 1000")
-        if offset < 0:
-            raise ValueError("offset must be greater than or equal to 0")
-        return rows[offset : offset + limit], limit, offset
 
     @staticmethod
     def _match_violation_tracking(path: str) -> str | None:
@@ -658,30 +488,6 @@ class _Handler(BaseHTTPRequestHandler):
             return None
         rest = path[len("/api/trust-shares/") : -len("/revoke")]
         return rest or None
-
-    def _list_snapshots(self) -> list[dict[str, object]]:
-        snapshots_dir = self.lake_dir / "gold" / "snapshots"
-        if not snapshots_dir.is_dir():
-            return []
-        out: list[dict[str, object]] = []
-        for path in sorted(snapshots_dir.glob("assessment-*.json")):
-            try:
-                payload = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            posture = payload.get("posture") or {}
-            out.append(
-                {
-                    "snapshot_path": str(path),
-                    "evaluated_at": payload.get("evaluated_at"),
-                    "reason": payload.get("snapshot_reason") or "manual",
-                    "assessment_hash": payload.get("assessment_hash"),
-                    "posture_score": posture.get("score"),
-                    "open_violation_count": posture.get("open_violation_count"),
-                    "critical_violation_count": posture.get("critical_violation_count"),
-                }
-            )
-        return out
 
     def _role(self) -> str:
         return (self.headers.get("X-Trust-Role") or "").strip().lower()

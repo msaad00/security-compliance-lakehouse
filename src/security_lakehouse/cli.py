@@ -64,6 +64,11 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--lake", required=True, help="security data lake output directory")
     serve.add_argument("--host", default="127.0.0.1", help="bind host")
     serve.add_argument("--port", type=int, default=8787, help="bind port")
+    serve.add_argument(
+        "--server",
+        action="store_true",
+        help="run server mode on FastAPI/uvicorn (requires the 'server' extra) instead of the stdlib server",
+    )
     serve.set_defaults(func=_serve)
 
     assessment = sub.add_parser("assessment", help="continuous compliance assessment commands")
@@ -238,9 +243,18 @@ def _query_duckdb(mart: Path, sql: str) -> list[dict]:
 
 
 def _serve(args: argparse.Namespace) -> int:
-    from security_lakehouse.server import serve
+    if getattr(args, "server", False):
+        try:
+            from security_lakehouse.server_app import serve
+        except ModuleNotFoundError as exc:
+            raise SystemExit(
+                "server mode requires the 'server' extra: pip install 'trustops-security-data-lake[server]'"
+            ) from exc
+        print(f"serving TrustOps console (server mode): http://{args.host}:{args.port}/")
+    else:
+        from security_lakehouse.server import serve
 
-    print(f"serving TrustOps console: http://{args.host}:{args.port}/")
+        print(f"serving TrustOps console: http://{args.host}:{args.port}/")
     serve(args.lake, host=args.host, port=args.port)
     return 0
 
