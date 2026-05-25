@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Download React bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-dist
           path: src/security_lakehouse/web/dist
@@ -179,7 +179,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build image (no push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
