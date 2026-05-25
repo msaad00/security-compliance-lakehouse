@@ -20,6 +20,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from security_lakehouse.auth.request_audit import REQUEST_AUDIT_FILE
 from security_lakehouse.connector_state import CONFIG_FILE as CONNECTOR_CONFIG_FILE
 from security_lakehouse.connector_state import RUNS_FILE as CONNECTOR_RUNS_FILE
 from security_lakehouse.trust_share import SHARES_FILE as TRUST_SHARES_FILE
@@ -188,6 +189,23 @@ def _trust_share_entries(lake: Path) -> list[dict[str, Any]]:
     return out
 
 
+def _request_entries(lake: Path) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for row in _read_log(_gold(lake) / REQUEST_AUDIT_FILE):
+        out.append(
+            _entry(
+                category="request",
+                actor=str(row.get("actor") or "anonymous"),
+                occurred_at=str(row.get("occurred_at") or ""),
+                summary=(f"{row.get('method')} {row.get('route')} {row.get('decision')} ({row.get('status_code')})"),
+                subject=str(row.get("correlation_id") or ""),
+                result=str(row.get("decision") or ""),
+                payload=row,
+            )
+        )
+    return out
+
+
 def build_audit_log(
     lake_dir: str | Path,
     *,
@@ -202,6 +220,7 @@ def build_audit_log(
         + _snapshot_entries(lake)
         + _workflow_entries(lake)
         + _trust_share_entries(lake)
+        + _request_entries(lake)
     )
     if category:
         entries = [e for e in entries if e["category"] == category]

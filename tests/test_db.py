@@ -39,9 +39,9 @@ def test_migration_creates_expected_schema(tmp_path: Path) -> None:
     assert {"tenants", "users", "alembic_version"} <= tables
 
 
-def test_db_current_reports_baseline_after_upgrade(tmp_path: Path) -> None:
+def test_db_current_reports_head_after_upgrade(tmp_path: Path) -> None:
     migrate.upgrade(tmp_path)
-    assert "0001_baseline" in migrate.current(tmp_path)
+    assert "(head)" in migrate.current(tmp_path)
 
 
 def test_tenant_and_user_round_trip(factory) -> None:

@@ -40,7 +40,7 @@ def upgrade() -> None:
         sa.Column("tenant_id", sa.String(length=36), nullable=False),
         sa.Column("email", sa.String(length=320), nullable=False),
         sa.Column("display_name", sa.String(length=255), server_default="", nullable=False),
-        sa.Column("role", sa.String(length=32), server_default="viewer", nullable=False),
+        sa.Column("role", sa.String(length=32), server_default="read_only", nullable=False),
         sa.Column("is_active", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),

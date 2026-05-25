@@ -69,6 +69,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="run server mode on FastAPI/uvicorn (requires the 'server' extra) instead of the stdlib server",
     )
+    serve.add_argument(
+        "--allow-insecure-no-auth",
+        action="store_true",
+        help="server mode only: disable authentication (local development only)",
+    )
     serve.set_defaults(func=_serve)
 
     assessment = sub.add_parser("assessment", help="continuous compliance assessment commands")
@@ -161,6 +166,52 @@ def _parser() -> argparse.ArgumentParser:
     db_current = db_sub.add_parser("current", help="print the current application-state schema revision")
     db_current.add_argument("--lake", required=True, help="security data lake output directory")
     db_current.set_defaults(func=_db_current)
+
+    auth = sub.add_parser("auth", help="server-mode auth: tenants, users, API keys (requires the 'server' extra)")
+    auth_sub = auth.add_subparsers(dest="auth_command", required=True)
+    auth_tenant = auth_sub.add_parser("create-tenant", help="create a tenant/workspace")
+    auth_tenant.add_argument("--lake", required=True, help="security data lake output directory")
+    auth_tenant.add_argument("--slug", required=True, help="unique tenant slug")
+    auth_tenant.add_argument("--name", required=True, help="tenant display name")
+    auth_tenant.set_defaults(func=_auth_create_tenant)
+    auth_user = auth_sub.add_parser("create-user", help="create a user in a tenant")
+    auth_user.add_argument("--lake", required=True, help="security data lake output directory")
+    auth_user.add_argument("--tenant-slug", required=True, help="tenant slug")
+    auth_user.add_argument("--email", required=True, help="user email (unique within the tenant)")
+    auth_user.add_argument("--display-name", default="", help="user display name")
+    auth_user.add_argument(
+        "--role",
+        default="read_only",
+        choices=["admin", "security_admin", "contributor", "auditor", "read_only"],
+        help="role: admin/security_admin/contributor/auditor/read_only",
+    )
+    auth_user.set_defaults(func=_auth_create_user)
+    auth_key = auth_sub.add_parser("issue-key", help="mint an API key for a user (printed once)")
+    auth_key.add_argument("--lake", required=True, help="security data lake output directory")
+    auth_key.add_argument("--tenant-slug", required=True, help="tenant slug")
+    auth_key.add_argument("--email", required=True, help="user email the key acts as")
+    auth_key.add_argument("--name", default="", help="key label")
+    auth_key.add_argument("--expires-days", type=int, default=None, help="optional expiry in days")
+    auth_key.set_defaults(func=_auth_issue_key)
+    auth_revoke = auth_sub.add_parser("revoke-key", help="revoke an API key by id")
+    auth_revoke.add_argument("--lake", required=True, help="security data lake output directory")
+    auth_revoke.add_argument("--tenant-slug", required=True, help="tenant slug")
+    auth_revoke.add_argument("--key-id", required=True, help="API key id")
+    auth_revoke.set_defaults(func=_auth_revoke_key)
+    auth_list = auth_sub.add_parser("list-keys", help="list API keys for a tenant")
+    auth_list.add_argument("--lake", required=True, help="security data lake output directory")
+    auth_list.add_argument("--tenant-slug", required=True, help="tenant slug")
+    auth_list.set_defaults(func=_auth_list_keys)
+
+    platform = sub.add_parser("platform", help="server-mode platform bootstrap commands")
+    platform_sub = platform.add_subparsers(dest="platform_command", required=True)
+    seed_dev = platform_sub.add_parser("seed-dev", help="seed a local dev tenant, admin user, and API key")
+    seed_dev.add_argument("--lake", required=True, help="security data lake output directory")
+    seed_dev.add_argument("--tenant-slug", default="dev", help="tenant slug")
+    seed_dev.add_argument("--tenant-name", default="Development", help="tenant display name")
+    seed_dev.add_argument("--email", default="admin@localhost", help="admin user email")
+    seed_dev.add_argument("--display-name", default="Local Admin", help="admin user display name")
+    seed_dev.set_defaults(func=_platform_seed_dev)
 
     return parser
 
@@ -260,12 +311,15 @@ def _serve(args: argparse.Namespace) -> int:
             raise SystemExit(
                 "server mode requires the 'server' extra: pip install 'trustops-security-data-lake[server]'"
             ) from exc
-        print(f"serving TrustOps console (server mode): http://{args.host}:{args.port}/")
+        require_auth = not getattr(args, "allow_insecure_no_auth", False)
+        mode = "server mode" if require_auth else "server mode, INSECURE no-auth"
+        print(f"serving TrustOps console ({mode}): http://{args.host}:{args.port}/")
+        serve(args.lake, host=args.host, port=args.port, require_auth=require_auth)
     else:
         from security_lakehouse.server import serve
 
         print(f"serving TrustOps console: http://{args.host}:{args.port}/")
-    serve(args.lake, host=args.host, port=args.port)
+        serve(args.lake, host=args.host, port=args.port)
     return 0
 
 
@@ -289,6 +343,153 @@ def _db_current(args: argparse.Namespace) -> int:
             "the db commands require the 'server' extra: pip install 'trustops-security-data-lake[server]'"
         ) from exc
     print(migrate.current(args.lake) or "(no revision applied)")
+    return 0
+
+
+def _auth_session(lake: str):
+    """Ensure the schema exists and return a transactional session scope."""
+    try:
+        from security_lakehouse.db import migrate
+        from security_lakehouse.db.base import create_engine_for, session_factory, session_scope
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "the auth commands require the 'server' extra: pip install 'trustops-security-data-lake[server]'"
+        ) from exc
+    migrate.upgrade(lake)
+    return session_scope(session_factory(create_engine_for(lake)))
+
+
+def _auth_resolve_tenant(session, slug: str):
+    from security_lakehouse.db import repository
+
+    tenant = repository.get_tenant_by_slug(session, slug=slug)
+    if tenant is None:
+        raise SystemExit(f"no tenant with slug {slug!r}; create it with `auth create-tenant`")
+    return tenant
+
+
+def _auth_create_tenant(args: argparse.Namespace) -> int:
+    from security_lakehouse.db import repository
+
+    with _auth_session(args.lake) as session:
+        tenant = repository.create_tenant(session, slug=args.slug, name=args.name)
+        print(f"created tenant {tenant.slug} ({tenant.id})")
+    return 0
+
+
+def _auth_create_user(args: argparse.Namespace) -> int:
+    from security_lakehouse.db import repository
+
+    with _auth_session(args.lake) as session:
+        tenant = _auth_resolve_tenant(session, args.tenant_slug)
+        user = repository.create_user(
+            session, tenant_id=tenant.id, email=args.email, display_name=args.display_name, role=args.role
+        )
+        print(f"created user {user.email} (role={user.role}, id={user.id})")
+    return 0
+
+
+def _auth_issue_key(args: argparse.Namespace) -> int:
+    from security_lakehouse.db import repository
+
+    with _auth_session(args.lake) as session:
+        tenant = _auth_resolve_tenant(session, args.tenant_slug)
+        user = repository.get_user_by_email(session, tenant_id=tenant.id, email=args.email)
+        if user is None:
+            raise SystemExit(f"no user {args.email!r} in tenant {tenant.slug!r}; create it with `auth create-user`")
+        expires_at = None
+        if args.expires_days is not None:
+            from datetime import UTC, datetime, timedelta
+
+            expires_at = datetime.now(UTC) + timedelta(days=args.expires_days)
+        key, _token = repository.create_api_key(
+            session, tenant_id=tenant.id, user_id=user.id, name=args.name, expires_at=expires_at
+        )
+        print(
+            json.dumps(
+                {
+                    "tenant": tenant.slug,
+                    "user_email": user.email,
+                    "api_key_id": key.id,
+                    "prefix": key.prefix,
+                    "status": key.status,
+                    "secret_returned": False,
+                    "note": "CLI output is non-secret; use the authenticated API creation endpoint for one-time raw key return.",
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+    return 0
+
+
+def _auth_list_keys(args: argparse.Namespace) -> int:
+    from security_lakehouse.db import repository
+
+    with _auth_session(args.lake) as session:
+        tenant = _auth_resolve_tenant(session, args.tenant_slug)
+        rows = [
+            {
+                "id": key.id,
+                "name": key.name,
+                "prefix": key.prefix,
+                "user_id": key.user_id,
+                "user_email": key.user.email,
+                "role": key.role,
+                "status": key.status,
+                "workspace_id": key.workspace_id,
+                "created_at": key.created_at.isoformat() if key.created_at else None,
+                "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+                "expires_at": key.expires_at.isoformat() if key.expires_at else None,
+                "revoked_at": key.revoked_at.isoformat() if key.revoked_at else None,
+            }
+            for key in repository.list_api_keys(session, tenant_id=tenant.id)
+        ]
+    print(json.dumps({"tenant": args.tenant_slug, "count": len(rows), "api_keys": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _auth_revoke_key(args: argparse.Namespace) -> int:
+    from datetime import UTC, datetime
+
+    from security_lakehouse.db import repository
+
+    with _auth_session(args.lake) as session:
+        tenant = _auth_resolve_tenant(session, args.tenant_slug)
+        revoked = repository.revoke_api_key(session, tenant_id=tenant.id, key_id=args.key_id, now=datetime.now(UTC))
+    print("revoked" if revoked else "not found or already revoked")
+    return 0
+
+
+def _platform_seed_dev(args: argparse.Namespace) -> int:
+    from security_lakehouse.db import repository
+
+    with _auth_session(args.lake) as session:
+        tenant = repository.get_tenant_by_slug(session, slug=args.tenant_slug)
+        if tenant is None:
+            tenant = repository.create_tenant(session, slug=args.tenant_slug, name=args.tenant_name)
+        user = repository.get_user_by_email(session, tenant_id=tenant.id, email=args.email)
+        if user is None:
+            user = repository.create_user(
+                session,
+                tenant_id=tenant.id,
+                email=args.email,
+                display_name=args.display_name,
+                role="admin",
+            )
+        key, _token = repository.create_api_key(session, tenant_id=tenant.id, user_id=user.id, name="local-dev")
+        result = {
+            "tenant_id": tenant.id,
+            "tenant_slug": tenant.slug,
+            "user_id": user.id,
+            "email": user.email,
+            "role": user.role,
+            "api_key_id": key.id,
+            "api_key_prefix": key.prefix,
+            "secret_returned": False,
+            "note": "Seeded dev principal and key metadata. CLI output is non-secret.",
+        }
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 
