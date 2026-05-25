@@ -161,7 +161,7 @@ jobs:
         run: helm lint deploy/helm/trustops
       - name: helm template
         run: helm template trustops deploy/helm/trustops > /tmp/render.yaml
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.9.5
       - name: terraform fmt
