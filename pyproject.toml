@@ -17,6 +17,9 @@ dependencies = []
 server = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
 ]
 dev = [
     "jsonschema>=4.23",
@@ -26,10 +29,12 @@ dev = [
     "pip-audit>=2.7",
     "pre-commit>=3.7",
     "commitizen>=3.27",
-    # server-mode parity tests
+    # server-mode parity + app-state tests (SQLite-backed, no Postgres needed)
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "httpx>=0.27",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
 ]
 analytics = [
     "duckdb>=1.0",
@@ -53,6 +58,8 @@ where = ["src"]
 "security_lakehouse" = [
     "web/dist/**/*",
     "web/dist/.gitkeep",
+    "migrations/script.py.mako",
+    "migrations/versions/*.py",
 ]
 
 [tool.pytest.ini_options]
