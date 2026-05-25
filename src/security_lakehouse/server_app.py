@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from security_lakehouse import api_v1
+from security_lakehouse import api_legacy, api_v1
 from security_lakehouse.auth.dependencies import get_session, require_scope
 from security_lakehouse.auth.oidc import OIDCLoginError, build_oauth, complete_oidc_login, load_oidc_config
 from security_lakehouse.auth.rbac import Identity
@@ -345,6 +345,22 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
             body = {}
         _status, payload = api_v1.handle_post(f"/api/v1/{rest}", body, lake)
+        return JSONResponse(payload, status_code=int(_status))
+
+    # --- legacy console surface (authenticated; same handlers as local mode) ---
+    # Registered after the v1 routes so /api/v1/* and /api/healthz keep priority.
+    @app.get("/api/{rest:path}")
+    def legacy_get(rest: str, request: Request, identity: Identity = Depends(_require_read)) -> JSONResponse:
+        _status, body = api_legacy.handle_get(f"/api/{rest}", _params(request), lake)
+        return JSONResponse(_redact_payload(body, identity), status_code=int(_status))
+
+    @app.post("/api/{rest:path}")
+    async def legacy_post(rest: str, request: Request, identity: Identity = Depends(_require_write)) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
+            body = {}
+        _status, payload = api_legacy.handle_post(f"/api/{rest}", body, lake, role=identity.role)
         return JSONResponse(payload, status_code=int(_status))
 
     @app.get("/", response_class=HTMLResponse)
