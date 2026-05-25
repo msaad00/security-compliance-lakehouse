@@ -19,6 +19,7 @@ import os
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -87,6 +88,13 @@ def _redact_payload(payload: object, identity: Identity) -> object:
     if isinstance(payload, list):
         return [_redact_payload(item, identity) for item in payload]
     return payload
+
+
+def _sanitize_legacy_error(status_code: HTTPStatus, payload: object) -> object:
+    """Keep server-mode legacy API errors from exposing internal exception text."""
+    if status_code != HTTPStatus.BAD_REQUEST or not isinstance(payload, dict):
+        return payload
+    return {"error": str(payload.get("error") or "bad_request"), "reason": "invalid request"}
 
 
 def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
@@ -368,6 +376,7 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
                 detail=f"requires scope: {required_scope}",
             )
         _status, payload = api_legacy.handle_post(legacy_path, body, lake, role=identity.role)
+        payload = _sanitize_legacy_error(_status, payload)
         return JSONResponse(payload, status_code=int(_status))
 
     @app.get("/", response_class=HTMLResponse)
