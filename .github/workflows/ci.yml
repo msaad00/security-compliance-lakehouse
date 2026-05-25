@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Download React bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-dist
           path: src/security_lakehouse/web/dist
