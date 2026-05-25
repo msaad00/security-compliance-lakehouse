@@ -180,8 +180,10 @@ def handle_get(path: str, params: Params, lake_dir: str | Path) -> tuple[HTTPSta
         resource, loader = collection
         try:
             return HTTPStatus.OK, collection_response(resource, loader(lake), params)
-        except ValueError as exc:
-            return HTTPStatus.BAD_REQUEST, error_envelope("bad_request", str(exc), resource=resource)
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, error_envelope(
+                "bad_request", "invalid request parameters", resource=resource
+            )
     return HTTPStatus.NOT_FOUND, error_envelope("not_found", f"unknown route {path}")
 
 
