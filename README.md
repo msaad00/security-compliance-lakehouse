@@ -36,6 +36,8 @@ It can run in two modes:
 | Snapshot engine   | freeze point-in-time posture for audit or vendor review     | `POST /api/snapshots`                         |
 | Analyst skills    | SOC analyst, SOC 2, AI governance, PCI/ISO expansion guards | skill-pack instructions                       |
 
+Pilot sequencing is tracked in [Pilot Roadmap Tracker](docs/PILOT_ROADMAP.md).
+
 ## Connector Access Model
 
 TrustOps uses the smallest viable access boundary:
