@@ -34,13 +34,15 @@ DETERMINISTIC_ROUTES = [
 
 @pytest.fixture
 def client(tmp_path: Path) -> TestClient:
+    # Contract tests exercise the v1 envelope, not auth, so run without it.
+    # Authentication and RBAC are covered in test_auth_rbac.py.
     _seed_lake(tmp_path)
-    return TestClient(create_app(tmp_path))
+    return TestClient(create_app(tmp_path, require_auth=False))
 
 
 def test_server_mode_matches_stdlib_contract(tmp_path: Path) -> None:
     _seed_lake(tmp_path)
-    app_client = TestClient(create_app(tmp_path))
+    app_client = TestClient(create_app(tmp_path, require_auth=False))
     stdlib = _spin(tmp_path)
     try:
         for path in DETERMINISTIC_ROUTES:

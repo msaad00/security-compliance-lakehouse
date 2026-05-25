@@ -1,26 +1,54 @@
 """Optional FastAPI server (``trustops[server]`` extra).
 
-This is the foundation of *server mode*: the same assessment engine and the
-same :mod:`security_lakehouse.api_v1` contract served on an ASGI stack so that
-later work (auth, multi-tenancy, live connectors) has a real middleware and
-concurrency surface to build on. Local mode keeps using the zero-dependency
-:mod:`security_lakehouse.server`.
+Server mode serves the same assessment engine and the same
+:mod:`security_lakehouse.api_v1` contract as local mode, plus the platform
+surface local mode cannot provide: an application-state database, bearer-token
+authentication, and role-based access control.
 
-Import this module only when the ``server`` extra is installed; it requires
-``fastapi`` and ``uvicorn``.
+Authentication is required by default. Start with ``require_auth=False`` (or set
+``TRUSTOPS_ALLOW_INSECURE_NO_AUTH=1``) only for local development; every request
+then runs as a synthetic admin. Local mode (:mod:`security_lakehouse.server`)
+remains zero-dependency and unauthenticated by design.
+
+Import this module only when the ``server`` extra is installed.
 """
 
 from __future__ import annotations
 
+import os
+import uuid
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from security_lakehouse import api_v1
+from security_lakehouse.auth.dependencies import get_session, require_scope
+from security_lakehouse.auth.rbac import Identity
+from security_lakehouse.auth.request_audit import append_request_audit
 from security_lakehouse.dashboard import render_dashboard
+from security_lakehouse.db import migrate, repository
+from security_lakehouse.db.base import create_engine_for, session_factory
 from security_lakehouse.web import web_dist_dir, web_dist_index
+
+_ERROR_CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_found"}
+
+# Scope dependencies are built once (module-level) and reused as route defaults.
+_require_read = require_scope("read")
+_require_snapshot = require_scope("snapshot")
+_require_admin = require_scope("auth_admin")
+_REDACTED_FIELDS = {"owner", "asset_owner", "actor", "assignee", "note", "credentials"}
+
+
+class CreateKeyRequest(BaseModel):
+    user_email: str
+    name: str = ""
+    expires_in_days: int | None = None
 
 
 def _params(request: Request) -> dict[str, list[str]]:
@@ -31,32 +59,161 @@ def _params(request: Request) -> dict[str, list[str]]:
     return params
 
 
-def create_app(lake_dir: str | Path) -> FastAPI:
+def _insecure_requested() -> bool:
+    return os.environ.get("TRUSTOPS_ALLOW_INSECURE_NO_AUTH", "").lower() in {"1", "true", "yes"}
+
+
+def _redact_payload(payload: object, identity: Identity) -> object:
+    if identity.role != "auditor":
+        return payload
+    if isinstance(payload, dict):
+        return {
+            key: ("[redacted]" if key in _REDACTED_FIELDS else _redact_payload(value, identity))
+            for key, value in payload.items()
+        }
+    if isinstance(payload, list):
+        return [_redact_payload(item, identity) for item in payload]
+    return payload
+
+
+def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     """Build the server-mode ASGI app bound to a security data lake directory."""
     lake = Path(lake_dir)
     dashboard = lake / "console.html"
     render_dashboard(lake, dashboard)
     web_dist = web_dist_dir() if web_dist_index() else None
 
-    app = FastAPI(title="TrustOps Security Data Lake", version=api_v1.API_VERSION)
+    migrate.upgrade(lake)
+    engine = create_engine_for(lake)
 
+    app = FastAPI(title="TrustOps Security Data Lake", version=api_v1.API_VERSION)
+    app.state.sessionmaker = session_factory(engine)
+    app.state.require_auth = require_auth and not _insecure_requested()
+
+    @app.middleware("http")
+    async def _record_request_audit(request: Request, call_next):
+        correlation_id = str(uuid.uuid4())
+        response = await call_next(request)
+        path = request.url.path
+        # Audit authorization decisions on the secured surface only; health is open.
+        if path.startswith("/api/v1/") and path != "/api/v1/healthz":
+            append_request_audit(
+                lake,
+                method=request.method,
+                route=path,
+                status_code=response.status_code,
+                decision="allow" if response.status_code < 400 else "deny",
+                correlation_id=correlation_id,
+                identity=getattr(request.state, "identity", None),
+            )
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _error_envelope(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        code = _ERROR_CODES.get(exc.status_code, "error")
+        return JSONResponse(
+            api_v1.error_envelope(code, str(exc.detail)),
+            status_code=exc.status_code,
+            headers=getattr(exc, "headers", None),
+        )
+
+    # --- open health checks (registered before the authenticated catch-all) ---
     @app.get("/api/healthz")
     def healthz() -> dict[str, object]:
         return {"ok": True, "service": "trustops-assessment"}
 
+    @app.get("/api/v1/healthz")
+    def v1_healthz() -> JSONResponse:
+        _status, body = api_v1.handle_get("/api/v1/healthz", {}, lake)
+        return JSONResponse(body, status_code=int(_status))
+
+    # --- auth surface ---
+    @app.get("/api/v1/auth/whoami")
+    def whoami(identity: Identity = Depends(_require_read)) -> JSONResponse:
+        return JSONResponse(
+            api_v1.envelope(
+                "auth.whoami",
+                {
+                    "user_id": identity.user_id,
+                    "tenant_id": identity.tenant_id,
+                    "email": identity.email,
+                    "role": identity.role,
+                    "scopes": sorted(identity.scopes),
+                },
+            )
+        )
+
+    @app.get("/api/v1/auth/keys")
+    def list_keys(
+        identity: Identity = Depends(_require_admin),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        keys = repository.list_api_keys(session, tenant_id=identity.tenant_id)
+        rows = [
+            {
+                "id": key.id,
+                "name": key.name,
+                "prefix": key.prefix,
+                "user_email": key.user.email,
+                "created_at": key.created_at.isoformat() if key.created_at else None,
+                "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+                "revoked": key.revoked_at is not None,
+            }
+            for key in keys
+        ]
+        return JSONResponse(api_v1.envelope("auth.keys", rows, meta={"count": len(rows)}))
+
+    @app.post("/api/v1/auth/keys", status_code=status.HTTP_201_CREATED)
+    def create_key(
+        body: CreateKeyRequest,
+        identity: Identity = Depends(_require_admin),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        user = repository.get_user_by_email(session, tenant_id=identity.tenant_id, email=body.user_email)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"no user {body.user_email!r} in tenant")
+        expires_at = None
+        if body.expires_in_days is not None:
+            expires_at = datetime.now(UTC) + timedelta(days=body.expires_in_days)
+        key, token = repository.create_api_key(
+            session, tenant_id=identity.tenant_id, user_id=user.id, name=body.name, expires_at=expires_at
+        )
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope(
+                "auth.keys",
+                {"id": key.id, "prefix": key.prefix, "user_email": user.email, "token": token},
+            ),
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    @app.delete("/api/v1/auth/keys/{key_id}")
+    def revoke_key(
+        key_id: str,
+        identity: Identity = Depends(_require_admin),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        revoked = repository.revoke_api_key(session, tenant_id=identity.tenant_id, key_id=key_id, now=datetime.now(UTC))
+        if not revoked:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="key not found or already revoked")
+        session.commit()
+        return JSONResponse(api_v1.envelope("auth.keys", {"id": key_id, "revoked": True}))
+
+    # --- versioned data surface (authenticated) ---
     @app.get("/api/v1/{rest:path}")
-    def v1_get(rest: str, request: Request) -> JSONResponse:
-        status, body = api_v1.handle_get(f"/api/v1/{rest}", _params(request), lake)
-        return JSONResponse(body, status_code=int(status))
+    def v1_get(rest: str, request: Request, identity: Identity = Depends(_require_read)) -> JSONResponse:
+        _status, body = api_v1.handle_get(f"/api/v1/{rest}", _params(request), lake)
+        return JSONResponse(_redact_payload(body, identity), status_code=int(_status))
 
     @app.post("/api/v1/{rest:path}")
-    async def v1_post(rest: str, request: Request) -> JSONResponse:
+    async def v1_post(rest: str, request: Request, _identity: Identity = Depends(_require_snapshot)) -> JSONResponse:
         try:
             body = await request.json()
         except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
             body = {}
-        status, payload = api_v1.handle_post(f"/api/v1/{rest}", body, lake)
-        return JSONResponse(payload, status_code=int(status))
+        _status, payload = api_v1.handle_post(f"/api/v1/{rest}", body, lake)
+        return JSONResponse(payload, status_code=int(_status))
 
     @app.get("/", response_class=HTMLResponse)
     @app.get("/console", response_class=HTMLResponse)
@@ -70,8 +227,8 @@ def create_app(lake_dir: str | Path) -> FastAPI:
     return app
 
 
-def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787) -> None:
+def serve(lake_dir: str | Path, *, host: str = "127.0.0.1", port: int = 8787, require_auth: bool = True) -> None:
     """Run the server-mode app under uvicorn."""
     import uvicorn
 
-    uvicorn.run(create_app(lake_dir), host=host, port=port)
+    uvicorn.run(create_app(lake_dir, require_auth=require_auth), host=host, port=port)
