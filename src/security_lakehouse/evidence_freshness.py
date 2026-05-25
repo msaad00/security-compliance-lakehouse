@@ -63,6 +63,7 @@ def summarize_source_freshness(records: list[dict[str, Any]]) -> list[dict[str, 
         statuses = Counter(str(item["status"]) for item in items)
         latest = max(str(item.get("evidence_collected_at") or "") for item in items)
         stale_count = sum(statuses[status] for status in STALE_STATUSES)
+        status = _source_status(statuses)
         out.append(
             {
                 "source": source,
@@ -75,6 +76,8 @@ def summarize_source_freshness(records: list[dict[str, Any]]) -> list[dict[str, 
                 "latest_evidence_at": latest or None,
                 "freshness_slo_minutes": int(items[0].get("freshness_slo_minutes") or 0),
                 "state": "current" if stale_count == 0 else "action_required",
+                "status": status,
+                "next_action": _next_action(status, source),
             }
         )
     return sorted(out, key=lambda item: (-int(item["stale_count"]), item["source"]))
@@ -170,6 +173,7 @@ def _freshness_record(
             "age_minutes": None,
             "expires_at": None,
             "reason": "evidence_ref or evidence_collected_at is missing",
+            "next_action": _next_action("missing", source),
         }
 
     collected_at = parse_event_time(collected_at_raw).astimezone(UTC)
@@ -188,6 +192,7 @@ def _freshness_record(
         "age_minutes": age_minutes,
         "expires_at": utc_iso(expires_at),
         "reason": _reason(status, source, slo_minutes),
+        "next_action": _next_action(status, source),
     }
 
 
@@ -229,3 +234,23 @@ def _reason(status: str, source: str, slo_minutes: int) -> str:
     if status == "stale":
         return f"{source} evidence exceeded the {slo_minutes} minute freshness SLO"
     return f"{source} evidence exceeded twice the {slo_minutes} minute freshness SLO"
+
+
+def _source_status(statuses: Counter[str]) -> str:
+    if statuses["expired"]:
+        return "expired"
+    if statuses["missing"]:
+        return "missing"
+    if statuses["stale"]:
+        return "stale"
+    return "fresh"
+
+
+def _next_action(status: str, source: str) -> str:
+    if status == "fresh":
+        return "keep monitoring evidence freshness and source health"
+    if status == "missing":
+        return f"request missing {source} evidence and confirm collection metadata"
+    if status == "expired":
+        return f"recollect expired {source} evidence and rerun affected control tests"
+    return f"refresh stale {source} evidence and rerun affected control tests"
