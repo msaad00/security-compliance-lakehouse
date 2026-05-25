@@ -16,12 +16,13 @@ Import this module only when the ``server`` extra is installed.
 from __future__ import annotations
 
 import os
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -29,12 +30,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from security_lakehouse import api_v1
 from security_lakehouse.auth.dependencies import get_session, require_scope
+from security_lakehouse.auth.oidc import OIDCLoginError, build_oauth, complete_oidc_login, load_oidc_config
 from security_lakehouse.auth.rbac import Identity
 from security_lakehouse.auth.request_audit import append_request_audit
+from security_lakehouse.auth.sessions import SESSION_COOKIE
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.db import migrate, repository
 from security_lakehouse.db.base import create_engine_for, session_factory
 from security_lakehouse.web import web_dist_dir, web_dist_index
+
+_COOKIE_SECURE = os.environ.get("TRUSTOPS_COOKIE_SECURE", "true").lower() in {"1", "true", "yes", "on"}
 
 _ERROR_CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_found"}
 
@@ -90,6 +95,17 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     app.state.sessionmaker = session_factory(engine)
     app.state.require_auth = require_auth and not _insecure_requested()
 
+    # OIDC SSO is optional; the OAuth client + signed session middleware are only
+    # wired when an identity provider is configured via the environment.
+    app.state.oidc_config = load_oidc_config()
+    app.state.oauth = None
+    if app.state.oidc_config is not None:
+        from starlette.middleware.sessions import SessionMiddleware
+
+        secret = os.environ.get("TRUSTOPS_SESSION_SECRET") or secrets.token_hex(32)
+        app.add_middleware(SessionMiddleware, secret_key=secret, same_site="lax", https_only=_COOKIE_SECURE)
+        app.state.oauth = build_oauth(app.state.oidc_config)
+
     @app.middleware("http")
     async def _record_request_audit(request: Request, call_next):
         correlation_id = str(uuid.uuid4())
@@ -127,6 +143,42 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     def v1_healthz() -> JSONResponse:
         _status, body = api_v1.handle_get("/api/v1/healthz", {}, lake)
         return JSONResponse(body, status_code=int(_status))
+
+    # --- SSO (OIDC) ---
+    @app.get("/api/v1/auth/login")
+    async def sso_login(request: Request):
+        if app.state.oauth is None:
+            raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="OIDC SSO is not configured")
+        redirect_uri = os.environ.get("TRUSTOPS_OIDC_REDIRECT_URL") or str(request.url_for("sso_callback"))
+        return await app.state.oauth.oidc.authorize_redirect(request, redirect_uri)
+
+    @app.get("/api/v1/auth/callback", name="sso_callback")
+    async def sso_callback(request: Request, session: Session = Depends(get_session)):
+        if app.state.oauth is None:
+            raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="OIDC SSO is not configured")
+        try:
+            token = await app.state.oauth.oidc.authorize_access_token(request)
+        except Exception as exc:  # noqa: BLE001 - authlib surfaces several OAuth error types
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="OIDC token exchange failed") from exc
+        email = (token.get("userinfo") or {}).get("email", "")
+        try:
+            _user, sess_token = complete_oidc_login(session, config=app.state.oidc_config, email=email)
+        except OIDCLoginError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        session.commit()
+        response = RedirectResponse(url="/console", status_code=status.HTTP_302_FOUND)
+        response.set_cookie(SESSION_COOKIE, sess_token, httponly=True, secure=_COOKIE_SECURE, samesite="lax", path="/")
+        return response
+
+    @app.post("/api/v1/auth/logout")
+    def sso_logout(request: Request, session: Session = Depends(get_session)) -> JSONResponse:
+        cookie = request.cookies.get(SESSION_COOKIE)
+        if cookie:
+            repository.revoke_user_session(session, cookie, now=datetime.now(UTC))
+            session.commit()
+        response = JSONResponse(api_v1.envelope("auth.logout", {"ok": True}))
+        response.delete_cookie(SESSION_COOKIE, path="/")
+        return response
 
     # --- auth surface ---
     @app.get("/api/v1/auth/whoami")

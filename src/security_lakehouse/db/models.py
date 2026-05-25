@@ -29,6 +29,11 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def _as_aware(value: datetime) -> datetime:
+    """Coerce a stored datetime to aware UTC (SQLite drops tzinfo; Postgres keeps it)."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
 class Tenant(Base):
     """An isolated workspace; all application-state rows hang off a tenant."""
 
@@ -64,6 +69,7 @@ class User(Base):
 
     tenant: Mapped[Tenant] = relationship(back_populates="users")
     api_keys: Mapped[list[ApiKey]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    sessions: Mapped[list[UserSession]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class ApiKey(Base):
@@ -102,4 +108,39 @@ class ApiKey(Base):
         moment = now or _utcnow()
         if self.revoked_at is not None or self.status != "active":
             return False
-        return self.expires_at is None or self.expires_at > moment
+        return self.expires_at is None or _as_aware(self.expires_at) > moment
+
+
+class UserSession(Base):
+    """A browser session minted after SSO login.
+
+    Only the SHA-256 hash of the session token is stored; the opaque token is
+    delivered to the browser in an httpOnly cookie. ``idp`` records which
+    identity provider authenticated the session (e.g. ``oidc``).
+    """
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    idp: Mapped[str] = mapped_column(String(32), nullable=False, default="oidc")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="sessions")
+
+    def is_active(self, *, now: datetime | None = None) -> bool:
+        """A session is usable when it is neither revoked nor past its expiry."""
+        moment = now or _utcnow()
+        if self.revoked_at is not None:
+            return False
+        return _as_aware(self.expires_at) > moment
