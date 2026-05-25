@@ -33,6 +33,14 @@ from security_lakehouse.auth.dependencies import get_session, require_scope
 from security_lakehouse.auth.oidc import OIDCLoginError, build_oauth, complete_oidc_login, load_oidc_config
 from security_lakehouse.auth.rbac import Identity
 from security_lakehouse.auth.request_audit import append_request_audit
+from security_lakehouse.auth.saml import (
+    SAMLLoginError,
+    build_saml_auth,
+    complete_saml_login,
+    email_from_saml_assertion,
+    load_saml_config,
+    saml_request_data,
+)
 from security_lakehouse.auth.sessions import SESSION_COOKIE
 from security_lakehouse.dashboard import render_dashboard
 from security_lakehouse.db import migrate, repository
@@ -99,6 +107,8 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     # wired when an identity provider is configured via the environment.
     app.state.oidc_config = load_oidc_config()
     app.state.oauth = None
+    app.state.saml_config = load_saml_config()
+    app.state.saml_auth_factory = build_saml_auth
     if app.state.oidc_config is not None:
         from starlette.middleware.sessions import SessionMiddleware
 
@@ -178,6 +188,76 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             session.commit()
         response = JSONResponse(api_v1.envelope("auth.logout", {"ok": True}))
         response.delete_cookie(SESSION_COOKIE, path="/")
+        return response
+
+    # --- SSO (SAML) ---
+    @app.get("/api/v1/auth/saml/login")
+    def saml_login(request: Request):
+        if app.state.saml_config is None:
+            raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="SAML SSO is not configured")
+        auth = app.state.saml_auth_factory(
+            app.state.saml_config,
+            saml_request_data(
+                scheme=request.url.scheme,
+                host=request.url.netloc,
+                port=request.url.port,
+                path=request.url.path,
+                query=dict(request.query_params),
+            ),
+        )
+        return RedirectResponse(url=auth.login(), status_code=status.HTTP_302_FOUND)
+
+    @app.get("/api/v1/auth/saml/metadata")
+    def saml_metadata(request: Request):
+        if app.state.saml_config is None:
+            raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="SAML SSO is not configured")
+        auth = app.state.saml_auth_factory(
+            app.state.saml_config,
+            saml_request_data(
+                scheme=request.url.scheme,
+                host=request.url.netloc,
+                port=request.url.port,
+                path=request.url.path,
+                query=dict(request.query_params),
+            ),
+        )
+        metadata = auth.get_settings().get_sp_metadata()
+        errors = auth.get_settings().validate_metadata(metadata)
+        if errors:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="invalid SAML metadata")
+        return HTMLResponse(metadata, media_type="application/xml")
+
+    @app.post("/api/v1/auth/saml/acs")
+    async def saml_acs(request: Request, session: Session = Depends(get_session)):
+        if app.state.saml_config is None:
+            raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="SAML SSO is not configured")
+        body = await request.body()
+        auth = app.state.saml_auth_factory(
+            app.state.saml_config,
+            saml_request_data(
+                scheme=request.url.scheme,
+                host=request.url.netloc,
+                port=request.url.port,
+                path=request.url.path,
+                query=dict(request.query_params),
+                body=body,
+            ),
+        )
+        auth.process_response()
+        errors = auth.get_errors()
+        if errors or not auth.is_authenticated():
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="SAML response rejected")
+        try:
+            _user, sess_token = complete_saml_login(
+                session,
+                config=app.state.saml_config,
+                email=email_from_saml_assertion(auth),
+            )
+        except SAMLLoginError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        session.commit()
+        response = RedirectResponse(url="/console", status_code=status.HTTP_302_FOUND)
+        response.set_cookie(SESSION_COOKIE, sess_token, httponly=True, secure=_COOKIE_SECURE, samesite="lax", path="/")
         return response
 
     # --- auth surface ---
