@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title desc">
+  <title id="title">TrustOps source-linked framework coverage</title>
+  <desc id="desc">Neutral text-only framework coverage tiles. No official logos, marks, certification seals, or imitation badges are used.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#09111b"/><stop offset=".55" stop-color="#111827"/><stop offset="1" stop-color="#103b45"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f7cff"/><stop offset="1" stop-color="#30c7d2"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#020617" flood-opacity=".28"/></filter>
+    <style>.eyebrow{font:800 15px Inter,Arial,sans-serif;fill:#7dd3fc}.title{font:900 42px Inter,Arial,sans-serif;fill:#fff}.sub{font:600 18px Inter,Arial,sans-serif;fill:#c7d2e1}.card{fill:#fff;stroke:#d8e2ef;stroke-width:1.4}.name{font:900 18px Inter,Arial,sans-serif;fill:#111827}.meta{font:700 13px Inter,Arial,sans-serif;fill:#64748b}.status{font:800 10px Inter,Arial,sans-serif;fill:#0369a1;letter-spacing:.8px}</style>
+  </defs>
+  <rect width="1280" height="360" rx="28" fill="url(#bg)"/>
+  <circle cx="1120" cy="70" r="180" fill="none" stroke="#315dff" stroke-opacity=".20" stroke-width="2"/>
+  <circle cx="1020" cy="312" r="118" fill="none" stroke="#30c7d2" stroke-opacity=".18" stroke-width="2"/>
+  <text x="44" y="56" class="eyebrow">SOURCE-LINKED FRAMEWORK SCOPE</text>
+  <text x="44" y="108" class="title">Source-linked framework scope</text>
+  <text x="44" y="142" class="sub">Text-only framework labels. Official logos and certification seals are used only with documented permission.</text>
+  <g filter="url(#shadow)">
+    <g transform="translate(44 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">SOC 2</text><text x="16" y="96" class="meta">TSC</text></g>
+    <g transform="translate(196 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">NIST AI</text><text x="16" y="96" class="meta">RMF 1.0</text></g>
+    <g transform="translate(348 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">ISO 27001</text><text x="16" y="96" class="meta">2022</text></g>
+    <g transform="translate(500 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">HIPAA</text><text x="16" y="96" class="meta">Security</text></g>
+    <g transform="translate(652 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">PCI DSS</text><text x="16" y="96" class="meta">v4.0</text></g>
+    <g transform="translate(804 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">GDPR</text><text x="16" y="96" class="meta">2016/679</text></g>
+    <g transform="translate(956 184)"><rect class="card" width="136" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">EU AI Act</text><text x="16" y="96" class="meta">2024/1689</text></g>
+    <g transform="translate(1108 184)"><rect class="card" width="128" height="112" rx="12"/><rect x="16" y="18" width="90" height="22" rx="11" fill="#e0f2fe"/><text x="26" y="33" class="status">LIMITED MAP</text><text x="16" y="76" class="name">ISO</text><text x="16" y="96" class="meta">42001</text></g>
+  </g>
+  <rect x="44" y="318" width="362" height="20" rx="10" fill="#0f172a" stroke="#2c4058"/><rect x="52" y="325" width="260" height="6" rx="3" fill="url(#accent)"/>
+  <text x="424" y="333" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="800" fill="#94a3b8">Versioned source URLs, hashes, mappings, evidence requirements, and readiness gates back every framework label.</text>
+</svg>

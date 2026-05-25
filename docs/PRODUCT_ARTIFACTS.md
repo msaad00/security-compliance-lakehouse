@@ -4,16 +4,15 @@ This page is the product review index for the public repo.
 
 ## Product Experience
 
-| Artifact                               | Path                                        |
-| -------------------------------------- | ------------------------------------------- |
-| Interactive TrustOps console generator | `src/security_lakehouse/dashboard.py`       |
-| Local console/API server               | `src/security_lakehouse/server.py`          |
-| Continuous assessment engine           | `src/security_lakehouse/assessment.py`      |
-| CLI entry point                        | `src/security_lakehouse/cli.py`             |
-| Vendor diligence use case              | `docs/USE_CASE_VENDOR_DILIGENCE.md`         |
-| Console screenshot                     | `docs/images/trustops-console.png`          |
-| Framework badge strip                  | `docs/images/trustops-framework-badges.svg` |
-| Individual framework SVG badges        | `docs/images/frameworks/`                   |
+| Artifact                               | Path                                          |
+| -------------------------------------- | --------------------------------------------- |
+| Interactive TrustOps console generator | `src/security_lakehouse/dashboard.py`         |
+| Local console/API server               | `src/security_lakehouse/server.py`            |
+| Continuous assessment engine           | `src/security_lakehouse/assessment.py`        |
+| CLI entry point                        | `src/security_lakehouse/cli.py`               |
+| Vendor diligence use case              | `docs/USE_CASE_VENDOR_DILIGENCE.md`           |
+| Console screenshot                     | `docs/images/trustops-console.png`            |
+| Framework coverage graphic             | `docs/images/trustops-framework-coverage.svg` |
 
 Run locally:
 
@@ -43,16 +42,16 @@ See [Human and Agent API](api/AGENT_API.md).
 
 ## Diagrams
 
-| Diagram                    | Path                                                                                |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| Modular architecture       | [ARCHITECTURE.md](ARCHITECTURE.md)                                                  |
-| Data model                 | [DATA_MODEL.md](DATA_MODEL.md)                                                      |
-| Dual security data lake    | [dual-lakehouse.md](diagrams/dual-lakehouse.md)                                     |
-| Evaluation lifecycle       | [evaluation-lifecycle.md](diagrams/evaluation-lifecycle.md)                         |
-| Hosting model              | [hosting.md](diagrams/hosting.md)                                                   |
-| ASCII system map           | [ascii-system-map.md](diagrams/ascii-system-map.md)                                 |
-| SVG architecture visual    | [trustops-assessment-architecture.svg](images/trustops-assessment-architecture.svg) |
-| SVG framework badge visual | [trustops-framework-badges.svg](images/trustops-framework-badges.svg)               |
+| Diagram                       | Path                                                                                |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| Modular architecture          | [ARCHITECTURE.md](ARCHITECTURE.md)                                                  |
+| Data model                    | [DATA_MODEL.md](DATA_MODEL.md)                                                      |
+| Dual security data lake       | [dual-lakehouse.md](diagrams/dual-lakehouse.md)                                     |
+| Evaluation lifecycle          | [evaluation-lifecycle.md](diagrams/evaluation-lifecycle.md)                         |
+| Hosting model                 | [hosting.md](diagrams/hosting.md)                                                   |
+| ASCII system map              | [ascii-system-map.md](diagrams/ascii-system-map.md)                                 |
+| SVG architecture visual       | [trustops-assessment-architecture.svg](images/trustops-assessment-architecture.svg) |
+| SVG framework coverage visual | [trustops-framework-coverage.svg](images/trustops-framework-coverage.svg)           |
 
 ## Data And Schema
 
@@ -89,5 +88,7 @@ source references, and to avoid invented controls or certification claims.
 
 Framework support currently covers eight source-linked, readiness-gated
 frameworks: SOC 2, NIST AI RMF, ISO/IEC 27001, HIPAA Security Rule, PCI DSS,
-GDPR, EU AI Act, and ISO/IEC 42001. The framework SVGs are TrustOps-owned UI
-marks, not official certification seals or framework logos.
+GDPR, EU AI Act, and ISO/IEC 42001. Framework visuals use neutral text labels.
+Official third-party logos, regulator marks, or certification seals are not
+shipped unless their official usage terms and attribution are documented under
+[Third-Party Asset Policy](THIRD_PARTY_ASSETS.md).

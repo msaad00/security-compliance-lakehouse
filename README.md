@@ -1,13 +1,13 @@
-# TrustOps Security Data Lake
+# TrustOps
 
-Continuous compliance assessment for security data lakes.
+Security data lake assessment workbench.
 
 It reports near realtime posture with confidence from security evidence,
 control tests, owner workflows, snapshots, and agent-readable APIs.
 
 ![TrustOps workflow](docs/images/trustops-readme-banner.svg)
 
-![TrustOps framework badges](docs/images/trustops-framework-badges.svg)
+![TrustOps framework coverage](docs/images/trustops-framework-coverage.svg)
 
 ![TrustOps console](docs/images/trustops-console.png)
 
@@ -167,8 +167,8 @@ TrustOps separates product logic from storage.
 
 | Store      | Role                                                                      | Status                                      |
 | ---------- | ------------------------------------------------------------------------- | ------------------------------------------- |
-| Snowflake  | governed evidence lake, audit views, retention, RBAC, executive reporting | production hero path                        |
-| ClickHouse | high-volume telemetry, runtime events, trends, fast aggregations          | production hero path                        |
+| Snowflake  | governed evidence lake, audit views, retention, RBAC, executive reporting | target production backend                   |
+| ClickHouse | high-volume telemetry, runtime events, trends, fast aggregations          | target production backend                   |
 | DuckDB     | local analytical file for columnar demos and bigger local datasets        | optional analytical mart via `.[analytics]` |
 | SQLite     | zero-dependency local SQL artifact for smoke tests and first-run demos    | current lightweight default                 |
 
@@ -192,11 +192,13 @@ Current framework support is intentionally source-linked and readiness-gated:
 | EU AI Act 2024/1689           | implemented limited mapping |
 | ISO/IEC 42001:2023            | implemented limited mapping |
 
-The SVG badges above are TrustOps-owned framework marks, not official
-certification seals. A framework is not treated as ready until its official
-source is pulled, source hash is recorded, reviewed control/article mappings
-exist, evidence requirements are declared, evaluation rules are versioned, and
-coverage gates pass.
+The framework coverage graphic uses neutral text labels. TrustOps does not ship
+made-up framework logos, imitation certification seals, or regulator lookalike
+marks. Official third-party marks should be added only under the
+[Third-Party Asset Policy](docs/THIRD_PARTY_ASSETS.md). A framework is not
+treated as ready until its official source is pulled, source hash is recorded,
+reviewed control/article mappings exist, evidence requirements are declared,
+evaluation rules are versioned, and coverage gates pass.
 
 ## Data Model
 
@@ -289,19 +291,22 @@ make smoke
 The smoke target validates raw evidence, runs the pipeline, renders the console,
 and executes the regression suite.
 
-## Name
+## Project Identity
 
-Public positioning:
+Product:
 
 ```text
-TrustOps Security Data Lake
+TrustOps
 ```
 
-Repository name:
+Repository:
 
 ```text
 trustops-security-data-lake
 ```
 
-The product is TrustOps. The architecture is a security data lake assessment
-layer with Snowflake and ClickHouse as production storage paths.
+Architecture:
+
+```text
+security data lake assessment workbench
+```

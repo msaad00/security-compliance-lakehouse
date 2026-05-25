@@ -216,7 +216,7 @@ const STAGE_ORDER: ReadinessStage[] = [
   "mapped",
   "evidence_defined",
   "rule_versioned",
-  "coverage_certified",
+  "coverage_verified",
 ];
 
 const STAGE_LABEL: Record<ReadinessStage, string> = {
@@ -224,7 +224,7 @@ const STAGE_LABEL: Record<ReadinessStage, string> = {
   mapped: "Mapped to articles",
   evidence_defined: "Evidence defined",
   rule_versioned: "Rule versioned",
-  coverage_certified: "Coverage certified",
+  coverage_verified: "Coverage gate passed",
 };
 
 function ReadinessRow({ row }: { row: FrameworkReadiness }) {
@@ -299,7 +299,7 @@ export default function FrameworksPage() {
         <CardHeader>
           <CardTitle>Staged readiness</CardTitle>
           <CardDescription>
-            Coverage is only certified after every gate is green: source pulled,
+            Coverage is verified after every gate is green: source pulled,
             controls mapped to source articles, evidence requirements declared,
             evaluation rules versioned, and mapping coverage ≥ 95%. The earliest
             unmet gate is highlighted amber.
