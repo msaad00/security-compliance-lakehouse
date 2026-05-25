@@ -234,6 +234,10 @@ the bundled console.
 | `GET /api/v1/snapshots`       | immutable point-in-time assessment snapshots              |
 | `POST /api/v1/snapshots`      | create an immutable point-in-time assessment snapshot     |
 
+Server mode requires auth for non-health `/api/v1/*` routes. API keys, OIDC,
+and SAML all resolve to the same tenant/user/role model. See
+[Server Auth](docs/SERVER_AUTH.md).
+
 Example:
 
 ```bash
