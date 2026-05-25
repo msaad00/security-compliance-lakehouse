@@ -7,13 +7,14 @@ application-state database.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from security_lakehouse.auth.sessions import DEFAULT_SESSION_TTL_HOURS, generate_session_token, hash_session_token
 from security_lakehouse.auth.tokens import generate_token, hash_token
-from security_lakehouse.db.models import USER_ROLES, ApiKey, Tenant, User
+from security_lakehouse.db.models import USER_ROLES, ApiKey, Tenant, User, UserSession
 
 
 def create_tenant(session: Session, *, slug: str, name: str) -> Tenant:
@@ -107,5 +108,65 @@ def revoke_api_key(session: Session, *, tenant_id: str, key_id: str, now: dateti
         return False
     key.revoked_at = now
     key.status = "revoked"
+    session.flush()
+    return True
+
+
+def find_or_provision_user(
+    session: Session,
+    *,
+    tenant_id: str,
+    email: str,
+    auto_provision: bool,
+    default_role: str = "read_only",
+) -> User | None:
+    """Resolve an SSO-authenticated email to a user, optionally provisioning it.
+
+    Returns ``None`` when the user is absent and ``auto_provision`` is False.
+    """
+    user = get_user_by_email(session, tenant_id=tenant_id, email=email)
+    if user is not None:
+        return user
+    if not auto_provision:
+        return None
+    return create_user(session, tenant_id=tenant_id, email=email, role=default_role)
+
+
+def create_user_session(
+    session: Session,
+    *,
+    tenant_id: str,
+    user_id: str,
+    idp: str = "oidc",
+    ttl_hours: int = DEFAULT_SESSION_TTL_HOURS,
+    now: datetime | None = None,
+) -> tuple[UserSession, str]:
+    """Mint a browser session. Returns ``(session_row, plaintext_token)``."""
+    moment = now or datetime.now(UTC)
+    token, token_hash = generate_session_token()
+    row = UserSession(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        token_hash=token_hash,
+        idp=idp,
+        expires_at=moment + timedelta(hours=ttl_hours),
+    )
+    session.add(row)
+    session.flush()
+    return row, token
+
+
+def resolve_user_session(session: Session, token: str) -> UserSession | None:
+    """Resolve a session cookie token to its row by hash (active or not)."""
+    stmt = select(UserSession).where(UserSession.token_hash == hash_session_token(token))
+    return session.scalars(stmt).one_or_none()
+
+
+def revoke_user_session(session: Session, token: str, *, now: datetime) -> bool:
+    """Revoke a session by its token. Returns False if absent or already revoked."""
+    row = resolve_user_session(session, token)
+    if row is None or row.revoked_at is not None:
+        return False
+    row.revoked_at = now
     session.flush()
     return True

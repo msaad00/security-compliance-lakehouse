@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from security_lakehouse.auth.rbac import Identity, scopes_for_role
+from security_lakehouse.auth.sessions import SESSION_COOKIE
 from security_lakehouse.db import repository
 
 _bearer = HTTPBearer(auto_error=False)
@@ -43,35 +44,57 @@ def get_identity(
     if not getattr(request.app.state, "require_auth", True):
         request.state.identity = _INSECURE_IDENTITY
         return _INSECURE_IDENTITY
-    if credentials is None or not credentials.credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="missing bearer token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
     now = datetime.now(UTC)
-    key = repository.resolve_api_key(session, credentials.credentials)
-    if key is None or not key.is_active(now=now):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid or inactive token",
-            headers={"WWW-Authenticate": "Bearer"},
+
+    # 1. API key (agents/CI): Authorization: Bearer <token>
+    if credentials is not None and credentials.credentials:
+        key = repository.resolve_api_key(session, credentials.credentials)
+        if key is None or not key.is_active(now=now):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid or inactive token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not key.user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user is disabled")
+        key.last_used_at = now
+        session.commit()
+        identity = Identity(
+            user_id=key.user_id,
+            tenant_id=key.tenant_id,
+            email=key.user.email,
+            role=key.user.role,
+            scopes=scopes_for_role(key.user.role),
+            workspace_id=key.workspace_id,
+            api_key_id=key.id,
         )
-    if not key.user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user is disabled")
-    key.last_used_at = now
-    session.commit()
-    identity = Identity(
-        user_id=key.user_id,
-        tenant_id=key.tenant_id,
-        email=key.user.email,
-        role=key.user.role,
-        scopes=scopes_for_role(key.user.role),
-        workspace_id=key.workspace_id,
-        api_key_id=key.id,
+        request.state.identity = identity
+        return identity
+
+    # 2. Browser session (SSO): httpOnly cookie
+    cookie = request.cookies.get(SESSION_COOKIE)
+    if cookie:
+        sess = repository.resolve_user_session(session, cookie)
+        if sess is None or not sess.is_active(now=now):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid or expired session")
+        if not sess.user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="user is disabled")
+        identity = Identity(
+            user_id=sess.user_id,
+            tenant_id=sess.tenant_id,
+            email=sess.user.email,
+            role=sess.user.role,
+            scopes=scopes_for_role(sess.user.role),
+            workspace_id=sess.tenant_id,
+        )
+        request.state.identity = identity
+        return identity
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="missing credentials",
+        headers={"WWW-Authenticate": "Bearer"},
     )
-    request.state.identity = identity
-    return identity
 
 
 def require_scope(scope: str) -> Callable[..., Identity]:
