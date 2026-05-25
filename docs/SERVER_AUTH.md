@@ -85,5 +85,6 @@ boundary.
 | `auditor`        | Read-only, with owner, credential, and note fields redacted |
 | `read_only`      | Internal read-only view without mutation                    |
 
-All non-health `/api/v1/*` requests are audited with a correlation ID, actor,
-tenant, route, method, decision, status, and timestamp.
+All non-health `/api/v1/*` and `/api/*` requests are authenticated in server
+mode. Request audit events include a correlation ID, actor, tenant, route,
+method, decision, status, and timestamp.

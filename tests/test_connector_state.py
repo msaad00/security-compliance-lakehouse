@@ -241,7 +241,7 @@ def test_connector_configure_unknown_id_returns_400(tmp_path: Path) -> None:
             body={"state": "enabled"},
         )
         assert status == HTTPStatus.BAD_REQUEST
-        assert "unknown connector_id" in body["reason"]
+        assert body["reason"] == "invalid request"
     finally:
         server.shutdown()
 

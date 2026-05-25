@@ -229,7 +229,7 @@ raw evidence
 `/api/v1/*` is the stable headless contract for agents and external clients. It
 returns `{data, meta, errors}` envelopes and supports `limit`, `offset`, `sort`,
 and field filters on list resources. The unversioned `/api/*` routes remain for
-the bundled console.
+the bundled console and are served by both local mode and server mode.
 
 | Route                         | Purpose                                                   |
 | ----------------------------- | --------------------------------------------------------- |
@@ -243,8 +243,8 @@ the bundled console.
 | `GET /api/v1/snapshots`       | immutable point-in-time assessment snapshots              |
 | `POST /api/v1/snapshots`      | create an immutable point-in-time assessment snapshot     |
 
-Server mode requires auth for non-health `/api/v1/*` routes. API keys, OIDC,
-and SAML all resolve to the same tenant/user/role model. See
+Server mode requires auth for non-health `/api/v1/*` and `/api/*` routes. API
+keys, OIDC, and SAML all resolve to the same tenant/user/role model. See
 [Server Auth](docs/SERVER_AUTH.md).
 
 Example:

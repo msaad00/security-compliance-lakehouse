@@ -19,6 +19,7 @@ import os
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -28,7 +29,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from security_lakehouse import api_v1
+from security_lakehouse import api_legacy, api_v1
 from security_lakehouse.auth.dependencies import get_session, require_scope
 from security_lakehouse.auth.oidc import OIDCLoginError, build_oauth, complete_oidc_login, load_oidc_config
 from security_lakehouse.auth.rbac import Identity
@@ -89,6 +90,13 @@ def _redact_payload(payload: object, identity: Identity) -> object:
     return payload
 
 
+def _sanitize_legacy_error(status_code: HTTPStatus, payload: object) -> object:
+    """Keep server-mode legacy API errors from exposing internal exception text."""
+    if status_code != HTTPStatus.BAD_REQUEST or not isinstance(payload, dict):
+        return payload
+    return {"error": str(payload.get("error") or "bad_request"), "reason": "invalid request"}
+
+
 def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     """Build the server-mode ASGI app bound to a security data lake directory."""
     lake = Path(lake_dir)
@@ -121,8 +129,8 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         correlation_id = str(uuid.uuid4())
         response = await call_next(request)
         path = request.url.path
-        # Audit authorization decisions on the secured surface only; health is open.
-        if path.startswith("/api/v1/") and path != "/api/v1/healthz":
+        # Audit authorization decisions on the secured API surfaces only; health is open.
+        if path.startswith("/api/") and path not in {"/api/healthz", "/api/v1/healthz"}:
             append_request_audit(
                 lake,
                 method=request.method,
@@ -345,6 +353,30 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
             body = {}
         _status, payload = api_v1.handle_post(f"/api/v1/{rest}", body, lake)
+        return JSONResponse(payload, status_code=int(_status))
+
+    # --- legacy console surface (authenticated; same handlers as local mode) ---
+    # Registered after the v1 routes so /api/v1/* and /api/healthz keep priority.
+    @app.get("/api/{rest:path}")
+    def legacy_get(rest: str, request: Request, identity: Identity = Depends(_require_read)) -> JSONResponse:
+        _status, body = api_legacy.handle_get(f"/api/{rest}", _params(request), lake)
+        return JSONResponse(_redact_payload(body, identity), status_code=int(_status))
+
+    @app.post("/api/{rest:path}")
+    async def legacy_post(rest: str, request: Request, identity: Identity = Depends(_require_read)) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
+            body = {}
+        legacy_path = f"/api/{rest}"
+        required_scope = api_legacy.required_post_scope(legacy_path)
+        if not identity.has_scope(required_scope):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"requires scope: {required_scope}",
+            )
+        _status, payload = api_legacy.handle_post(legacy_path, body, lake, role=identity.role)
+        payload = _sanitize_legacy_error(_status, payload)
         return JSONResponse(payload, status_code=int(_status))
 
     @app.get("/", response_class=HTMLResponse)
