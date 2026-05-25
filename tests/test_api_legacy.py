@@ -69,6 +69,14 @@ def test_legacy_requires_auth_in_server_mode(tmp_path: Path) -> None:
     assert entries[0]["result"] == "deny"
 
 
+def test_legacy_bad_request_sanitizes_internal_exception_text(tmp_path: Path) -> None:
+    _seed_lake(tmp_path)
+    client = TestClient(create_app(tmp_path, require_auth=False))
+    resp = client.post("/api/connectors/does-not-exist/configure", json={"state": "enabled"})
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+    assert resp.json() == {"error": "bad_request", "reason": "invalid request"}
+
+
 def test_legacy_post_enforces_route_specific_scopes(tmp_path: Path) -> None:
     _seed_lake(tmp_path)
     app = create_app(tmp_path)

@@ -237,8 +237,8 @@ def handle_post(path: str, body: Body, lake_dir: str | Path, *, role: str = "") 
                 credentials=body.get("credentials") or {},
                 options=body.get("options") or {},
             )
-        except ValueError as exc:
-            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": str(exc)}
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": "invalid request"}
         return HTTPStatus.CREATED, {"event": record}
     probe = _suffix_match(path, "/api/connectors/", "/probe")
     if probe is not None:
@@ -255,8 +255,8 @@ def handle_post(path: str, body: Body, lake_dir: str | Path, *, role: str = "") 
                 edges=body.get("edges") or [],
                 actor=str(body.get("actor") or "console"),
             )
-        except ValueError as exc:
-            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": str(exc)}
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": "invalid request"}
         return HTTPStatus.CREATED, {"workflow": record}
     if path == "/api/scheduler/tick":
         results = scheduler_tick(lake)
@@ -264,15 +264,15 @@ def handle_post(path: str, body: Body, lake_dir: str | Path, *, role: str = "") 
     if path == "/api/workflows/actions/run":
         try:
             output = run_action(lake, node_type=str(body.get("node_type") or ""), params=body.get("params") or {})
-        except ValueError as exc:
-            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": str(exc)}
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": "invalid request"}
         return HTTPStatus.CREATED, {"output": output}
     workflow_run = _suffix_match(path, "/api/workflows/", "/run")
     if workflow_run is not None and workflow_run != "actions":
         try:
             run = run_workflow(lake, workflow_id=workflow_run, actor=str(body.get("actor") or "console"))
-        except ValueError as exc:
-            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": str(exc)}
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": "invalid request"}
         return HTTPStatus.CREATED, {"run": run}
     if path == "/api/trust-shares":
         try:
@@ -284,8 +284,8 @@ def handle_post(path: str, body: Body, lake_dir: str | Path, *, role: str = "") 
                 created_by=str(body.get("created_by") or "console"),
                 framework_id=body.get("framework_id"),
             )
-        except ValueError as exc:
-            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": str(exc)}
+        except ValueError:
+            return HTTPStatus.BAD_REQUEST, {"error": "bad_request", "reason": "invalid request"}
         return HTTPStatus.CREATED, {"share": share}
     revoke = _suffix_match(path, "/api/trust-shares/", "/revoke")
     if revoke is not None:
