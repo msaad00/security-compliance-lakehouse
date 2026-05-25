@@ -112,8 +112,9 @@ Connectors should emit evidence records with:
 - `status`
 - `controls`
 - `evidence.evidence_id`
-- `evidence.uri`
-- `evidence.collected_at`
+- `evidence.evidence_ref`
+- `evidence.evidence_collected_at`
+- `evidence.raw_sha256`
 
 Connectors should not decide compliance. They only collect evidence. The
 assessment engine decides posture.

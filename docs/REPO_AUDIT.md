@@ -41,3 +41,12 @@ settings. It emits a `repository.authenticated_signal_gap` record with
 Use the authenticated GitHub/GitLab connector path for those controls. The
 public audit is still useful for fast demos, OSS posture checks, and initial
 repo inventory before requesting credentials.
+
+Run the authenticated governance connector when those gaps matter:
+
+```bash
+GITHUB_TOKEN=... security-lakehouse repo governance-sync OWNER/REPO --out build/repo-governance.jsonl
+security-lakehouse validate --raw build/repo-governance.jsonl
+```
+
+See [Repository Governance Connector](REPO_GOVERNANCE_CONNECTOR.md).

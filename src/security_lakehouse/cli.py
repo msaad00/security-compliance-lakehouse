@@ -114,6 +114,14 @@ def _parser() -> argparse.ArgumentParser:
     repo_audit.add_argument("--out", required=True, help="raw evidence JSONL output path")
     repo_audit.add_argument("--fixture-dir", default=None, help="local fixture directory for offline tests and demos")
     repo_audit.set_defaults(func=_repo_audit)
+    repo_governance = repo_sub.add_parser(
+        "governance-sync", help="sync authenticated GitHub repository governance evidence"
+    )
+    repo_governance.add_argument("repo", help="GitHub URL or OWNER/REPO")
+    repo_governance.add_argument("--out", required=True, help="raw evidence JSONL output path")
+    repo_governance.add_argument("--fixture-dir", default=None, help="local fixture directory for offline tests")
+    repo_governance.add_argument("--token-env", default="GITHUB_TOKEN", help="environment variable containing token")
+    repo_governance.set_defaults(func=_repo_governance_sync)
 
     frameworks = sub.add_parser("frameworks", help="framework registry commands")
     frameworks_sub = frameworks.add_subparsers(dest="frameworks_command", required=True)
@@ -312,6 +320,15 @@ def _repo_audit(args: argparse.Namespace) -> int:
     from security_lakehouse.repo_audit import audit_public_repo
 
     rows = audit_public_repo(args.repo, out=args.out, fixture_dir=args.fixture_dir)
+    signals = sorted({row["event_type"] for row in rows})
+    print(json.dumps({"count": len(rows), "out": args.out, "signals": signals}, indent=2, sort_keys=True))
+    return 0
+
+
+def _repo_governance_sync(args: argparse.Namespace) -> int:
+    from security_lakehouse.repo_governance import sync_repo_governance
+
+    rows = sync_repo_governance(args.repo, out=args.out, fixture_dir=args.fixture_dir, token_env=args.token_env)
     signals = sorted({row["event_type"] for row in rows})
     print(json.dumps({"count": len(rows), "out": args.out, "signals": signals}, indent=2, sort_keys=True))
     return 0
