@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from security_lakehouse.connector_state import append_config_event, latest_run
 from security_lakehouse.framework_sync import sync_frameworks
 from security_lakehouse.readiness import STAGES, build_readiness_view
 from security_lakehouse.scheduler import (
@@ -193,6 +194,87 @@ def test_scheduler_respects_period_with_synthetic_now(tmp_path: Path) -> None:
     tick(tmp_path, now=base + timedelta(minutes=6), runner=runner)
     assert len(captured) == 2
     assert all(c["workflow_id"] == workflow_id for c in captured)
+
+
+def test_scheduler_fires_due_connector_sync_once(tmp_path: Path) -> None:
+    append_config_event(
+        tmp_path,
+        connector_id="github-security",
+        state="enabled",
+        actor="alice",
+        options={
+            "sync_schedule": "every 5m",
+            "repo": "acme/model-service",
+            "fixture_dir": str(Path(__file__).parent / "fixtures" / "github-governance"),
+            "materialize": False,
+        },
+    )
+    fired: list[dict] = []
+
+    def connector_runner(_lake, **kwargs) -> dict:
+        fired.append(kwargs)
+        return {"result": "ok", "evidence_count": 5}
+
+    base = datetime(2026, 5, 24, 12, 0, tzinfo=UTC)
+    first = tick(tmp_path, now=base, connector_runner=connector_runner)
+    second = tick(tmp_path, now=base + timedelta(minutes=2), connector_runner=connector_runner)
+    third = tick(tmp_path, now=base + timedelta(minutes=6), connector_runner=connector_runner)
+
+    assert [row["target_kind"] for row in first] == ["connector"]
+    assert first[0]["connector_id"] == "github-security"
+    assert first[0]["evidence_count"] == 5
+    assert second == []
+    assert len(third) == 1
+    assert len(fired) == 2
+    assert fired[0]["actor"] == "scheduler"
+    assert fired[0]["repo"] == "acme/model-service"
+    assert fired[0]["materialize"] is False
+
+
+def test_scheduler_connector_sync_runs_real_github_fixture(tmp_path: Path) -> None:
+    append_config_event(
+        tmp_path,
+        connector_id="github-security",
+        state="enabled",
+        actor="alice",
+        options={
+            "sync_schedule": "every 5m",
+            "repo": "acme/model-service",
+            "fixture_dir": str(Path(__file__).parent / "fixtures" / "github-governance"),
+            "materialize": False,
+        },
+    )
+
+    result = tick(tmp_path)
+
+    assert len(result) == 1
+    assert result[0]["target_kind"] == "connector"
+    assert result[0]["connector_id"] == "github-security"
+    assert result[0]["result"] == "ok"
+    assert result[0]["evidence_count"] == 5
+    assert latest_run(tmp_path, "github-security", kind="sync")["result"] == "ok"
+
+
+def test_scheduler_records_connector_error_without_advancing_state(tmp_path: Path) -> None:
+    append_config_event(
+        tmp_path,
+        connector_id="github-security",
+        state="enabled",
+        actor="alice",
+        options={"sync_schedule": "every 5m", "repo": "acme/model-service"},
+    )
+
+    def boom(_lake, **_kwargs) -> dict:
+        raise RuntimeError("token denied")
+
+    base = datetime(2026, 5, 24, 12, 0, tzinfo=UTC)
+    first = tick(tmp_path, now=base, connector_runner=boom)
+    second = tick(tmp_path, now=base + timedelta(minutes=1), connector_runner=boom)
+
+    assert first[0]["target_kind"] == "connector"
+    assert first[0]["result"] == "error"
+    assert "token denied" in (first[0]["error"] or "")
+    assert second[0]["result"] == "error"
 
 
 # --- readiness -----------------------------------------------------------------

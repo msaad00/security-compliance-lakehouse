@@ -53,6 +53,29 @@ def _parser() -> argparse.ArgumentParser:
     connectors_configure.add_argument("--connector-id", required=True, help="connector id from connectors/catalog.json")
     connectors_configure.add_argument("--state", required=True, choices=["enabled", "disabled"], help="connector state")
     connectors_configure.add_argument("--actor", default="cli", help="actor recorded on the configuration event")
+    connectors_configure.add_argument(
+        "--sync-schedule",
+        default=None,
+        help="optional scheduler expression for continuous connector syncs, for example '@hourly' or 'every 15m'",
+    )
+    connectors_configure.add_argument(
+        "--repo", default=None, help="GitHub OWNER/REPO for scheduled github-security sync"
+    )
+    connectors_configure.add_argument(
+        "--fixture-dir",
+        default=None,
+        help="local fixture directory for scheduled offline connector sync",
+    )
+    connectors_configure.add_argument(
+        "--token-env",
+        default=None,
+        help="environment variable containing the scheduled connector token",
+    )
+    connectors_configure.add_argument(
+        "--no-materialize",
+        action="store_true",
+        help="scheduled sync collects raw evidence only; do not rebuild bronze/silver/gold outputs",
+    )
     connectors_configure.set_defaults(func=_connectors_configure)
     connectors_sync = connectors_sub.add_parser("sync", help="run a configured connector into the managed raw lake")
     connectors_sync.add_argument("--lake", required=True, help="security data lake output directory")
@@ -288,11 +311,23 @@ def _connectors_list(args: argparse.Namespace) -> int:
 def _connectors_configure(args: argparse.Namespace) -> int:
     from security_lakehouse.connector_state import append_config_event
 
+    options = {
+        key: value
+        for key, value in {
+            "sync_schedule": args.sync_schedule,
+            "repo": args.repo,
+            "fixture_dir": args.fixture_dir,
+            "token_env": args.token_env,
+            "materialize": False if args.no_materialize else None,
+        }.items()
+        if value is not None
+    }
     event = append_config_event(
         args.lake,
         connector_id=args.connector_id,
         state=args.state,
         actor=args.actor,
+        options=options,
     )
     print(json.dumps({"event": event}, indent=2, sort_keys=True))
     return 0

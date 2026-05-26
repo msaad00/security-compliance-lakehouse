@@ -1,9 +1,14 @@
-"""Cron scheduler for ``trigger.cron`` workflow nodes.
+"""Cron scheduler for workflows and connector syncs.
 
 A workflow whose triggers include ``trigger.cron`` (with a ``schedule`` param)
 becomes eligible for periodic execution. The scheduler ticks once per call,
 fires every due workflow exactly once, and persists the last-fired timestamp
 to ``gold/scheduler_state.jsonl`` so successive ticks don't double-fire.
+
+An enabled connector becomes eligible for periodic sync when its connector
+configuration options include ``sync_schedule``. The scheduler calls the same
+connector runner used by the CLI, so scheduled evidence collection and manual
+syncs share validation, run history, and raw-event materialization.
 
 Two execution surfaces:
   * ``security-lakehouse scheduler tick --lake build/lakehouse`` runs the
@@ -31,6 +36,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from security_lakehouse.connector_runner import run_connector_sync
+from security_lakehouse.connector_state import build_catalog_view
 from security_lakehouse.workflows import list_workflows, run_workflow
 
 STATE_FILE = "scheduler_state.jsonl"
@@ -80,6 +87,17 @@ class ScheduledWorkflow:
     period: timedelta
 
 
+@dataclass(frozen=True)
+class ScheduledConnector:
+    connector_id: str
+    schedule: str
+    period: timedelta
+    repo: str | None
+    fixture_dir: str | None
+    token_env: str
+    materialize: bool
+
+
 def _scheduled_from_workflows(workflows: list[dict[str, Any]]) -> list[ScheduledWorkflow]:
     out: list[ScheduledWorkflow] = []
     for workflow in workflows:
@@ -101,6 +119,34 @@ def _scheduled_from_workflows(workflows: list[dict[str, Any]]) -> list[Scheduled
     return out
 
 
+def _scheduled_from_connectors(lake_dir: str | Path) -> list[ScheduledConnector]:
+    out: list[ScheduledConnector] = []
+    for connector in build_catalog_view(lake_dir):
+        if connector.get("state") != "enabled":
+            continue
+        options = connector.get("configured_options") or {}
+        schedule = str(options.get("sync_schedule") or options.get("schedule") or "")
+        period = parse_schedule(schedule)
+        if period is None:
+            continue
+        out.append(
+            ScheduledConnector(
+                connector_id=str(connector.get("connector_id") or ""),
+                schedule=schedule,
+                period=period,
+                repo=options.get("repo"),
+                fixture_dir=options.get("fixture_dir"),
+                token_env=str(options.get("token_env") or "GITHUB_TOKEN"),
+                materialize=bool(options.get("materialize", True)),
+            )
+        )
+    return out
+
+
+def _state_key(target_kind: str, target_id: str) -> str:
+    return f"{target_kind}:{target_id}"
+
+
 def _read_state(lake_dir: str | Path) -> dict[str, datetime]:
     path = _gold(lake_dir) / STATE_FILE
     if not path.is_file():
@@ -113,24 +159,34 @@ def _read_state(lake_dir: str | Path) -> dict[str, datetime]:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        wid = str(row.get("workflow_id") or "")
+        target_kind = str(row.get("target_kind") or "workflow")
+        target_id = str(row.get("target_id") or row.get("workflow_id") or "")
         last = row.get("last_fired_at")
-        if not wid or not last:
+        if not target_id or not last:
             continue
         try:
             parsed = datetime.fromisoformat(str(last).replace("Z", "+00:00")).astimezone(UTC)
         except ValueError:
             continue
-        existing = latest.get(wid)
+        key = _state_key(target_kind, target_id)
+        existing = latest.get(key)
         if existing is None or parsed > existing:
-            latest[wid] = parsed
+            latest[key] = parsed
     return latest
 
 
-def _write_state(lake_dir: str | Path, workflow_id: str, fired_at: datetime) -> None:
+def _write_state(lake_dir: str | Path, *, target_kind: str, target_id: str, fired_at: datetime) -> None:
     gold = _gold(lake_dir)
     gold.mkdir(parents=True, exist_ok=True)
-    record = {"workflow_id": workflow_id, "last_fired_at": _utc_iso(fired_at)}
+    record = {
+        "target_kind": target_kind,
+        "target_id": target_id,
+        "last_fired_at": _utc_iso(fired_at),
+    }
+    if target_kind == "workflow":
+        record["workflow_id"] = target_id
+    if target_kind == "connector":
+        record["connector_id"] = target_id
     with (gold / STATE_FILE).open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, separators=(",", ":")) + "\n")
 
@@ -140,23 +196,30 @@ def tick(
     *,
     now: datetime | None = None,
     runner: Any | None = None,
+    connector_runner: Any | None = None,
 ) -> list[dict[str, Any]]:
-    """Fire every due workflow once. Returns one record per attempted run."""
+    """Fire every due workflow and connector once.
+
+    Returns one record per attempted run. ``runner`` remains the workflow
+    runner override used by tests; ``connector_runner`` is the equivalent
+    override for scheduled connector syncs.
+    """
     moment = (now or _utc_now()).astimezone(UTC)
     scheduled = _scheduled_from_workflows(list_workflows(lake_dir))
     state = _read_state(lake_dir)
     results: list[dict[str, Any]] = []
     for entry in scheduled:
-        last_fired = state.get(entry.workflow_id)
+        last_fired = state.get(_state_key("workflow", entry.workflow_id))
         due_at = (last_fired + entry.period) if last_fired else moment
         if last_fired is not None and moment < due_at:
             continue
         try:
             run = (runner or run_workflow)(lake_dir, workflow_id=entry.workflow_id, actor="scheduler")
             outcome = run.get("result") if isinstance(run, dict) else "ok"
-            _write_state(lake_dir, entry.workflow_id, moment)
+            _write_state(lake_dir, target_kind="workflow", target_id=entry.workflow_id, fired_at=moment)
             results.append(
                 {
+                    "target_kind": "workflow",
                     "workflow_id": entry.workflow_id,
                     "schedule": entry.schedule,
                     "fired_at": _utc_iso(moment),
@@ -167,10 +230,55 @@ def tick(
         except Exception as exc:  # surface every failure in the tick log
             results.append(
                 {
+                    "target_kind": "workflow",
                     "workflow_id": entry.workflow_id,
                     "schedule": entry.schedule,
                     "fired_at": _utc_iso(moment),
                     "result": "error",
+                    "error": str(exc),
+                }
+            )
+    sync_runner = connector_runner or run_connector_sync
+    for entry in _scheduled_from_connectors(lake_dir):
+        last_fired = state.get(_state_key("connector", entry.connector_id))
+        due_at = (last_fired + entry.period) if last_fired else moment
+        if last_fired is not None and moment < due_at:
+            continue
+        try:
+            run = sync_runner(
+                lake_dir,
+                connector_id=entry.connector_id,
+                actor="scheduler",
+                repo=entry.repo,
+                fixture_dir=entry.fixture_dir,
+                token_env=entry.token_env,
+                materialize=entry.materialize,
+            )
+            outcome = getattr(run, "result", None) or (run.get("result") if isinstance(run, dict) else "ok")
+            evidence_count = getattr(run, "evidence_count", None)
+            if evidence_count is None and isinstance(run, dict):
+                evidence_count = run.get("evidence_count")
+            _write_state(lake_dir, target_kind="connector", target_id=entry.connector_id, fired_at=moment)
+            results.append(
+                {
+                    "target_kind": "connector",
+                    "connector_id": entry.connector_id,
+                    "schedule": entry.schedule,
+                    "fired_at": _utc_iso(moment),
+                    "result": outcome,
+                    "evidence_count": evidence_count,
+                    "error": None,
+                }
+            )
+        except Exception as exc:  # surface every failure in the tick log
+            results.append(
+                {
+                    "target_kind": "connector",
+                    "connector_id": entry.connector_id,
+                    "schedule": entry.schedule,
+                    "fired_at": _utc_iso(moment),
+                    "result": "error",
+                    "evidence_count": None,
                     "error": str(exc),
                 }
             )
