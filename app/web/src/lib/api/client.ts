@@ -3,6 +3,7 @@ import type {
   ActionSpec,
   Assessment,
   AssetRisk,
+  AuthMethods,
   AuditLogEntry,
   ComplianceGraph,
   ConfigurePayload,
@@ -30,6 +31,17 @@ import type {
 } from "./types";
 
 const BASE = "/api";
+const LOGIN_PATH = "/console/login";
+
+function redirectToLogin(): void {
+  if (typeof window === "undefined") return;
+  const pathname = window.location.pathname.replace(/\/$/, "");
+  if (pathname === LOGIN_PATH) return;
+  const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.location.assign(
+    `${LOGIN_PATH}?return_to=${encodeURIComponent(returnTo)}`,
+  );
+}
 
 function headers(): Record<string, string> {
   const out: Record<string, string> = { "content-type": "application/json" };
@@ -40,8 +52,10 @@ function headers(): Record<string, string> {
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     cache: "no-store",
+    credentials: "same-origin",
     headers: headers(),
   });
+  if (res.status === 401) redirectToLogin();
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
   return (await res.json()) as T;
 }
@@ -49,9 +63,11 @@ async function get<T>(path: string): Promise<T> {
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
+    credentials: "same-origin",
     headers: headers(),
     body: JSON.stringify(body ?? {}),
   });
+  if (res.status === 401) redirectToLogin();
   if (!res.ok) {
     const payload = await res.json().catch(() => ({}));
     const reason = (payload as { reason?: string }).reason ?? `${res.status}`;
@@ -62,6 +78,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export const api = {
   health: () => get<Health>("/healthz"),
+  authMethods: () =>
+    get<{ data: AuthMethods }>("/v1/auth/methods").then((body) => body.data),
   posture: () => get<Assessment>("/posture/current"),
   controls: () => get<{ controls: ControlPosture[] }>("/controls"),
   controlTests: () =>
