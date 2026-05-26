@@ -168,7 +168,7 @@ def test_scheduler_records_error_when_runner_raises(tmp_path: Path) -> None:
     result = tick(tmp_path, runner=boom)
     assert len(result) == 1
     assert result[0]["result"] == "error"
-    assert "simulated failure" in (result[0]["error"] or "")
+    assert result[0]["error"] == "internal error"
 
 
 def test_run_forever_obeys_iteration_cap(tmp_path: Path) -> None:
@@ -273,7 +273,7 @@ def test_scheduler_records_connector_error_without_advancing_state(tmp_path: Pat
 
     assert first[0]["target_kind"] == "connector"
     assert first[0]["result"] == "error"
-    assert "token denied" in (first[0]["error"] or "")
+    assert first[0]["error"] == "internal error"
     assert second[0]["result"] == "error"
 
 

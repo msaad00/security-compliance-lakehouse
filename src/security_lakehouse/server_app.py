@@ -51,6 +51,11 @@ from security_lakehouse.web import web_dist_dir, web_dist_index
 _COOKIE_SECURE = os.environ.get("TRUSTOPS_COOKIE_SECURE", "true").lower() in {"1", "true", "yes", "on"}
 
 _ERROR_CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_found"}
+_LEGACY_ERROR_REASONS = {
+    HTTPStatus.BAD_REQUEST: "invalid request",
+    HTTPStatus.FORBIDDEN: "forbidden",
+    HTTPStatus.NOT_FOUND: "not found",
+}
 
 # Scope dependencies are built once (module-level) and reused as route defaults.
 _require_read = require_scope("read")
@@ -90,11 +95,33 @@ def _redact_payload(payload: object, identity: Identity) -> object:
     return payload
 
 
-def _sanitize_legacy_error(status_code: HTTPStatus, payload: object) -> object:
-    """Keep server-mode legacy API errors from exposing internal exception text."""
-    if status_code != HTTPStatus.BAD_REQUEST or not isinstance(payload, dict):
-        return payload
-    return {"error": str(payload.get("error") or "bad_request"), "reason": "invalid request"}
+def _legacy_error_payload(status_code: HTTPStatus) -> dict[str, str]:
+    """Return generic server-mode legacy API errors.
+
+    The legacy dispatcher is shared with local mode and may call file, workflow,
+    connector, or trust-share helpers. Server mode must not echo exception text
+    or handler-produced error details to authenticated clients.
+    """
+    if status_code == HTTPStatus.BAD_REQUEST:
+        error = "bad_request"
+    elif status_code == HTTPStatus.FORBIDDEN:
+        error = "forbidden"
+    elif status_code == HTTPStatus.NOT_FOUND:
+        error = "not_found"
+    else:
+        error = "internal_error"
+    return {"error": error, "reason": _LEGACY_ERROR_REASONS.get(status_code, "internal server error")}
+
+
+def _legacy_post_response(path: str, body: dict[str, object], lake: Path, identity: Identity) -> JSONResponse:
+    """Dispatch a legacy POST with a fail-closed server-mode error boundary."""
+    try:
+        status_code, payload = api_legacy.handle_post(path, body, lake, role=identity.role)
+    except Exception:  # noqa: BLE001 - do not expose internal exception text at the HTTP boundary
+        return JSONResponse(_legacy_error_payload(HTTPStatus.INTERNAL_SERVER_ERROR), status_code=500)
+    if status_code >= HTTPStatus.BAD_REQUEST:
+        return JSONResponse(_legacy_error_payload(status_code), status_code=int(status_code))
+    return JSONResponse(payload, status_code=int(status_code))
 
 
 def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
@@ -176,13 +203,13 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="OIDC SSO is not configured")
         try:
             token = await app.state.oauth.oidc.authorize_access_token(request)
-        except Exception as exc:  # noqa: BLE001 - authlib surfaces several OAuth error types
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="OIDC token exchange failed") from exc
+        except Exception:  # noqa: BLE001 - authlib surfaces several OAuth error types
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="OIDC token exchange failed") from None
         email = (token.get("userinfo") or {}).get("email", "")
         try:
             _user, sess_token = complete_oidc_login(session, config=app.state.oidc_config, email=email)
-        except OIDCLoginError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        except OIDCLoginError:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OIDC login rejected") from None
         session.commit()
         response = RedirectResponse(url="/console", status_code=status.HTTP_302_FOUND)
         response.set_cookie(SESSION_COOKIE, sess_token, httponly=True, secure=_COOKIE_SECURE, samesite="lax", path="/")
@@ -261,8 +288,8 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
                 config=app.state.saml_config,
                 email=email_from_saml_assertion(auth),
             )
-        except SAMLLoginError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        except SAMLLoginError:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="SAML login rejected") from None
         session.commit()
         response = RedirectResponse(url="/console", status_code=status.HTTP_302_FOUND)
         response.set_cookie(SESSION_COOKIE, sess_token, httponly=True, secure=_COOKIE_SECURE, samesite="lax", path="/")
@@ -400,9 +427,7 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"requires scope: {required_scope}",
             )
-        _status, payload = api_legacy.handle_post(legacy_path, body, lake, role=identity.role)
-        payload = _sanitize_legacy_error(_status, payload)
-        return JSONResponse(payload, status_code=int(_status))
+        return _legacy_post_response(legacy_path, body, lake, identity)
 
     @app.get("/", response_class=HTMLResponse)
     @app.get("/console", response_class=HTMLResponse)

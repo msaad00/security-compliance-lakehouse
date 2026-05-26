@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -18,6 +19,7 @@ pytest.importorskip("sqlalchemy")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from security_lakehouse import api_legacy  # noqa: E402
 from security_lakehouse.audit_log import build_audit_log  # noqa: E402
 from security_lakehouse.db.base import session_scope  # noqa: E402
 from security_lakehouse.db.repository import create_api_key, create_tenant, create_user  # noqa: E402
@@ -75,6 +77,21 @@ def test_legacy_bad_request_sanitizes_internal_exception_text(tmp_path: Path) ->
     resp = client.post("/api/connectors/does-not-exist/configure", json={"state": "enabled"})
     assert resp.status_code == HTTPStatus.BAD_REQUEST
     assert resp.json() == {"error": "bad_request", "reason": "invalid request"}
+
+
+def test_legacy_post_hides_unexpected_exception_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _seed_lake(tmp_path)
+    client = TestClient(create_app(tmp_path, require_auth=False))
+
+    def boom(*_args: Any, **_kwargs: Any) -> tuple[HTTPStatus, dict[str, str]]:
+        raise RuntimeError("stack trace: secret-token-123")
+
+    monkeypatch.setattr(api_legacy, "handle_post", boom)
+
+    resp = client.post("/api/snapshots", json={"reason": "audit"})
+    assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert resp.json() == {"error": "internal_error", "reason": "internal server error"}
+    assert "secret-token-123" not in resp.text
 
 
 def test_legacy_post_enforces_route_specific_scopes(tmp_path: Path) -> None:
