@@ -257,6 +257,14 @@ def _parser() -> argparse.ArgumentParser:
     seed_dev.add_argument("--display-name", default="Local Admin", help="admin user display name")
     seed_dev.set_defaults(func=_platform_seed_dev)
 
+    policy = sub.add_parser("policy", help="controls-as-code policy engine")
+    policy_sub = policy.add_subparsers(dest="policy_command", required=True)
+    policy_lint = policy_sub.add_parser("lint", help="validate every control's evaluation_rule in the catalog")
+    policy_lint.add_argument("--catalog", default=None, help="optional controls catalog JSON")
+    policy_lint.set_defaults(func=_policy_lint)
+    policy_rules = policy_sub.add_parser("rules", help="list the built-in named rules")
+    policy_rules.set_defaults(func=_policy_rules)
+
     return parser
 
 
@@ -731,6 +739,32 @@ def _assessment_stale_evidence(args: argparse.Namespace) -> int:
     else:
         rows = [row for row in rows if row["status"] in {"stale", "expired", "missing"}]
     print(json.dumps({"count": len(rows), "evidence": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _policy_lint(args: argparse.Namespace) -> int:
+    from security_lakehouse.controls import DEFAULT_CATALOG_PATH
+    from security_lakehouse.io import read_json
+    from security_lakehouse.policy import validate_rule
+
+    catalog = read_json(args.catalog or DEFAULT_CATALOG_PATH)
+    controls = catalog.get("controls", []) if isinstance(catalog, dict) else []
+    failures: list[str] = []
+    for control in controls:
+        control_id = str(control.get("control_id", "?"))
+        for problem in validate_rule(control.get("evaluation_rule")):
+            failures.append(f"{control_id}: {problem}")
+    if failures:
+        print("policy lint failed:\n" + "\n".join(f"  - {f}" for f in failures))
+        return 1
+    print(f"policy lint passed: {len(controls)} control rule(s) valid")
+    return 0
+
+
+def _policy_rules(args: argparse.Namespace) -> int:
+    from security_lakehouse.policy import NAMED_RULES
+
+    print(json.dumps(NAMED_RULES, indent=2, sort_keys=True))
     return 0
 
 
