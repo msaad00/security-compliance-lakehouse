@@ -227,7 +227,7 @@ def tick(
                     "error": None,
                 }
             )
-        except Exception as exc:  # surface every failure in the tick log
+        except Exception:  # noqa: BLE001 - scheduler results must not expose exception details
             results.append(
                 {
                     "target_kind": "workflow",
@@ -235,7 +235,7 @@ def tick(
                     "schedule": entry.schedule,
                     "fired_at": _utc_iso(moment),
                     "result": "error",
-                    "error": str(exc),
+                    "error": "internal error",
                 }
             )
     sync_runner = connector_runner or run_connector_sync
@@ -270,7 +270,7 @@ def tick(
                     "error": None,
                 }
             )
-        except Exception as exc:  # surface every failure in the tick log
+        except Exception:  # noqa: BLE001 - scheduler results must not expose exception details
             results.append(
                 {
                     "target_kind": "connector",
@@ -279,7 +279,7 @@ def tick(
                     "fired_at": _utc_iso(moment),
                     "result": "error",
                     "evidence_count": None,
-                    "error": str(exc),
+                    "error": "internal error",
                 }
             )
     return results

@@ -203,13 +203,13 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="OIDC SSO is not configured")
         try:
             token = await app.state.oauth.oidc.authorize_access_token(request)
-        except Exception as exc:  # noqa: BLE001 - authlib surfaces several OAuth error types
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="OIDC token exchange failed") from exc
+        except Exception:  # noqa: BLE001 - authlib surfaces several OAuth error types
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="OIDC token exchange failed") from None
         email = (token.get("userinfo") or {}).get("email", "")
         try:
             _user, sess_token = complete_oidc_login(session, config=app.state.oidc_config, email=email)
-        except OIDCLoginError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        except OIDCLoginError:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="OIDC login rejected") from None
         session.commit()
         response = RedirectResponse(url="/console", status_code=status.HTTP_302_FOUND)
         response.set_cookie(SESSION_COOKIE, sess_token, httponly=True, secure=_COOKIE_SECURE, samesite="lax", path="/")
@@ -288,8 +288,8 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
                 config=app.state.saml_config,
                 email=email_from_saml_assertion(auth),
             )
-        except SAMLLoginError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+        except SAMLLoginError:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="SAML login rejected") from None
         session.commit()
         response = RedirectResponse(url="/console", status_code=status.HTTP_302_FOUND)
         response.set_cookie(SESSION_COOKIE, sess_token, httponly=True, secure=_COOKIE_SECURE, samesite="lax", path="/")
