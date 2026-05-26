@@ -26,6 +26,9 @@ import type {
 } from "./types";
 
 const STALE = 15_000;
+// Poll interval for "continuous" surfaces so posture/violations/connectors
+// refresh on their own. Callers can override via `opts.refetchInterval`.
+const LIVE = 15_000;
 
 type Opts<T> = Omit<UseQueryOptions<T>, "queryKey" | "queryFn">;
 
@@ -55,6 +58,8 @@ export function usePosture(opts?: Opts<Assessment>) {
     queryKey: ["posture", "current"],
     queryFn: api.posture,
     staleTime: STALE,
+    refetchInterval: LIVE,
+    refetchOnWindowFocus: true,
     initialData,
     ...opts,
   });
@@ -74,6 +79,8 @@ export function useControlTests(opts?: Opts<ControlTest[]>) {
     queryKey: ["control-tests"],
     queryFn: async () => (await api.controlTests()).control_tests ?? [],
     staleTime: STALE,
+    refetchInterval: LIVE,
+    refetchOnWindowFocus: true,
     ...opts,
   });
 }
@@ -83,6 +90,8 @@ export function useViolations(opts?: Opts<Violation[]>) {
     queryKey: ["violations"],
     queryFn: async () => (await api.violations()).violations ?? [],
     staleTime: STALE,
+    refetchInterval: LIVE,
+    refetchOnWindowFocus: true,
     ...opts,
   });
 }
@@ -165,6 +174,8 @@ export function useConnectors(opts?: Opts<ConnectorView[]>) {
     queryKey: ["connectors"],
     queryFn: async () => (await api.listConnectors()).connectors ?? [],
     staleTime: STALE,
+    refetchInterval: LIVE,
+    refetchOnWindowFocus: true,
     ...opts,
   });
 }

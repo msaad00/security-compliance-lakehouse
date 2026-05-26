@@ -169,12 +169,12 @@ export default function AutomationPage() {
   }, [editor.nodes, lastRun]);
 
   const addNode = useCallback(
-    (spec: ActionSpec) => {
+    (spec: ActionSpec, position?: { x: number; y: number }) => {
       const id = nextNodeId();
       const node: FlowNode = {
         id,
         type: "trustops",
-        position: {
+        position: position ?? {
           x: 120 + (editor.nodes.length % 4) * 220,
           y: 140 + Math.floor(editor.nodes.length / 4) * 130,
         },
@@ -367,6 +367,7 @@ export default function AutomationPage() {
           onNodesChange={(n) => setEditor((e) => ({ ...e, nodes: n }))}
           onEdgesChange={(es) => setEditor((e) => ({ ...e, edges: es }))}
           onSelectNode={setSelectedNode}
+          onDropAction={addNode}
         />
         <NodeConfigPanel
           node={selected}

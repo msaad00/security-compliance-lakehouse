@@ -50,7 +50,7 @@ export function ActionPalette({ catalog, onAdd }: Props) {
       <CardHeader>
         <CardTitle>Action library</CardTitle>
         <CardDescription>
-          Click any action to drop it into the canvas.
+          Drag an action onto the canvas, or click to add it.
         </CardDescription>
       </CardHeader>
       <div className="px-5 pb-3">
@@ -75,8 +75,16 @@ export function ActionPalette({ catalog, onAdd }: Props) {
                 <button
                   key={action.node_type}
                   type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(
+                      "application/trustops-action",
+                      JSON.stringify(action),
+                    );
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
                   onClick={() => onAdd(action)}
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-line bg-white px-3 py-2 text-left transition-colors hover:border-brand hover:shadow-card"
+                  className="grid cursor-grab grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-line bg-white px-3 py-2 text-left transition-colors hover:border-brand hover:shadow-card active:cursor-grabbing"
                 >
                   <span
                     className={[

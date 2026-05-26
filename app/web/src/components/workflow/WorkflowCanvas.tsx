@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Background,
   Controls,
@@ -16,6 +16,7 @@ import {
   type NodeChange,
   type NodeProps,
   type NodeTypes,
+  type ReactFlowInstance,
   type ReactFlowProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -120,6 +121,7 @@ interface Props {
   onNodesChange: (nodes: FlowNode[]) => void;
   onEdgesChange: (edges: Edge[]) => void;
   onSelectNode: (id: string | null) => void;
+  onDropAction?: (spec: ActionSpec, position: { x: number; y: number }) => void;
   fitTrigger?: number;
 }
 
@@ -130,8 +132,32 @@ export function WorkflowCanvas({
   onNodesChange,
   onEdgesChange,
   onSelectNode,
+  onDropAction,
   fitTrigger,
 }: Props) {
+  const instanceRef = useRef<ReactFlowInstance<FlowNode, Edge> | null>(null);
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    if (event.dataTransfer.types.includes("application/trustops-action")) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      const raw = event.dataTransfer.getData("application/trustops-action");
+      if (!raw || !instanceRef.current || !onDropAction) return;
+      event.preventDefault();
+      const spec = JSON.parse(raw) as ActionSpec;
+      const position = instanceRef.current.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      onDropAction(spec, position);
+    },
+    [onDropAction],
+  );
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const next = applyNodeChanges(changes, nodes) as FlowNode[];
@@ -182,11 +208,18 @@ export function WorkflowCanvas({
   }, [fitTrigger]);
 
   return (
-    <div className="h-[560px] overflow-hidden rounded-2xl border border-line bg-white">
+    <div
+      className="h-[560px] overflow-hidden rounded-2xl border border-line bg-white"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <ReactFlow
         nodes={decoratedNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        onInit={(instance) => {
+          instanceRef.current = instance;
+        }}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
