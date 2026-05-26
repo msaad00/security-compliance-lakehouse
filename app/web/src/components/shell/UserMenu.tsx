@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuditorMode } from "@/lib/state/auditor";
 import { usePersistentState } from "@/lib/state/preferences";
+import { workspaceIdentity } from "@/lib/workspace";
 
 type Theme = "light" | "dark" | "system";
 
@@ -31,9 +32,11 @@ export function UserMenu() {
           className="inline-flex items-center gap-2 rounded-lg border border-[#27364a] bg-[#101926] px-3 py-2 text-sm font-extrabold text-[#d9e4f2] hover:bg-[#152030]"
         >
           <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand to-brand-cyan text-[11px] text-white">
-            A
+            {workspaceIdentity.avatar}
           </span>
-          Acme Co · {auditor ? "auditor" : "Prod"}
+          {auditor
+            ? `${workspaceIdentity.orgName} · auditor`
+            : workspaceIdentity.primaryLabel}
           <ChevronDown className="h-3.5 w-3.5 opacity-60" />
         </button>
       </DropdownMenu.Trigger>
@@ -48,14 +51,16 @@ export function UserMenu() {
           </DropdownMenu.Label>
           <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-slate-50">
             <Building2 className="h-4 w-4 text-muted" />
-            <span className="truncate text-ink">Acme Co — Prod</span>
+            <span className="truncate text-ink">
+              {workspaceIdentity.orgName} — {workspaceIdentity.environmentName}
+            </span>
             <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-black text-emerald-700">
               active
             </span>
           </DropdownMenu.Item>
           <DropdownMenu.Item className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted outline-none data-[highlighted]:bg-slate-50">
             <Building2 className="h-4 w-4" />
-            Acme Co — Staging
+            {workspaceIdentity.secondaryLabel}
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           <DropdownMenu.Label className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted">
