@@ -79,6 +79,35 @@ from the managed raw connector file. Use `--no-materialize` when you only want
 to collect raw evidence. Every sync attempt is recorded in
 `gold/connector_runs.jsonl`.
 
+## Scheduled Sync
+
+Manual sync proves the connector. Scheduled sync makes the connector part of
+continuous posture.
+
+Persist scheduler options on the connector configuration:
+
+```bash
+security-lakehouse connectors configure \
+  --lake build/lakehouse \
+  --connector-id github-security \
+  --state enabled \
+  --sync-schedule "every 15m" \
+  --repo OWNER/REPO
+```
+
+Run the scheduler from cron, Kubernetes `CronJob`, or the local daemon:
+
+```bash
+security-lakehouse scheduler tick --lake build/lakehouse
+security-lakehouse scheduler run --lake build/lakehouse --tick-seconds 60
+```
+
+Supported schedule expressions are intentionally small and portable:
+`@hourly`, `@daily`, `every Nm`, and `every Nh`. The scheduler records last
+fire time in `gold/scheduler_state.jsonl`, writes sync history to
+`gold/connector_runs.jsonl`, and uses the same connector runner as
+`connectors sync`; it does not use a separate evidence path.
+
 Repository evidence has two concrete collection paths:
 
 ```bash

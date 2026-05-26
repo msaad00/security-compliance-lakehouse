@@ -102,3 +102,38 @@ def test_connector_sync_cli_runs_fixture_connector(tmp_path: Path, capsys) -> No
     assert payload["evidence_count"] == 5
     assert payload["materialized"] is False
     assert len(read_jsonl(tmp_path / CONNECTOR_RAW_FILE)) == 5
+
+
+def test_connector_configure_cli_persists_schedule_options(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+    code = main(
+        [
+            "connectors",
+            "configure",
+            "--lake",
+            str(tmp_path),
+            "--connector-id",
+            "github-security",
+            "--state",
+            "enabled",
+            "--sync-schedule",
+            "every 15m",
+            "--repo",
+            "acme/model-service",
+            "--fixture-dir",
+            str(FIXTURE),
+            "--token-env",
+            "GH_READ_TOKEN",
+            "--no-materialize",
+        ]
+    )
+
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    options = payload["event"]["options"]
+    assert options == {
+        "fixture_dir": str(FIXTURE),
+        "materialize": False,
+        "repo": "acme/model-service",
+        "sync_schedule": "every 15m",
+        "token_env": "GH_READ_TOKEN",
+    }
