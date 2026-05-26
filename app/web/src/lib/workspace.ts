@@ -1,4 +1,5 @@
-const orgName = process.env.NEXT_PUBLIC_TRUSTOPS_ORG_NAME?.trim() || "Workspace";
+const orgName =
+  process.env.NEXT_PUBLIC_TRUSTOPS_ORG_NAME?.trim() || "Workspace";
 const environmentName =
   process.env.NEXT_PUBLIC_TRUSTOPS_ENVIRONMENT?.trim() || "Production";
 const secondaryEnvironmentName =
