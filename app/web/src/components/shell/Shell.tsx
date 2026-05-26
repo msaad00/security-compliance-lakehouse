@@ -3,6 +3,7 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { CommandPalette } from "./CommandPalette";
 import { Sidebar } from "./Sidebar";
@@ -12,6 +13,10 @@ import { SnapshotModal } from "@/components/modals/SnapshotModal";
 import { api } from "@/lib/api/client";
 
 export function Shell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const normalizedPathname = pathname.replace(/\/$/, "");
+  const isLoginRoute =
+    normalizedPathname === "/login" || normalizedPathname.endsWith("/login");
   const qc = useQueryClient();
   const [toast, setToast] = useState<string | null>(null);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
@@ -36,6 +41,10 @@ export function Shell({ children }: { children: ReactNode }) {
       /* non-blocking */
     }
   }, []);
+
+  if (isLoginRoute) {
+    return <div className="min-h-screen bg-panel">{children}</div>;
+  }
 
   return (
     <div className="grid min-h-screen grid-rows-[78px_auto_auto_1fr] bg-rail">

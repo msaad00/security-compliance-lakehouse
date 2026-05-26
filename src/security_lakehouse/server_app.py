@@ -269,6 +269,31 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         return response
 
     # --- auth surface ---
+    @app.get("/api/v1/auth/methods")
+    def auth_methods() -> JSONResponse:
+        return JSONResponse(
+            api_v1.envelope(
+                "auth.methods",
+                {
+                    "require_auth": bool(app.state.require_auth),
+                    "methods": [
+                        {
+                            "id": "oidc",
+                            "label": "OIDC SSO",
+                            "configured": app.state.oauth is not None,
+                            "login_url": "/api/v1/auth/login",
+                        },
+                        {
+                            "id": "saml",
+                            "label": "SAML SSO",
+                            "configured": app.state.saml_config is not None,
+                            "login_url": "/api/v1/auth/saml/login",
+                        },
+                    ],
+                },
+            )
+        )
+
     @app.get("/api/v1/auth/whoami")
     def whoami(identity: Identity = Depends(_require_read)) -> JSONResponse:
         return JSONResponse(

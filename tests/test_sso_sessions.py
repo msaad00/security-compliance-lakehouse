@@ -147,6 +147,30 @@ def test_login_501_when_oidc_unconfigured(app_env) -> None:
     assert client.get("/api/v1/auth/login").status_code == HTTPStatus.NOT_IMPLEMENTED
 
 
+def test_auth_methods_reports_configured_login_surfaces(app_env) -> None:
+    app, client = app_env
+    app.state.oauth = object()
+    app.state.saml_config = _saml_config()
+
+    resp = client.get("/api/v1/auth/methods")
+    assert resp.status_code == HTTPStatus.OK
+    body = resp.json()["data"]
+    assert body["require_auth"] is True
+    methods = {method["id"]: method for method in body["methods"]}
+    assert methods["oidc"] == {
+        "id": "oidc",
+        "label": "OIDC SSO",
+        "configured": True,
+        "login_url": "/api/v1/auth/login",
+    }
+    assert methods["saml"] == {
+        "id": "saml",
+        "label": "SAML SSO",
+        "configured": True,
+        "login_url": "/api/v1/auth/saml/login",
+    }
+
+
 def test_load_saml_config_rejects_partial_environment(monkeypatch) -> None:
     monkeypatch.setenv("TRUSTOPS_SAML_SP_ENTITY_ID", "https://trustops.test/saml/metadata")
     with pytest.raises(SAMLConfigError):

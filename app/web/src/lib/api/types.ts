@@ -108,6 +108,18 @@ export interface Health {
   service: string;
 }
 
+export interface AuthMethod {
+  id: "oidc" | "saml";
+  label: string;
+  configured: boolean;
+  login_url: string;
+}
+
+export interface AuthMethods {
+  require_auth: boolean;
+  methods: AuthMethod[];
+}
+
 export interface SnapshotResponse {
   snapshot_path: string;
   reason: string;

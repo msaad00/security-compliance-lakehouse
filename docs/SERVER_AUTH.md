@@ -43,6 +43,7 @@ Endpoints:
 
 | Endpoint                    | Purpose                                           |
 | --------------------------- | ------------------------------------------------- |
+| `GET /api/v1/auth/methods`  | Discover configured browser login methods         |
 | `GET /api/v1/auth/login`    | Start OIDC login                                  |
 | `GET /api/v1/auth/callback` | Complete OIDC login and issue the browser session |
 | `POST /api/v1/auth/logout`  | Revoke the browser session                        |
@@ -88,3 +89,8 @@ boundary.
 All non-health `/api/v1/*` and `/api/*` requests are authenticated in server
 mode. Request audit events include a correlation ID, actor, tenant, route,
 method, decision, status, and timestamp.
+
+The bundled console redirects unauthenticated browser traffic to `/console/login`.
+That page reads `GET /api/v1/auth/methods` and only enables login buttons for
+configured OIDC or SAML providers. Agent and CI access should continue to use
+API keys.
