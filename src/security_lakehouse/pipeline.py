@@ -12,9 +12,14 @@ from pathlib import Path
 from typing import Any
 
 from security_lakehouse.controls import expand_controls, load_control_map
-from security_lakehouse.evidence_freshness import build_evidence_freshness, summarize_source_freshness
+from security_lakehouse.evidence_freshness import (
+    build_evidence_freshness,
+    stale_control_ids,
+    summarize_source_freshness,
+)
 from security_lakehouse.io import read_jsonl, write_json, write_jsonl
 from security_lakehouse.models import SEVERITY_SCORE, PipelineResult, parse_event_time, utc_iso
+from security_lakehouse.policy import ControlContext, evaluate_control
 from security_lakehouse.programs import build_control_tests
 from security_lakehouse.validation import validate_raw_events
 
@@ -38,9 +43,10 @@ def run_pipeline(
     bronze_rows = [_bronze_row(row) for row in raw_rows]
     silver_rows = [_silver_row(row, bronze["raw_sha256"]) for row, bronze in zip(raw_rows, bronze_rows, strict=True)]
     control_map = load_control_map(mapping_path)
-    control_rows = _build_control_rows(silver_rows, control_map)
-    asset_rows = _build_asset_rows(silver_rows)
     evidence_freshness_rows = build_evidence_freshness(silver_rows)
+    stale_controls = stale_control_ids(evidence_freshness_rows)
+    control_rows = _build_control_rows(silver_rows, control_map, stale_controls)
+    asset_rows = _build_asset_rows(silver_rows)
     control_test_rows = build_control_tests(silver_rows, control_rows)
     metrics = _build_metrics(silver_rows, control_rows, asset_rows)
     metrics.update(_build_freshness_metrics(evidence_freshness_rows))
@@ -182,8 +188,11 @@ def _silver_row(row: dict[str, Any], raw_sha256: str) -> dict[str, Any]:
 
 
 def _build_control_rows(
-    silver_rows: list[dict[str, Any]], control_map: dict[str, dict[str, Any]]
+    silver_rows: list[dict[str, Any]],
+    control_map: dict[str, dict[str, Any]],
+    stale_controls: set[str] | None = None,
 ) -> list[dict[str, Any]]:
+    stale = stale_controls or set()
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in silver_rows:
         for control in expand_controls(row["control_ids"], control_map):
@@ -195,7 +204,16 @@ def _build_control_rows(
         failing_rows = [row for row in rows if row["status"] in {"open", "failed", "blocked", "noncompliant"}]
         evidence_rows = [row for row in rows if row["evidence_ref"]]
         max_score = max((row["severity_score"] for row in rows), default=0)
-        status = "fail" if failing_rows else "pass"
+        top_open = max(failing_rows, key=lambda r: r["severity_score"], default=None)
+        context = ControlContext(
+            control_id=control_id,
+            open_violation_count=len(failing_rows),
+            event_count=len(rows),
+            evidence_count=len(evidence_rows),
+            max_severity=str(top_open["severity"]) if top_open else "info",
+            evidence_status="stale" if control_id in stale else "fresh",
+        )
+        result = evaluate_control(context, control.get("evaluation_rule"))
         coverage = round(len(evidence_rows) / len(rows), 4) if rows else 0
         control_rows.append(
             {
@@ -204,7 +222,9 @@ def _build_control_rows(
                 "title": str(control.get("title", "")),
                 "risk_domain": str(control.get("risk_domain", "unknown")),
                 "owner": str(control.get("owner", "security")),
-                "status": status,
+                "status": result.status,
+                "evaluation_rule": result.rule,
+                "rule_reasons": result.reasons,
                 "risk_score": max_score,
                 "event_count": len(rows),
                 "open_event_count": len(failing_rows),
