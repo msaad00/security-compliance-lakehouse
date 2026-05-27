@@ -79,7 +79,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
-async function mutate<T>(path: string, method: "PATCH" | "DELETE", body?: unknown): Promise<T> {
+async function mutate<T>(
+  path: string,
+  method: "PATCH" | "DELETE",
+  body?: unknown,
+): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
     credentials: "same-origin",
@@ -100,9 +104,15 @@ export const api = {
   authMethods: () =>
     get<{ data: AuthMethods }>("/v1/auth/methods").then((body) => body.data),
   remediationTasks: (query = "") =>
-    get<{ data: RemediationTask[] }>(`/v1/remediation/tasks${query}`).then((b) => b.data),
-  createRemediationTask: (payload: Partial<RemediationTask> & { title: string }) =>
-    post<{ data: RemediationTask }>("/v1/remediation/tasks", payload).then((b) => b.data),
+    get<{ data: RemediationTask[] }>(`/v1/remediation/tasks${query}`).then(
+      (b) => b.data,
+    ),
+  createRemediationTask: (
+    payload: Partial<RemediationTask> & { title: string },
+  ) =>
+    post<{ data: RemediationTask }>("/v1/remediation/tasks", payload).then(
+      (b) => b.data,
+    ),
   updateRemediationTask: (id: string, payload: Record<string, unknown>) =>
     mutate<{ data: RemediationTask }>(
       `/v1/remediation/tasks/${encodeURIComponent(id)}`,
@@ -110,9 +120,18 @@ export const api = {
       payload,
     ).then((b) => b.data),
   evidenceRequests: () =>
-    get<{ data: EvidenceRequestItem[] }>("/v1/remediation/evidence-requests").then((b) => b.data),
-  createEvidenceRequest: (payload: { control_id: string; requested_from?: string; note?: string }) =>
-    post<{ data: EvidenceRequestItem }>("/v1/remediation/evidence-requests", payload).then((b) => b.data),
+    get<{ data: EvidenceRequestItem[] }>(
+      "/v1/remediation/evidence-requests",
+    ).then((b) => b.data),
+  createEvidenceRequest: (payload: {
+    control_id: string;
+    requested_from?: string;
+    note?: string;
+  }) =>
+    post<{ data: EvidenceRequestItem }>(
+      "/v1/remediation/evidence-requests",
+      payload,
+    ).then((b) => b.data),
   setEvidenceRequestStatus: (id: string, status: string) =>
     mutate<{ data: EvidenceRequestItem }>(
       `/v1/remediation/evidence-requests/${encodeURIComponent(id)}`,
@@ -120,9 +139,18 @@ export const api = {
       { status },
     ).then((b) => b.data),
   controlExceptions: () =>
-    get<{ data: ControlExceptionItem[] }>("/v1/remediation/exceptions").then((b) => b.data),
-  createControlException: (payload: { control_id: string; reason?: string; expires_at?: string | null }) =>
-    post<{ data: ControlExceptionItem }>("/v1/remediation/exceptions", payload).then((b) => b.data),
+    get<{ data: ControlExceptionItem[] }>("/v1/remediation/exceptions").then(
+      (b) => b.data,
+    ),
+  createControlException: (payload: {
+    control_id: string;
+    reason?: string;
+    expires_at?: string | null;
+  }) =>
+    post<{ data: ControlExceptionItem }>(
+      "/v1/remediation/exceptions",
+      payload,
+    ).then((b) => b.data),
   revokeControlException: (id: string) =>
     mutate<{ data: ControlExceptionItem }>(
       `/v1/remediation/exceptions/${encodeURIComponent(id)}`,
