@@ -237,6 +237,7 @@ export const api = {
       {},
     ),
   graph: () => get<ComplianceGraph>("/graph"),
+  repoGraph: () => get<ComplianceGraph>("/repo-graph"),
   readiness: () =>
     get<{ count: number; frameworks: FrameworkReadiness[] }>("/readiness"),
   crosswalk: () => get<Crosswalk>("/crosswalk"),

@@ -31,6 +31,18 @@ def _silver_event_rows(lake_dir: Path) -> list[dict[str, Any]]:
     return read_jsonl(path) if path.is_file() else []
 
 
+def _bronze_raw_rows(lake_dir: Path) -> list[dict[str, Any]]:
+    path = lake_dir / "bronze" / "raw_events.jsonl"
+    if not path.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for row in read_jsonl(path):
+        raw = row.get("raw")
+        if isinstance(raw, dict):
+            rows.append(raw)
+    return rows
+
+
 def build_compliance_graph(lake_dir: str | Path) -> dict[str, Any]:
     """Return a serialisable graph spanning frameworks → controls → evidence → assets."""
     lake = Path(lake_dir)
@@ -151,6 +163,228 @@ def build_compliance_graph(lake_dir: str | Path) -> dict[str, Any]:
         "asset": sum(1 for n in nodes if n["kind"] == "asset"),
     }
     return {"nodes": nodes, "edges": edges, "counts": counts}
+
+
+def build_repository_graph(lake_dir: str | Path) -> dict[str, Any]:
+    """Return a graph of repository topology + governance evidence.
+
+    The source is the immutable bronze replay stream so the graph can preserve
+    fields that the generic silver model intentionally flattens away. Public
+    repo audit events and authenticated governance events share this model.
+    """
+    lake = Path(lake_dir)
+    events = [
+        row
+        for row in _bronze_raw_rows(lake)
+        if str(row.get("event_type") or "").startswith("repository.")
+        or str((row.get("entity") or {}).get("asset_type") or "") == "repository"
+    ]
+    nodes: dict[str, dict[str, Any]] = {}
+    edges: dict[str, dict[str, Any]] = {}
+
+    def add_node(node_id: str, kind: str, label: str, **extra: Any) -> None:
+        current = nodes.get(node_id, {})
+        nodes[node_id] = {
+            "id": node_id,
+            "kind": kind,
+            "label": label,
+            **current,
+            **{k: v for k, v in extra.items() if v is not None},
+        }
+
+    def add_edge(source: str, target: str, kind: str) -> None:
+        edge_id = f"e:{source}->{target}:{kind}"
+        edges[edge_id] = {"id": edge_id, "source": source, "target": target, "kind": kind}
+
+    for event in events:
+        entity = event.get("entity") or {}
+        attributes = event.get("attributes") or {}
+        repo_id = str(entity.get("asset_id") or attributes.get("repo_asset_id") or "repository:unknown")
+        repo_label = str(entity.get("repo") or repo_id.removeprefix("github:repo:"))
+        add_node(
+            repo_id,
+            "repository",
+            repo_label,
+            subtitle=str(entity.get("asset_owner") or entity.get("owner") or "repository"),
+            owner=entity.get("asset_owner") or entity.get("owner"),
+            environment=entity.get("environment"),
+        )
+
+        event_type = str(event.get("event_type") or "repository.unknown")
+        evidence = event.get("evidence") or {}
+        evidence_id = str(evidence.get("evidence_id") or event.get("event_id") or f"{repo_id}:{event_type}")
+        evidence_node = f"evidence:{evidence_id}"
+        add_node(
+            evidence_node,
+            "evidence",
+            event_type.replace("repository.", ""),
+            subtitle=str(event.get("status") or "observed"),
+            event_count=1,
+        )
+        add_edge(repo_id, evidence_node, "has_evidence")
+
+        for control_id in event.get("controls") or []:
+            control_node = f"control:{control_id}"
+            add_node(control_node, "control", str(control_id), framework_id=_framework_from_control(str(control_id)))
+            add_edge(evidence_node, control_node, "evidence_maps_control")
+
+        if event_type == "repository.code_graph":
+            _add_embedded_code_graph(repo_id, attributes, add_node, add_edge)
+        elif event_type == "repository.authenticated_signal_gap":
+            gap_node = f"{repo_id}:signal_gap:not_available_public_mode"
+            add_node(
+                gap_node,
+                "signal_gap",
+                "not_available_public_mode",
+                subtitle="Private repository settings require an authenticated connector",
+            )
+            add_edge(repo_id, gap_node, "has_signal_gap")
+            for signal in attributes.get("requires_authenticated_connector") or []:
+                signal_node = f"{gap_node}:{signal}"
+                add_node(signal_node, "governance_signal", str(signal), subtitle="not available in public mode")
+                add_edge(gap_node, signal_node, "requires_authenticated_connector")
+        elif event_type.startswith("repository.governance."):
+            _add_governance_signal(repo_id, event_type, attributes, add_node, add_edge)
+        else:
+            _add_repository_signal_paths(repo_id, event_type, attributes, add_node, add_edge)
+
+    counts = Counter(str(node["kind"]) for node in nodes.values())
+    return {
+        "nodes": sorted(nodes.values(), key=lambda node: (str(node["kind"]), str(node["id"]))),
+        "edges": sorted(edges.values(), key=lambda edge: str(edge["id"])),
+        "counts": dict(sorted(counts.items())),
+    }
+
+
+def _add_embedded_code_graph(repo_id: str, attributes: dict[str, Any], add_node: Any, add_edge: Any) -> None:
+    kind_map = {
+        "repository": "repository",
+        "directory": "directory",
+        "language": "language",
+        "evidence_signal": "evidence_signal",
+    }
+    for node in attributes.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        node_id = str(node.get("id") or "")
+        if not node_id:
+            continue
+        add_node(
+            node_id,
+            kind_map.get(str(node.get("kind") or ""), str(node.get("kind") or "repo_node")),
+            str(node.get("label") or node_id),
+            subtitle=str(node.get("visibility") or node.get("path_count") or node.get("bytes") or ""),
+            path_count=node.get("path_count"),
+        )
+    for edge in attributes.get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        source = str(edge.get("source") or "")
+        target = str(edge.get("target") or "")
+        if source and target:
+            add_edge(source, target, str(edge.get("kind") or "related"))
+    for signal, value in (attributes.get("counts") or {}).items():
+        if signal == "signals" and value == 0:
+            no_signal = f"{repo_id}:signal_gap:no_public_signals"
+            add_node(
+                no_signal, "signal_gap", "no_public_signals", subtitle="No public repo evidence signals were detected"
+            )
+            add_edge(repo_id, no_signal, "has_signal_gap")
+
+
+def _add_repository_signal_paths(
+    repo_id: str, event_type: str, attributes: dict[str, Any], add_node: Any, add_edge: Any
+) -> None:
+    signal = event_type.removeprefix("repository.")
+    signal_node = f"{repo_id}:signal:{signal}"
+    add_node(signal_node, "evidence_signal", signal, subtitle=f"{attributes.get('path_count', 0)} paths")
+    add_edge(repo_id, signal_node, "has_signal")
+    path_kind = {
+        "ci_workflow": "workflow",
+        "dependency_manifest": "dependency_manifest",
+        "codeowners": "ownership_file",
+        "security_policy": "security_file",
+    }.get(signal, "file")
+    for path in attributes.get("paths") or []:
+        path_node = f"{repo_id}:path:{path}"
+        add_node(path_node, path_kind, str(path), subtitle=signal)
+        add_edge(signal_node, path_node, "references_path")
+
+
+def _add_governance_signal(
+    repo_id: str, event_type: str, attributes: dict[str, Any], add_node: Any, add_edge: Any
+) -> None:
+    signal = event_type.removeprefix("repository.governance.")
+    governance = attributes.get("governance") or {}
+    available = governance.get("available")
+    signal_node = f"{repo_id}:governance:{signal}"
+    add_node(
+        signal_node,
+        "governance_signal",
+        signal,
+        subtitle="available" if available is not False else "not available",
+    )
+    add_edge(repo_id, signal_node, "has_governance_signal")
+    if available is False:
+        gap_node = f"{signal_node}:not_available_public_mode"
+        add_node(gap_node, "signal_gap", "not_available_public_mode", subtitle=governance.get("reason"))
+        add_edge(signal_node, gap_node, "requires_authenticated_connector")
+        return
+    if signal in {"collaborators", "teams"}:
+        for item in governance.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            label = str(item.get("login") or item.get("name") or "unknown")
+            principal_node = f"{repo_id}:{signal}:{label}"
+            add_node(
+                principal_node,
+                "principal" if signal == "collaborators" else "team",
+                label,
+                subtitle=str(item.get("role_name") or item.get("permission") or signal),
+            )
+            add_edge(signal_node, principal_node, f"has_{signal}")
+    elif signal == "branch_protection":
+        reviews = governance.get("required_pull_request_reviews") or {}
+        checks = governance.get("required_status_checks") or {}
+        if reviews:
+            review_node = f"{signal_node}:reviews"
+            add_node(
+                review_node,
+                "review_rule",
+                "required reviews",
+                subtitle=f"{reviews.get('required_approving_review_count', 0)} approvals",
+            )
+            add_edge(signal_node, review_node, "enforces")
+        for check in checks.get("contexts") or []:
+            check_node = f"{signal_node}:check:{check}"
+            add_node(check_node, "status_check", str(check), subtitle="required status check")
+            add_edge(signal_node, check_node, "requires_status_check")
+    elif signal == "workflow_permissions":
+        permission = governance.get("default_workflow_permissions")
+        if permission:
+            perm_node = f"{signal_node}:permission:{permission}"
+            add_node(perm_node, "workflow_permission", str(permission), subtitle="default workflow permission")
+            add_edge(signal_node, perm_node, "sets_permission")
+
+
+def _framework_from_control(control_id: str) -> str | None:
+    if control_id.startswith("SOC2-"):
+        return "soc2"
+    if control_id.startswith("ISO27001-"):
+        return "iso-27001-2022"
+    if control_id.startswith("PCI-DSS-"):
+        return "pci-dss-v4"
+    if control_id.startswith("NIST-AI-RMF-"):
+        return "nist-ai-rmf"
+    if control_id.startswith("GDPR-"):
+        return "gdpr-2016-679"
+    if control_id.startswith("EU-AI-ACT-"):
+        return "eu-ai-act-2024-1689"
+    if control_id.startswith("HIPAA-"):
+        return "hipaa-security-rule"
+    if control_id.startswith("ISO42001-"):
+        return "iso-42001-2023"
+    return None
 
 
 def build_framework_crosswalk(controls_path: str | Path | None = None) -> dict[str, Any]:

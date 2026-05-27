@@ -5,6 +5,7 @@ import {
   ArrowDownToLine,
   Download,
   Filter,
+  GitBranch,
   Layout,
   Network,
   Route,
@@ -25,14 +26,35 @@ import {
   type ImperativeRef,
   type LayoutDir,
 } from "@/components/graph/GraphCanvas";
-import { useComplianceGraph } from "@/lib/api/hooks";
+import { useComplianceGraph, useRepositoryGraph } from "@/lib/api/hooks";
 import type { GraphNode, GraphNodeKind } from "@/lib/api/types";
 
-const ALL_KINDS: GraphNodeKind[] = [
+const COMPLIANCE_KINDS: GraphNodeKind[] = [
   "framework",
   "control",
   "evidence_type",
   "asset",
+];
+
+const REPO_KINDS: GraphNodeKind[] = [
+  "repository",
+  "directory",
+  "language",
+  "evidence_signal",
+  "governance_signal",
+  "signal_gap",
+  "workflow",
+  "dependency_manifest",
+  "ownership_file",
+  "security_file",
+  "file",
+  "principal",
+  "team",
+  "review_rule",
+  "status_check",
+  "workflow_permission",
+  "evidence",
+  "control",
 ];
 
 const KIND_LABEL: Record<GraphNodeKind, string> = {
@@ -40,6 +62,23 @@ const KIND_LABEL: Record<GraphNodeKind, string> = {
   control: "Controls",
   evidence_type: "Evidence types",
   asset: "Assets",
+  repository: "Repositories",
+  directory: "Directories",
+  language: "Languages",
+  evidence_signal: "Evidence signals",
+  governance_signal: "Governance signals",
+  signal_gap: "Signal gaps",
+  workflow: "Workflows",
+  dependency_manifest: "Dependencies",
+  ownership_file: "Ownership files",
+  security_file: "Security files",
+  file: "Files",
+  principal: "Principals",
+  team: "Teams",
+  review_rule: "Review rules",
+  status_check: "Status checks",
+  workflow_permission: "Workflow permissions",
+  evidence: "Evidence refs",
 };
 
 const KIND_TONE: Record<
@@ -50,6 +89,23 @@ const KIND_TONE: Record<
   control: "ready",
   evidence_type: "attention",
   asset: "critical",
+  repository: "info",
+  directory: "ready",
+  language: "ready",
+  evidence_signal: "attention",
+  governance_signal: "info",
+  signal_gap: "critical",
+  workflow: "attention",
+  dependency_manifest: "attention",
+  ownership_file: "ready",
+  security_file: "ready",
+  file: "info",
+  principal: "critical",
+  team: "info",
+  review_rule: "ready",
+  status_check: "ready",
+  workflow_permission: "attention",
+  evidence: "info",
 };
 
 const KIND_SWATCH: Record<GraphNodeKind, string> = {
@@ -57,6 +113,23 @@ const KIND_SWATCH: Record<GraphNodeKind, string> = {
   control: "#16b364",
   evidence_type: "#f79009",
   asset: "#7a35ff",
+  repository: "#0ea5e9",
+  directory: "#64748b",
+  language: "#16b364",
+  evidence_signal: "#f79009",
+  governance_signal: "#2563eb",
+  signal_gap: "#dc2626",
+  workflow: "#7c3aed",
+  dependency_manifest: "#c2410c",
+  ownership_file: "#0891b2",
+  security_file: "#059669",
+  file: "#94a3b8",
+  principal: "#be123c",
+  team: "#4338ca",
+  review_rule: "#10b981",
+  status_check: "#22c55e",
+  workflow_permission: "#f59e0b",
+  evidence: "#475569",
 };
 
 const LAYOUT_LABEL: Record<LayoutDir, string> = {
@@ -77,9 +150,16 @@ function downloadBlob(filename: string, blob: Blob) {
 }
 
 export default function GraphPage() {
-  const graph = useComplianceGraph();
+  const complianceGraph = useComplianceGraph();
+  const repoGraph = useRepositoryGraph();
+  const [graphMode, setGraphMode] = useState<"compliance" | "repository">(
+    "compliance",
+  );
+  const activeKinds =
+    graphMode === "compliance" ? COMPLIANCE_KINDS : REPO_KINDS;
+  const graph = graphMode === "compliance" ? complianceGraph : repoGraph;
   const [visible, setVisible] = useState<Set<GraphNodeKind>>(
-    new Set(ALL_KINDS),
+    new Set(activeKinds),
   );
   const [layout, setLayout] = useState<LayoutDir>("LR");
   const [filterOwner, setFilterOwner] = useState("");
@@ -92,10 +172,15 @@ export default function GraphPage() {
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const canvasRef = useRef<ImperativeRef | null>(null);
 
+  useEffect(() => {
+    setVisible(new Set(activeKinds));
+    setSelected(null);
+    clearPath();
+  }, [graphMode]);
+
   const data = graph.data;
   const counts = useMemo(
-    () =>
-      data?.counts ?? { framework: 0, control: 0, evidence_type: 0, asset: 0 },
+    () => (data?.counts ?? {}) as Partial<Record<GraphNodeKind, number>>,
     [data],
   );
 
@@ -194,8 +279,16 @@ export default function GraphPage() {
     <div className="grid gap-5 px-7 py-7">
       <PageHeader
         eyebrow="Graph"
-        title="Framework → control → evidence → asset"
-        description="Every framework loaded, the controls under it, the evidence types those controls require, and the assets covered. Use the rail to filter, search, toggle layouts, trace a path between any two nodes, or export the view."
+        title={
+          graphMode === "compliance"
+            ? "Framework → control → evidence → asset"
+            : "Repository topology and governance"
+        }
+        description={
+          graphMode === "compliance"
+            ? "Every framework loaded, the controls under it, the evidence types those controls require, and the assets covered. Use the rail to filter, search, toggle layouts, trace a path between any two nodes, or export the view."
+            : "Public repo audit and authenticated governance evidence rendered as repositories, code structure, workflows, owners, required reviews, status checks, controls, and evidence refs. Public-mode gaps stay explicit."
+        }
         actions={
           <Badge tone="info">
             <Network className="mr-1 h-3 w-3" />{" "}
@@ -208,6 +301,28 @@ export default function GraphPage() {
 
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 p-3">
+          <div className="inline-flex items-center gap-1 rounded-lg border border-line bg-white p-0.5">
+            {(["compliance", "repository"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setGraphMode(mode)}
+                className={[
+                  "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-black",
+                  graphMode === mode
+                    ? "bg-ink text-white"
+                    : "text-slate-600 hover:bg-slate-50",
+                ].join(" ")}
+              >
+                {mode === "repository" ? (
+                  <GitBranch className="h-3.5 w-3.5" />
+                ) : (
+                  <Network className="h-3.5 w-3.5" />
+                )}
+                {mode === "repository" ? "Repository" : "Compliance"}
+              </button>
+            ))}
+          </div>
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
@@ -292,7 +407,7 @@ export default function GraphPage() {
                 Layers
               </div>
               <div className="grid gap-1.5">
-                {ALL_KINDS.map((kind) => {
+                {activeKinds.map((kind) => {
                   const on = visible.has(kind);
                   return (
                     <button
@@ -377,7 +492,7 @@ export default function GraphPage() {
                 Legend
               </div>
               <div className="grid gap-1">
-                {ALL_KINDS.map((kind) => (
+                {activeKinds.map((kind) => (
                   <div key={kind} className="flex items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 rounded"
