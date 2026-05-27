@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   Background,
   Controls,
+  Handle,
   MiniMap,
+  Position,
   ReactFlow,
   addEdge,
   applyEdgeChanges,
@@ -20,7 +22,21 @@ import {
   type ReactFlowProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { ActionSpec, WorkflowNode } from "@/lib/api/types";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Cpu,
+  GitFork,
+  Loader2,
+  Play,
+  Zap,
+} from "lucide-react";
+import type { ActionSpec, WorkflowNode, WorkflowRun } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Node data + kind theming
+// ---------------------------------------------------------------------------
 
 interface NodeData extends Record<string, unknown> {
   label: string;
@@ -28,76 +44,279 @@ interface NodeData extends Record<string, unknown> {
   node_type: string;
   params: Record<string, unknown>;
   runResult?: "ok" | "error" | null;
+  runPending?: boolean;
 }
 
 export type FlowNode = Node<NodeData, "trustops">;
 
-const KIND_STYLE: Record<
-  NodeData["kind"],
-  { border: string; bg: string; chip: string }
-> = {
-  trigger: { border: "#4f7cff", bg: "#eff6ff", chip: "#1d4ed8" },
-  check: { border: "#f79009", bg: "#fffbeb", chip: "#b54708" },
-  action: { border: "#16b364", bg: "#ecfdf5", chip: "#067647" },
+interface KindStyle {
+  border: string;
+  borderSelected: string;
+  bg: string;
+  badgeBg: string;
+  badgeFg: string;
+  ring: string;
+  Icon: React.ElementType;
+}
+
+const KIND_STYLE: Record<NonNullable<NodeData["kind"]>, KindStyle> = {
+  trigger: {
+    border: "#3b82f6",
+    borderSelected: "#1d4ed8",
+    bg: "#eff6ff",
+    badgeBg: "#dbeafe",
+    badgeFg: "#1e40af",
+    ring: "rgba(59,130,246,0.35)",
+    Icon: Zap,
+  },
+  check: {
+    border: "#f59e0b",
+    borderSelected: "#b45309",
+    bg: "#fffbeb",
+    badgeBg: "#fef3c7",
+    badgeFg: "#92400e",
+    ring: "rgba(245,158,11,0.35)",
+    Icon: GitFork,
+  },
+  action: {
+    border: "#10b981",
+    borderSelected: "#047857",
+    bg: "#ecfdf5",
+    badgeBg: "#d1fae5",
+    badgeFg: "#065f46",
+    ring: "rgba(16,185,129,0.35)",
+    Icon: Cpu,
+  },
 };
 
+// ---------------------------------------------------------------------------
+// Custom node card
+// ---------------------------------------------------------------------------
+
 function NodeCard({ data, selected }: NodeProps<FlowNode>) {
-  const tone = KIND_STYLE[data.kind];
-  const runRing =
+  const tone = KIND_STYLE[data.kind] ?? KIND_STYLE.action;
+  const Icon = tone.Icon;
+
+  const runRingColor =
     data.runResult === "ok"
-      ? "shadow-[0_0_0_3px_rgba(22,179,100,0.55)]"
+      ? "rgba(16,185,129,0.6)"
       : data.runResult === "error"
-        ? "shadow-[0_0_0_3px_rgba(217,45,32,0.55)]"
-        : "shadow-sm";
-  const runChip =
+        ? "rgba(239,68,68,0.6)"
+        : data.runPending
+          ? "rgba(99,102,241,0.5)"
+          : selected
+            ? tone.ring
+            : "transparent";
+
+  const borderColor = selected ? tone.borderSelected : tone.border;
+  const borderWidth = selected ? 2 : 1.5;
+
+  const StatusIcon =
     data.runResult === "ok"
-      ? { bg: "#dcfae6", fg: "#067647", label: "ok" }
+      ? CheckCircle2
       : data.runResult === "error"
-        ? { bg: "#fee4e2", fg: "#b42318", label: "error" }
-        : null;
+        ? AlertCircle
+        : data.runPending
+          ? Loader2
+          : null;
+
+  const statusColor =
+    data.runResult === "ok"
+      ? "#10b981"
+      : data.runResult === "error"
+        ? "#ef4444"
+        : "#6366f1";
+
   return (
     <div
       style={{
-        borderColor: selected ? "#101623" : tone.border,
+        borderColor,
         background: tone.bg,
-        borderWidth: selected ? 2 : 1.5,
+        borderWidth,
+        boxShadow: `0 0 0 3px ${runRingColor}, 0 2px 8px rgba(15,23,42,0.08)`,
+        minWidth: 220,
       }}
-      className={`min-w-[200px] rounded-xl px-3 py-2.5 text-left transition-colors ${runRing}`}
+      className="rounded-xl border text-left transition-all"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide"
-          style={{ color: tone.chip, background: "#ffffff" }}
-        >
-          {data.kind}
-        </span>
-        {runChip ? (
+      {/* Top handle */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2.5 !w-2.5 !rounded-full !border-2 !border-white"
+        style={{ background: tone.border }}
+      />
+
+      <div className="px-3.5 py-3">
+        {/* Header row: kind badge + status icon */}
+        <div className="flex items-center justify-between gap-2">
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide"
-            style={{ color: runChip.fg, background: runChip.bg }}
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest"
+            style={{ background: tone.badgeBg, color: tone.badgeFg }}
           >
-            {runChip.label}
+            <Icon className="h-2.5 w-2.5" aria-hidden />
+            {data.kind}
           </span>
-        ) : (
-          <code className="text-[10px] text-slate-500">{data.node_type}</code>
+
+          {StatusIcon ? (
+            <StatusIcon
+              className={cn("h-3.5 w-3.5", data.runPending && "animate-spin")}
+              style={{ color: statusColor }}
+              aria-label={data.runResult ?? "running"}
+            />
+          ) : (
+            <code className="text-[10px] text-muted">{data.node_type}</code>
+          )}
+        </div>
+
+        {/* Label */}
+        <div className="mt-1.5 text-sm font-black leading-snug text-ink">
+          {data.label}
+        </div>
+
+        {/* Param pills */}
+        {Object.keys(data.params).length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {Object.entries(data.params)
+              .slice(0, 3)
+              .map(([k, v]) => (
+                <span
+                  key={k}
+                  className="inline-flex max-w-[160px] items-center truncate rounded border border-line bg-white px-1.5 py-0.5 text-[10px] text-muted"
+                  title={`${k}: ${String(v)}`}
+                >
+                  <span className="mr-0.5 font-black text-ink">{k}</span>
+                  {String(v) && (
+                    <>
+                      <span className="mx-0.5 opacity-40">:</span>
+                      <span className="truncate">{String(v)}</span>
+                    </>
+                  )}
+                </span>
+              ))}
+          </div>
+        )}
+
+        {/* node_type subtitle when no run result */}
+        {!data.runResult && (
+          <div className="mt-1 text-[10px] text-muted">{data.node_type}</div>
         )}
       </div>
-      <div className="mt-1.5 text-sm font-black text-ink">{data.label}</div>
-      {Object.keys(data.params).length > 0 && (
-        <div className="mt-1 truncate text-[11px] text-slate-600">
-          {Object.entries(data.params)
-            .map(([k, v]) => `${k}: ${String(v)}`)
-            .slice(0, 2)
-            .join(" · ")}
-        </div>
-      )}
+
+      {/* Bottom handle */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-2.5 !w-2.5 !rounded-full !border-2 !border-white"
+        style={{ background: tone.border }}
+      />
     </div>
   );
 }
 
 const nodeTypes: NodeTypes = { trustops: NodeCard };
 
-function toFlowNode(
+// ---------------------------------------------------------------------------
+// Empty / onboarding state overlay
+// ---------------------------------------------------------------------------
+
+function EmptyCanvas({ onOpenTemplates }: { onOpenTemplates?: () => void }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+      <div className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-dashed border-line bg-white shadow-card">
+        <Play className="h-6 w-6 text-muted" />
+      </div>
+      <div>
+        <div className="text-sm font-black text-ink">Canvas is empty</div>
+        <div className="mt-0.5 text-xs text-muted">
+          Drag actions from the library on the left, or start from a template.
+        </div>
+      </div>
+      {onOpenTemplates && (
+        <button
+          type="button"
+          onClick={onOpenTemplates}
+          className="pointer-events-auto rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-black text-ink shadow-card transition-colors hover:border-brand hover:text-brand"
+        >
+          Browse templates
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Run summary panel
+// ---------------------------------------------------------------------------
+
+interface RunSummaryProps {
+  run: WorkflowRun;
+  onDismiss: () => void;
+}
+
+function RunSummaryPanel({ run, onDismiss }: RunSummaryProps) {
+  const ok = run.node_results.filter((r) => r.result === "ok").length;
+  const err = run.node_results.filter((r) => r.result === "error").length;
+
+  return (
+    <div className="absolute bottom-3 left-1/2 z-10 w-[460px] max-w-[calc(100%-24px)] -translate-x-1/2 rounded-2xl border border-line bg-white shadow-hero">
+      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+        <div className="flex items-center gap-2">
+          {run.result === "ok" ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          ) : (
+            <AlertCircle className="h-4 w-4 text-rose-500" />
+          )}
+          <span className="text-sm font-black text-ink">
+            Run {run.result.toUpperCase()} &middot; v{run.workflow_version}
+          </span>
+          <span className="text-xs text-muted">
+            {ok} passed &middot; {err} failed
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss run summary"
+          className="rounded p-0.5 text-muted hover:text-ink"
+        >
+          &times;
+        </button>
+      </div>
+
+      <div className="grid gap-1 p-3">
+        {run.node_results.map((nr, idx) => (
+          <div
+            key={`${nr.node_id}-${idx}`}
+            className="flex items-center gap-2.5 rounded-lg border border-line bg-slate-50 px-3 py-1.5"
+          >
+            {nr.result === "ok" ? (
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+            ) : (
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+            )}
+            <code className="min-w-0 truncate text-[11px] text-ink">
+              {nr.node_id}
+            </code>
+            <span className="ml-auto shrink-0 text-[10px] text-muted">
+              {nr.node_type}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-line px-4 py-2 text-[10px] text-muted">
+        {run.started_at} &rarr; {run.finished_at} &middot; actor{" "}
+        <b className="text-ink">{run.actor}</b>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// toFlowNode helper (re-exported for page.tsx)
+// ---------------------------------------------------------------------------
+
+export function toFlowNode(
   node: WorkflowNode,
   action: ActionSpec | undefined,
 ): FlowNode {
@@ -114,6 +333,10 @@ function toFlowNode(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Props + canvas component
+// ---------------------------------------------------------------------------
+
 interface Props {
   nodes: FlowNode[];
   edges: Edge[];
@@ -123,6 +346,9 @@ interface Props {
   onSelectNode: (id: string | null) => void;
   onDropAction?: (spec: ActionSpec, position: { x: number; y: number }) => void;
   fitTrigger?: number;
+  lastRun?: WorkflowRun | null;
+  onDismissRun?: () => void;
+  onOpenTemplates?: () => void;
 }
 
 export function WorkflowCanvas({
@@ -134,6 +360,9 @@ export function WorkflowCanvas({
   onSelectNode,
   onDropAction,
   fitTrigger,
+  lastRun,
+  onDismissRun,
+  onOpenTemplates,
 }: Props) {
   const instanceRef = useRef<ReactFlowInstance<FlowNode, Edge> | null>(null);
 
@@ -158,6 +387,7 @@ export function WorkflowCanvas({
     },
     [onDropAction],
   );
+
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const next = applyNodeChanges(changes, nodes) as FlowNode[];
@@ -189,7 +419,7 @@ export function WorkflowCanvas({
     [onSelectNode],
   );
 
-  // Keep node labels in sync with catalog updates.
+  // Keep node labels + kinds in sync with catalog updates.
   const decoratedNodes = useMemo(() => {
     const byType = new Map(catalog.map((a) => [a.node_type, a]));
     return nodes.map((node) => ({
@@ -203,13 +433,12 @@ export function WorkflowCanvas({
   }, [nodes, catalog]);
 
   useEffect(() => {
-    // touch fitTrigger so consumers can ask for a refit via state change
     void fitTrigger;
   }, [fitTrigger]);
 
   return (
     <div
-      className="h-[560px] overflow-hidden rounded-2xl border border-line bg-white"
+      className="relative h-[580px] overflow-hidden rounded-2xl border border-line bg-white"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -226,13 +455,35 @@ export function WorkflowCanvas({
         onSelectionChange={handleSelection}
         fitView
         proOptions={{ hideAttribution: true }}
+        defaultEdgeOptions={{
+          animated: true,
+          style: { stroke: "#d9e1ec", strokeWidth: 2 },
+        }}
       >
-        <Background gap={20} color="#e2e8f0" />
-        <MiniMap pannable zoomable maskColor="rgba(15,23,42,0.06)" />
+        <Background gap={24} color="#e2e8f0" />
+        <MiniMap
+          pannable
+          zoomable
+          maskColor="rgba(15,23,42,0.06)"
+          nodeColor={(n) => {
+            const kind = (n.data as NodeData).kind ?? "action";
+            return (
+              {
+                trigger: "#3b82f6",
+                check: "#f59e0b",
+                action: "#10b981",
+              }[kind] ?? "#94a3b8"
+            );
+          }}
+        />
         <Controls position="bottom-left" />
       </ReactFlow>
+
+      {nodes.length === 0 && <EmptyCanvas onOpenTemplates={onOpenTemplates} />}
+
+      {lastRun && onDismissRun && (
+        <RunSummaryPanel run={lastRun} onDismiss={onDismissRun} />
+      )}
     </div>
   );
 }
-
-export { toFlowNode };
