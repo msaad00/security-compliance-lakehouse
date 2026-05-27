@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from security_lakehouse.db.base import Base
@@ -19,6 +19,13 @@ from security_lakehouse.db.base import Base
 # Server-mode roles. ``viewer`` and ``analyst`` are not accepted aliases here;
 # the API surface uses explicit product roles so audit events are unambiguous.
 USER_ROLES = ("admin", "security_admin", "contributor", "auditor", "read_only")
+
+# Remediation workflow vocabularies.
+REMEDIATION_STATUSES = ("open", "in_progress", "blocked", "resolved", "dismissed")
+REMEDIATION_CLOSED = {"resolved", "dismissed"}
+REMEDIATION_PRIORITIES = ("low", "medium", "high", "critical")
+EVIDENCE_REQUEST_STATUSES = ("open", "fulfilled", "cancelled")
+EXCEPTION_STATUSES = ("active", "revoked", "expired")
 
 
 def _uuid() -> str:
@@ -144,3 +151,88 @@ class UserSession(Base):
         if self.revoked_at is not None:
             return False
         return _as_aware(self.expires_at) > moment
+
+
+class RemediationTask(Base):
+    """An owned unit of remediation work tied to a control or violation, with an SLA due date."""
+
+    __tablename__ = "remediation_tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    control_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    violation_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    owner: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="open")
+    priority: Mapped[str] = mapped_column(String(16), nullable=False, default="medium")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def is_open(self) -> bool:
+        return self.status not in REMEDIATION_CLOSED
+
+    def is_overdue(self, *, now: datetime | None = None) -> bool:
+        """Open and past its SLA due date."""
+        if self.due_at is None or not self.is_open:
+            return False
+        return _as_aware(self.due_at) < (now or _utcnow())
+
+
+class EvidenceRequest(Base):
+    """A request for fresh evidence from a control owner or team."""
+
+    __tablename__ = "evidence_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    control_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    requested_from: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="open")
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+    fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ControlException(Base):
+    """A time-boxed, approved exception that suppresses a control's failure."""
+
+    __tablename__ = "control_exceptions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    control_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    approved_by: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def is_active(self, *, now: datetime | None = None) -> bool:
+        """Active and not past its expiry."""
+        if self.status != "active" or self.revoked_at is not None:
+            return False
+        return self.expires_at is None or _as_aware(self.expires_at) > (now or _utcnow())
