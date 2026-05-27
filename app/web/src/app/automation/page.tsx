@@ -368,6 +368,9 @@ export default function AutomationPage() {
           onEdgesChange={(es) => setEditor((e) => ({ ...e, edges: es }))}
           onSelectNode={setSelectedNode}
           onDropAction={addNode}
+          lastRun={lastRun}
+          onDismissRun={() => setLastRun(null)}
+          onOpenTemplates={() => setTemplatesOpen(true)}
         />
         <NodeConfigPanel
           node={selected}
