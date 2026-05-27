@@ -222,7 +222,23 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     migrate.upgrade(lake)
     engine = create_engine_for(lake)
 
-    app = FastAPI(title="TrustOps Security Data Lake", version=api_v1.API_VERSION)
+    app = FastAPI(
+        title="TrustOps Security Data Lake",
+        version=api_v1.API_VERSION,
+        description=(
+            "Continuous compliance assessment for security data lakes. The same "
+            "engine serves a human console and a headless `/api/v1` surface for "
+            "agents. Discover the contract at `GET /api/v1`; browse it at `/docs`."
+        ),
+        openapi_tags=[
+            {"name": "discovery", "description": "Self-describing index + health."},
+            {"name": "auth", "description": "API keys, SSO (OIDC/SAML), sessions, RBAC."},
+            {"name": "assessment", "description": "Posture, controls, evidence, violations, snapshots."},
+            {"name": "remediation", "description": "Tasks, evidence requests, control exceptions."},
+            {"name": "insights", "description": "Posture time-series and remediation metrics."},
+            {"name": "tags", "description": "Cross-entity tags and saved views."},
+        ],
+    )
     app.state.sessionmaker = session_factory(engine)
     app.state.require_auth = require_auth and not _insecure_requested()
 
@@ -272,10 +288,37 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     def healthz() -> dict[str, object]:
         return {"ok": True, "service": "trustops-assessment"}
 
-    @app.get("/api/v1/healthz")
+    @app.get("/api/v1/healthz", tags=["discovery"])
     def v1_healthz() -> JSONResponse:
         _status, body = api_v1.handle_get("/api/v1/healthz", {}, lake)
         return JSONResponse(body, status_code=int(_status))
+
+    @app.get("/api/v1", tags=["discovery"])
+    def v1_index(_identity: Identity = Depends(_require_read)) -> JSONResponse:
+        # Self-describing contract so headless agents can enumerate the surface.
+        return JSONResponse(
+            api_v1.envelope(
+                "index",
+                {
+                    "api_version": api_v1.API_VERSION,
+                    "resources": api_v1.resource_catalog(),
+                    "collection_controls": {
+                        "limit": "1-1000 (default 100)",
+                        "offset": ">= 0",
+                        "sort": "field, or -field for descending",
+                        "filters": "any field=value (comma-separated values = OR)",
+                    },
+                    "auth": {
+                        "api_key": "Authorization: Bearer <token>",
+                        "session": "httpOnly cookie via OIDC/SAML SSO",
+                        "methods_endpoint": "/api/v1/auth/methods",
+                    },
+                    "streams": ["/api/v1/stream"],
+                    "openapi": "/openapi.json",
+                    "docs": "/docs",
+                },
+            )
+        )
 
     # --- continuous-eval live stream (SSE) ---
     # Pushes posture updates so the console is live without client polling.

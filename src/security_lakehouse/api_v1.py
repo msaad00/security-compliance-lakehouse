@@ -86,6 +86,27 @@ COLLECTION_LOADERS: dict[str, tuple[str, Callable[[Path], list[JsonObject]]]] = 
     "/api/v1/snapshots": ("snapshots", list_snapshots),
 }
 
+# Resources that also accept writes via handle_post.
+_WRITABLE = {"/api/v1/snapshots": ["POST"]}
+
+
+def resource_catalog() -> list[JsonObject]:
+    """Self-describing list of v1 resources, for headless/agent discovery."""
+    catalog: list[JsonObject] = []
+    for path, (name, _loader) in SINGLETON_LOADERS.items():
+        catalog.append({"resource": name, "path": path, "kind": "singleton", "methods": ["GET"]})
+    for path, (name, _loader) in COLLECTION_LOADERS.items():
+        catalog.append(
+            {
+                "resource": name,
+                "path": path,
+                "kind": "collection",
+                "methods": ["GET", *_WRITABLE.get(path, [])],
+                "query": ["limit", "offset", "sort", "<field>=<value>"],
+            }
+        )
+    return sorted(catalog, key=lambda row: row["path"])
+
 
 def filter_collection(rows: list[JsonObject], params: Params) -> tuple[list[JsonObject], dict[str, list[str]]]:
     """Apply ``field=value`` query filters (comma-separated, list-field aware)."""
