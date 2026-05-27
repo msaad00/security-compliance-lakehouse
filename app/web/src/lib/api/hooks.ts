@@ -23,6 +23,9 @@ import type {
   TriagePayload,
   VerifyResult,
   Violation,
+  RemediationTask,
+  EvidenceRequestItem,
+  ControlExceptionItem,
 } from "./types";
 
 const STALE = 15_000;
@@ -378,3 +381,109 @@ export function useAuditLog(opts?: {
 }
 
 export type { VerifyResult, TrackingEvent };
+
+// --- remediation workflow ---
+
+export function useRemediationTasks(
+  query = "",
+  opts?: Opts<RemediationTask[]>,
+) {
+  return useQuery({
+    queryKey: ["remediation", "tasks", query],
+    queryFn: () => api.remediationTasks(query),
+    staleTime: STALE,
+    refetchInterval: LIVE,
+    refetchOnWindowFocus: true,
+    ...opts,
+  });
+}
+
+export function useCreateTaskMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Partial<RemediationTask> & { title: string }) =>
+      api.createRemediationTask(payload),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["remediation", "tasks"] }),
+  });
+}
+
+export function useUpdateTaskMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Record<string, unknown>;
+    }) => api.updateRemediationTask(id, payload),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["remediation", "tasks"] }),
+  });
+}
+
+export function useEvidenceRequests(opts?: Opts<EvidenceRequestItem[]>) {
+  return useQuery({
+    queryKey: ["remediation", "evidence-requests"],
+    queryFn: api.evidenceRequests,
+    staleTime: STALE,
+    refetchInterval: LIVE,
+    ...opts,
+  });
+}
+
+export function useCreateEvidenceRequestMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      control_id: string;
+      requested_from?: string;
+      note?: string;
+    }) => api.createEvidenceRequest(payload),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["remediation", "evidence-requests"] }),
+  });
+}
+
+export function useSetEvidenceRequestStatusMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.setEvidenceRequestStatus(id, status),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["remediation", "evidence-requests"] }),
+  });
+}
+
+export function useControlExceptions(opts?: Opts<ControlExceptionItem[]>) {
+  return useQuery({
+    queryKey: ["remediation", "exceptions"],
+    queryFn: api.controlExceptions,
+    staleTime: STALE,
+    refetchInterval: LIVE,
+    ...opts,
+  });
+}
+
+export function useCreateControlExceptionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      control_id: string;
+      reason?: string;
+      expires_at?: string | null;
+    }) => api.createControlException(payload),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["remediation", "exceptions"] }),
+  });
+}
+
+export function useRevokeControlExceptionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.revokeControlException(id),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["remediation", "exceptions"] }),
+  });
+}
