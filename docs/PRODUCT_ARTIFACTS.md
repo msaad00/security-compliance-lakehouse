@@ -64,6 +64,7 @@ See [Human and Agent API](api/AGENT_API.md).
 | Framework registry          | `frameworks/registry.json`                    |
 | Implemented control catalog | `controls/catalog.json`                       |
 | Control mapping             | `mappings/control_map.json`                   |
+| Framework coverage matrix   | `docs/FRAMEWORK_COVERAGE.md`                  |
 
 ## Security Data Lake Backends
 

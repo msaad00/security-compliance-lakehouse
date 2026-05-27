@@ -1,24 +1,54 @@
 # TrustOps
 
-Security data lake assessment workbench.
+Self-hosted trust operations for AI-era security teams.
 
-It reports near realtime posture with confidence from security evidence,
-control tests, owner workflows, snapshots, and agent-readable APIs.
+TrustOps turns security evidence into continuous compliance posture, owner
+workflows, audit snapshots, repository governance graphs, and agent-readable
+APIs while keeping the evidence in your lake or your cloud boundary.
 
-![TrustOps workflow](docs/images/trustops-readme-banner.svg)
+<p align="center">
+  <img src="docs/images/trustops-readme-banner.svg" alt="TrustOps product workflow" width="100%">
+</p>
 
-![TrustOps framework coverage](docs/images/trustops-framework-coverage.svg)
+<p align="center">
+  <a href="docs/PRODUCT_WALKTHROUGH.md"><strong>Product walkthrough</strong></a>
+  ·
+  <a href="docs/FRAMEWORK_COVERAGE.md"><strong>Framework coverage</strong></a>
+  ·
+  <a href="docs/CONNECTORS.md"><strong>Connectors</strong></a>
+  ·
+  <a href="docs/SERVER_AUTH.md"><strong>Server auth</strong></a>
+  ·
+  <a href="docs/api/AGENT_API.md"><strong>Agent API</strong></a>
+</p>
 
-![TrustOps console](docs/images/trustops-console.png)
+<p align="center">
+  <img src="docs/images/trustops-framework-coverage.svg" alt="TrustOps framework coverage summary" width="100%">
+</p>
 
-## What This Is
+<p align="center">
+  <img src="docs/images/trustops-console.png" alt="TrustOps console" width="92%">
+</p>
 
-TrustOps is an assessment layer, not just an ingestion demo.
+## What Ships
+
+TrustOps is an assessment platform, not an ingestion demo.
 
 For a concise shipped-versus-planned walkthrough, start with
 [Product Walkthrough](docs/PRODUCT_WALKTHROUGH.md).
 
-It can run in two modes:
+The current repo includes:
+
+| Layer             | Shipped surface                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Workbench         | Next.js console with dashboard, controls, evidence, violations, workflows, graphs, connectors, frameworks, audit log, and trust center |
+| Server mode       | FastAPI behind `.[server]`, API keys, OIDC, SAML, RBAC, request audit events, and tenant/user spine                                    |
+| Evidence model    | bronze replay records, silver normalized facts, gold posture/tests/assets/freshness, SQLite/DuckDB local marts                         |
+| Continuous inputs | GitHub evidence runner, scheduled connector syncs, public repo audit, authenticated repo governance sync                               |
+| Policy logic      | controls-as-code rule engine with lintable evaluation rules and rule reasons in posture output                                         |
+| Human + agent API | `/api/v1/*` envelopes plus console-compatible `/api/*`; agents and humans use the same auth boundary                                   |
+
+It can run in two evidence modes:
 
 | Mode                  | Use when                                                                               | What it does                                                      |
 | --------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -186,28 +216,30 @@ and makes the project runnable without cloud credentials. DuckDB is the stronger
 local analytical path when the optional `analytics` extra is installed.
 Snowflake and ClickHouse remain the production architecture.
 
-## Implemented Framework Scope
+## Framework Coverage
 
-Current framework support is intentionally source-linked and readiness-gated:
+The repo currently ships **34 source-linked controls** across **8 frameworks**,
+with reviewed source mappings for every seeded control. Public-source frameworks
+now have a minimum of six mapped controls each.
 
-| Framework                     | Status                      |
-| ----------------------------- | --------------------------- |
-| SOC 2 Trust Services Criteria | implemented limited mapping |
-| NIST AI RMF 1.0               | implemented limited mapping |
-| ISO/IEC 27001:2022            | implemented limited mapping |
-| HIPAA Security Rule           | implemented limited mapping |
-| PCI DSS v4.0                  | implemented limited mapping |
-| GDPR 2016/679                 | implemented limited mapping |
-| EU AI Act 2024/1689           | implemented limited mapping |
-| ISO/IEC 42001:2023            | implemented limited mapping |
+| Framework family    | Seeded controls | Reviewed mappings |
+| ------------------- | --------------: | ----------------: |
+| NIST AI RMF         |               6 |                 6 |
+| HIPAA Security Rule |               6 |                 6 |
+| GDPR                |               6 |                 6 |
+| EU AI Act           |               6 |                 6 |
+| ISO/IEC 27001       |               3 |                 3 |
+| PCI DSS             |               3 |                 3 |
+| SOC 2 TSC           |               2 |                 2 |
+| ISO/IEC 42001       |               2 |                 2 |
 
-The framework coverage graphic uses neutral text labels. TrustOps does not ship
-made-up framework logos, imitation certification seals, or regulator lookalike
-marks. Official third-party marks should be added only under the
-[Third-Party Asset Policy](docs/THIRD_PARTY_ASSETS.md). A framework is not
-treated as ready until its official source is pulled, source hash is recorded,
-reviewed control/article mappings exist, evidence requirements are declared,
-evaluation rules are versioned, and coverage gates pass.
+See [Framework Coverage Matrix](docs/FRAMEWORK_COVERAGE.md) for official source
+URLs, current coverage, readiness gates, and expansion roadmap.
+
+Framework visuals use neutral text labels unless an official logo/certification
+mark is added with documented permission and attribution under the
+[Third-Party Asset Policy](docs/THIRD_PARTY_ASSETS.md). Public visibility of a
+logo is not the same thing as permission to bundle it or imply certification.
 
 ## Data Model
 
