@@ -30,6 +30,23 @@ def test_every_mapping_points_at_a_known_control() -> None:
         assert control_id in catalog, f"mapping references unknown control {control_id}"
 
 
+def test_public_source_frameworks_have_reviewed_coverage_floor() -> None:
+    catalog = load_control_catalog()
+    mappings = load_control_article_mappings()
+    coverage_floor = {
+        "nist-ai-rmf": 6,
+        "hipaa-security-rule": 6,
+        "gdpr-2016-679": 6,
+        "eu-ai-act-2024-1689": 6,
+    }
+
+    for framework_id, minimum in coverage_floor.items():
+        controls = [control for control in catalog.values() if control["framework_id"] == framework_id]
+        mapped = [control for control in controls if control["control_id"] in mappings]
+        assert len(controls) >= minimum, f"{framework_id} should have at least {minimum} public-source controls"
+        assert len(mapped) == len(controls), f"{framework_id} controls must all have reviewed source mappings"
+
+
 def test_reviewed_crosswalk_returns_diagonal_and_counts() -> None:
     crosswalk = build_reviewed_crosswalk()
     fids = crosswalk["frameworks"]
