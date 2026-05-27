@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from security_lakehouse.fixtures import find_fixture, list_fixtures
-from security_lakehouse.graph import build_compliance_graph, build_framework_crosswalk
+from security_lakehouse.graph import build_compliance_graph, build_framework_crosswalk, build_repository_graph
 from security_lakehouse.server import _Handler
 
 
@@ -75,6 +75,130 @@ def test_build_compliance_graph_dedupes_evidence_types(tmp_path: Path) -> None:
     assert evidence_nodes[0]["event_count"] == 2
 
 
+def _write_repo_bronze(lake: Path) -> None:
+    repo = "github:repo:acme/model-service"
+    rows = [
+        {
+            "raw": {
+                "event_id": "repo-code-graph",
+                "tenant_id": "public",
+                "event_time": "2026-05-24T12:00:00Z",
+                "source": "github-public-repo",
+                "event_type": "repository.code_graph",
+                "entity": {
+                    "asset_id": repo,
+                    "asset_type": "repository",
+                    "asset_owner": "acme",
+                    "environment": "public",
+                    "repo": "acme/model-service",
+                },
+                "severity": "info",
+                "status": "observed",
+                "controls": [],
+                "evidence": {"evidence_id": "ev-code-graph"},
+                "attributes": {
+                    "nodes": [
+                        {"id": repo, "kind": "repository", "label": "acme/model-service"},
+                        {"id": f"{repo}:dir:.github", "kind": "directory", "label": ".github"},
+                        {"id": f"{repo}:signal:ci_workflow", "kind": "evidence_signal", "label": "ci_workflow"},
+                    ],
+                    "edges": [
+                        {"source": repo, "target": f"{repo}:dir:.github", "kind": "contains"},
+                        {"source": repo, "target": f"{repo}:signal:ci_workflow", "kind": "has_signal"},
+                    ],
+                    "counts": {"signals": 1},
+                },
+            }
+        },
+        {
+            "raw": {
+                "event_id": "repo-codeowners",
+                "tenant_id": "public",
+                "event_time": "2026-05-24T12:00:00Z",
+                "source": "github-public-repo",
+                "event_type": "repository.codeowners",
+                "entity": {
+                    "asset_id": repo,
+                    "asset_type": "repository",
+                    "asset_owner": "acme",
+                    "environment": "public",
+                    "repo": "acme/model-service",
+                },
+                "severity": "info",
+                "status": "observed",
+                "controls": ["SOC2-CC6.1"],
+                "evidence": {"evidence_id": "ev-codeowners"},
+                "attributes": {"paths": [".github/CODEOWNERS"], "path_count": 1},
+            }
+        },
+        {
+            "raw": {
+                "event_id": "repo-auth-gap",
+                "tenant_id": "public",
+                "event_time": "2026-05-24T12:00:00Z",
+                "source": "github-public-repo",
+                "event_type": "repository.authenticated_signal_gap",
+                "entity": {
+                    "asset_id": repo,
+                    "asset_type": "repository",
+                    "asset_owner": "acme",
+                    "environment": "public",
+                    "repo": "acme/model-service",
+                },
+                "severity": "info",
+                "status": "requires_authenticated_connector",
+                "controls": [],
+                "evidence": {"evidence_id": "ev-auth-gap"},
+                "attributes": {"requires_authenticated_connector": ["branch_protection_rules"]},
+            }
+        },
+        {
+            "raw": {
+                "event_id": "repo-branch",
+                "tenant_id": "customer-managed",
+                "event_time": "2026-05-24T12:00:00Z",
+                "source": "github-repo-governance",
+                "event_type": "repository.governance.branch_protection",
+                "entity": {
+                    "asset_id": repo,
+                    "asset_type": "repository",
+                    "asset_owner": "acme",
+                    "environment": "prod",
+                    "repo": "acme/model-service",
+                },
+                "severity": "info",
+                "status": "observed",
+                "controls": ["SOC2-CC6.1", "ISO27001-A.5.15"],
+                "evidence": {"evidence_id": "ev-branch"},
+                "attributes": {
+                    "governance": {
+                        "available": True,
+                        "required_pull_request_reviews": {"required_approving_review_count": 2},
+                        "required_status_checks": {"contexts": ["quality", "web"]},
+                    }
+                },
+            }
+        },
+    ]
+    (lake / "bronze").mkdir(parents=True, exist_ok=True)
+    (lake / "bronze" / "raw_events.jsonl").write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_build_repository_graph_links_repo_governance_and_controls(tmp_path: Path) -> None:
+    _write_repo_bronze(tmp_path)
+    graph = build_repository_graph(tmp_path)
+    kinds = {node["kind"] for node in graph["nodes"]}
+    assert {"repository", "directory", "evidence_signal", "signal_gap", "governance_signal", "control"}.issubset(kinds)
+    edge_kinds = {edge["kind"] for edge in graph["edges"]}
+    assert {"has_evidence", "evidence_maps_control", "has_governance_signal", "requires_status_check"}.issubset(
+        edge_kinds
+    )
+    assert graph["counts"]["repository"] == 1
+
+
 def test_crosswalk_returns_self_diagonal_and_shared_dimensions() -> None:
     crosswalk = build_framework_crosswalk()
     fids = crosswalk["frameworks"]
@@ -133,9 +257,10 @@ def _get(server: ThreadingHTTPServer, path: str) -> tuple[int, dict]:
         return int(resp.status), json.loads(resp.read().decode("utf-8"))
 
 
-@pytest.mark.parametrize("path", ["/api/graph", "/api/crosswalk"])
+@pytest.mark.parametrize("path", ["/api/graph", "/api/crosswalk", "/api/repo-graph"])
 def test_graph_endpoints_return_200(tmp_path: Path, path: str) -> None:
     _bootstrap_lake(tmp_path)
+    _write_repo_bronze(tmp_path)
     server = _spin(tmp_path)
     try:
         status, body = _get(server, path)

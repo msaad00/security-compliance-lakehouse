@@ -36,14 +36,24 @@ interface GraphNodeData extends Record<string, unknown> {
 
 type FlowGraphNode = Node<GraphNodeData, "trustops-graph">;
 
-const KIND_STYLE: Record<
-  GraphNodeKind,
-  { border: string; bg: string; chip: string }
+const KIND_STYLE: Partial<
+  Record<GraphNodeKind, { border: string; bg: string; chip: string }>
 > = {
   framework: { border: "#4f7cff", bg: "#eff6ff", chip: "#1d4ed8" },
   control: { border: "#16b364", bg: "#ecfdf5", chip: "#067647" },
   evidence_type: { border: "#f79009", bg: "#fffbeb", chip: "#b54708" },
   asset: { border: "#7a35ff", bg: "#f5f0ff", chip: "#6d28d9" },
+  repository: { border: "#0ea5e9", bg: "#eff6ff", chip: "#0369a1" },
+  directory: { border: "#64748b", bg: "#f8fafc", chip: "#475569" },
+  language: { border: "#16b364", bg: "#ecfdf5", chip: "#067647" },
+  evidence_signal: { border: "#f79009", bg: "#fffbeb", chip: "#b54708" },
+  governance_signal: { border: "#2563eb", bg: "#eff6ff", chip: "#1d4ed8" },
+  signal_gap: { border: "#dc2626", bg: "#fef2f2", chip: "#b91c1c" },
+  workflow: { border: "#7c3aed", bg: "#f5f3ff", chip: "#6d28d9" },
+  dependency_manifest: { border: "#c2410c", bg: "#fff7ed", chip: "#9a3412" },
+  principal: { border: "#be123c", bg: "#fff1f2", chip: "#9f1239" },
+  team: { border: "#4338ca", bg: "#eef2ff", chip: "#3730a3" },
+  evidence: { border: "#475569", bg: "#f8fafc", chip: "#334155" },
 };
 
 function emphasisClass(emphasis: GraphNodeData["emphasis"]): string {
@@ -62,7 +72,11 @@ function emphasisClass(emphasis: GraphNodeData["emphasis"]): string {
 }
 
 function GraphNodeCard({ data, selected }: NodeProps<FlowGraphNode>) {
-  const tone = KIND_STYLE[data.kind];
+  const tone = KIND_STYLE[data.kind] ?? {
+    border: "#94a3b8",
+    bg: "#f8fafc",
+    chip: "#475569",
+  };
   return (
     <Tooltip.Root delayDuration={120}>
       <Tooltip.Trigger asChild>

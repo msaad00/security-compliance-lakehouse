@@ -21,7 +21,7 @@ from security_lakehouse.assessment import build_current_posture, write_assessmen
 from security_lakehouse.audit_log import build_audit_log
 from security_lakehouse.connector_state import append_config_event, build_catalog_view, list_runs, run_probe
 from security_lakehouse.framework_provenance import build_framework_view
-from security_lakehouse.graph import build_compliance_graph, build_framework_crosswalk
+from security_lakehouse.graph import build_compliance_graph, build_framework_crosswalk, build_repository_graph
 from security_lakehouse.io import read_jsonl
 from security_lakehouse.mappings import build_reviewed_crosswalk, load_control_article_mappings
 from security_lakehouse.readiness import build_readiness_view
@@ -147,6 +147,8 @@ def handle_get(path: str, query: Query, lake_dir: str | Path) -> tuple[HTTPStatu
         return HTTPStatus.OK, {"count": len(view), "frameworks": view}
     if path == "/api/graph":
         return HTTPStatus.OK, build_compliance_graph(lake)
+    if path == "/api/repo-graph":
+        return HTTPStatus.OK, build_repository_graph(lake)
     if path == "/api/crosswalk":
         return HTTPStatus.OK, build_framework_crosswalk()
     if path == "/api/crosswalk/reviewed":
