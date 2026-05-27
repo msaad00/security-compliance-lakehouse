@@ -324,7 +324,28 @@ export interface AuditLogEntry {
 
 // --- Compliance graph -------------------------------------------------------
 
-export type GraphNodeKind = "framework" | "control" | "evidence_type" | "asset";
+export type GraphNodeKind =
+  | "framework"
+  | "control"
+  | "evidence_type"
+  | "asset"
+  | "repository"
+  | "directory"
+  | "language"
+  | "evidence_signal"
+  | "governance_signal"
+  | "signal_gap"
+  | "workflow"
+  | "dependency_manifest"
+  | "ownership_file"
+  | "security_file"
+  | "file"
+  | "principal"
+  | "team"
+  | "review_rule"
+  | "status_check"
+  | "workflow_permission"
+  | "evidence";
 
 export type GraphEdgeKind =
   | "framework_has_control"
@@ -341,6 +362,7 @@ export interface GraphNode {
   environment?: string;
   risk_score?: number;
   event_count?: number;
+  path_count?: number;
 }
 
 export interface GraphEdge {

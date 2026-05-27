@@ -320,6 +320,14 @@ export function useComplianceGraph() {
   });
 }
 
+export function useRepositoryGraph() {
+  return useQuery({
+    queryKey: ["repo-graph"],
+    queryFn: api.repoGraph,
+    staleTime: STALE,
+  });
+}
+
 export function useCrosswalk() {
   return useQuery({
     queryKey: ["crosswalk"],
