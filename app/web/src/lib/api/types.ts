@@ -425,3 +425,45 @@ export interface FrameworkReadiness {
   stage: ReadinessStage;
   is_ready: boolean;
 }
+
+export interface RemediationTask {
+  id: string;
+  title: string;
+  description: string;
+  control_id: string | null;
+  violation_id: string | null;
+  owner: string;
+  status: "open" | "in_progress" | "blocked" | "resolved" | "dismissed";
+  priority: "low" | "medium" | "high" | "critical";
+  due_at: string | null;
+  overdue: boolean;
+  created_by: string;
+  created_at: string | null;
+  updated_at: string | null;
+  resolved_at: string | null;
+}
+
+export interface EvidenceRequestItem {
+  id: string;
+  control_id: string;
+  requested_from: string;
+  status: "open" | "fulfilled" | "cancelled";
+  note: string;
+  due_at: string | null;
+  created_by: string;
+  created_at: string | null;
+  fulfilled_at: string | null;
+}
+
+export interface ControlExceptionItem {
+  id: string;
+  control_id: string;
+  reason: string;
+  approved_by: string;
+  status: "active" | "revoked" | "expired";
+  active: boolean;
+  expires_at: string | null;
+  created_by: string;
+  created_at: string | null;
+  revoked_at: string | null;
+}
