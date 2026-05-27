@@ -6,6 +6,8 @@ import type {
   AuthMethods,
   ControlExceptionItem,
   EvidenceRequestItem,
+  PostureMetricPoint,
+  RemediationInsights,
   RemediationTask,
   AuditLogEntry,
   ComplianceGraph,
@@ -16,12 +18,15 @@ import type {
   ControlTest,
   ControlArticleMapping,
   Crosswalk,
+  EntityTag,
   FrameworkReadiness,
   FrameworkView,
   ReviewedCrosswalk,
   Health,
   NormalizedEvent,
+  SavedView,
   SnapshotResponse,
+  Tag,
   TrackingEvent,
   TriagePayload,
   TrustShare,
@@ -256,6 +261,63 @@ export const api = {
       `/audit-log${tail ? `?${tail}` : ""}`,
     );
   },
+
+  // --- Tags + saved views ---
+  listTags: () => get<{ data: Tag[] }>("/v1/tags").then((b) => b.data),
+  createTag: (payload: { name: string; color?: string }) =>
+    post<{ data: Tag }>("/v1/tags", payload).then((b) => b.data),
+  deleteTag: (tagId: string) =>
+    mutate<{ data: { id: string; deleted: boolean } }>(
+      `/v1/tags/${encodeURIComponent(tagId)}`,
+      "DELETE",
+    ).then((b) => b.data),
+  attachTag: (payload: {
+    tag_id: string;
+    entity_type: string;
+    entity_id: string;
+  }) =>
+    post<{ data: EntityTag }>("/v1/tags/attach", payload).then((b) => b.data),
+  detachTag: (payload: {
+    tag_id: string;
+    entity_type: string;
+    entity_id: string;
+  }) =>
+    post<{ data: { detached: boolean } }>("/v1/tags/detach", payload).then(
+      (b) => b.data,
+    ),
+  tagsForEntity: (entityType: string, entityId: string) =>
+    get<{ data: Tag[] }>(
+      `/v1/tags/for?entity_type=${encodeURIComponent(entityType)}&entity_id=${encodeURIComponent(entityId)}`,
+    ).then((b) => b.data),
+  listSavedViews: (surface?: string) => {
+    const qs = surface ? `?surface=${encodeURIComponent(surface)}` : "";
+    return get<{ data: SavedView[] }>(`/v1/saved-views${qs}`).then(
+      (b) => b.data,
+    );
+  },
+  createSavedView: (payload: {
+    surface: string;
+    name: string;
+    filters: Record<string, unknown>;
+  }) =>
+    post<{ data: SavedView }>("/v1/saved-views", payload).then((b) => b.data),
+  deleteSavedView: (viewId: string) =>
+    mutate<{ data: { id: string; deleted: boolean } }>(
+      `/v1/saved-views/${encodeURIComponent(viewId)}`,
+      "DELETE",
+    ).then((b) => b.data),
+  insightsTimeseries: (limit = 90) =>
+    get<{ data: PostureMetricPoint[] }>(
+      `/v1/insights/timeseries?limit=${limit}`,
+    ).then((b) => b.data),
+  insightsRemediation: () =>
+    get<{ data: RemediationInsights }>("/v1/insights/remediation").then(
+      (b) => b.data,
+    ),
+  insightsCapture: () =>
+    post<{ data: PostureMetricPoint }>("/v1/insights/capture", {}).then(
+      (b) => b.data,
+    ),
 };
 
 export interface SnapshotSummary {

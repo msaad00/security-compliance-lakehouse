@@ -44,7 +44,9 @@ from security_lakehouse.auth.saml import (
 )
 from security_lakehouse.auth.sessions import SESSION_COOKIE
 from security_lakehouse.dashboard import render_dashboard
+from security_lakehouse.db import metrics as metrics_db
 from security_lakehouse.db import migrate, remediation, repository
+from security_lakehouse.db import tags as tags_db
 from security_lakehouse.db.base import create_engine_for, session_factory
 from security_lakehouse.web import web_dist_dir, web_dist_index
 
@@ -108,6 +110,23 @@ class CreateExceptionRequest(BaseModel):
     reason: str = ""
     approved_by: str = ""
     expires_at: str | None = None
+
+
+class CreateTagRequest(BaseModel):
+    name: str
+    color: str = ""
+
+
+class AttachTagRequest(BaseModel):
+    tag_id: str
+    entity_type: str
+    entity_id: str
+
+
+class CreateSavedViewRequest(BaseModel):
+    surface: str
+    name: str
+    filters: dict = {}
 
 
 def _parse_dt(value: str | None) -> datetime | None:
@@ -619,6 +638,180 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="exception not found or not active")
         session.commit()
         return JSONResponse(api_v1.envelope("remediation.exceptions", remediation.exception_to_dict(revoked)))
+
+    # --- tags ---
+    @app.get("/api/v1/tags")
+    def list_tags(identity: Identity = Depends(_require_read), session: Session = Depends(get_session)) -> JSONResponse:
+        rows = tags_db.list_tags(session, tenant_id=identity.tenant_id)
+        data = [tags_db.tag_to_dict(t) for t in rows]
+        return JSONResponse(api_v1.envelope("tags", _redact_payload(data, identity), meta={"count": len(data)}))
+
+    @app.post("/api/v1/tags", status_code=status.HTTP_201_CREATED)
+    def create_tag(
+        body: CreateTagRequest,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            tag = tags_db.create_tag(session, tenant_id=identity.tenant_id, name=body.name, color=body.color)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        session.commit()
+        return JSONResponse(api_v1.envelope("tags", tags_db.tag_to_dict(tag)), status_code=status.HTTP_201_CREATED)
+
+    @app.delete("/api/v1/tags/{tag_id}")
+    def delete_tag(
+        tag_id: str,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        deleted = tags_db.delete_tag(session, tenant_id=identity.tenant_id, tag_id=tag_id)
+        if not deleted:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="tag not found")
+        session.commit()
+        return JSONResponse(api_v1.envelope("tags", {"id": tag_id, "deleted": True}))
+
+    @app.post("/api/v1/tags/attach", status_code=status.HTTP_201_CREATED)
+    def attach_tag(
+        body: AttachTagRequest,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            et = tags_db.attach_tag(
+                session,
+                tenant_id=identity.tenant_id,
+                tag_id=body.tag_id,
+                entity_type=body.entity_type,
+                entity_id=body.entity_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope("tags.attach", tags_db.entity_tag_to_dict(et)), status_code=status.HTTP_201_CREATED
+        )
+
+    @app.post("/api/v1/tags/detach")
+    def detach_tag(
+        body: AttachTagRequest,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            removed = tags_db.detach_tag(
+                session,
+                tenant_id=identity.tenant_id,
+                tag_id=body.tag_id,
+                entity_type=body.entity_type,
+                entity_id=body.entity_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if not removed:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="association not found")
+        session.commit()
+        return JSONResponse(api_v1.envelope("tags.detach", {"detached": True}))
+
+    @app.get("/api/v1/tags/for")
+    def tags_for_entity(
+        request: Request,
+        identity: Identity = Depends(_require_read),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        params = _params(request)
+        entity_type = (params.get("entity_type") or [None])[0]
+        entity_id = (params.get("entity_id") or [None])[0]
+        if not entity_type or not entity_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="entity_type and entity_id are required"
+            )
+        rows = tags_db.tags_for_entity(
+            session, tenant_id=identity.tenant_id, entity_type=entity_type, entity_id=entity_id
+        )
+        data = [tags_db.tag_to_dict(t) for t in rows]
+        return JSONResponse(api_v1.envelope("tags.for", data, meta={"count": len(data)}))
+
+    # --- saved views ---
+    @app.get("/api/v1/saved-views")
+    def list_saved_views(
+        request: Request,
+        identity: Identity = Depends(_require_read),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        surface = (_params(request).get("surface") or [None])[0]
+        rows = tags_db.list_saved_views(session, tenant_id=identity.tenant_id, surface=surface)
+        data = [tags_db.saved_view_to_dict(v) for v in rows]
+        return JSONResponse(api_v1.envelope("saved_views", _redact_payload(data, identity), meta={"count": len(data)}))
+
+    @app.post("/api/v1/saved-views", status_code=status.HTTP_201_CREATED)
+    def create_saved_view(
+        body: CreateSavedViewRequest,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            view = tags_db.create_saved_view(
+                session,
+                tenant_id=identity.tenant_id,
+                surface=body.surface,
+                name=body.name,
+                filters=body.filters,
+                created_by=identity.email,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope("saved_views", tags_db.saved_view_to_dict(view)), status_code=status.HTTP_201_CREATED
+        )
+
+    @app.delete("/api/v1/saved-views/{view_id}")
+    def delete_saved_view(
+        view_id: str,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        deleted = tags_db.delete_saved_view(session, tenant_id=identity.tenant_id, view_id=view_id)
+        if not deleted:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="saved view not found")
+        session.commit()
+        return JSONResponse(api_v1.envelope("saved_views", {"id": view_id, "deleted": True}))
+
+    # --- metrics & insights ---
+    @app.get("/api/v1/insights/timeseries")
+    def insights_timeseries(
+        request: Request,
+        identity: Identity = Depends(_require_read),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        raw_limit = (_params(request).get("limit") or [None])[0]
+        limit = int(raw_limit) if raw_limit and raw_limit.isdigit() else 90
+        points = metrics_db.list_metric_points(session, tenant_id=identity.tenant_id, limit=limit)
+        rows = [metrics_db.metric_point_to_dict(p) for p in points]
+        return JSONResponse(
+            api_v1.envelope("insights.timeseries", _redact_payload(rows, identity), meta={"count": len(rows)})
+        )
+
+    @app.get("/api/v1/insights/remediation")
+    def insights_remediation(
+        identity: Identity = Depends(_require_read),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        data = metrics_db.remediation_insights(session, tenant_id=identity.tenant_id)
+        return JSONResponse(api_v1.envelope("insights.remediation", _redact_payload(data, identity)))
+
+    @app.post("/api/v1/insights/capture", status_code=status.HTTP_201_CREATED)
+    def insights_capture(
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        point = metrics_db.capture_metric_point(session, tenant_id=identity.tenant_id, lake_dir=lake)
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope("insights.timeseries", metrics_db.metric_point_to_dict(point)),
+            status_code=status.HTTP_201_CREATED,
+        )
 
     # --- versioned data surface (authenticated) ---
     @app.get("/api/v1/{rest:path}")
