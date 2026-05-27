@@ -137,7 +137,7 @@ def test_dashboard_render_tolerates_empty_lake(tmp_path: Path) -> None:
     empty_lake.mkdir()
     out = render_dashboard(empty_lake, tmp_path / "empty.html")
     html = out.read_text(encoding="utf-8")
-    assert "Assessment workbench" in html
+    assert "Trust Home" in html
     assert "TrustOps" in html
 
 
@@ -148,9 +148,9 @@ def test_dashboard_render_uses_gold_data(tmp_path: Path) -> None:
 
     html = output.read_text(encoding="utf-8")
     # Either the React single-file export (when web/dist/ is packaged) or the
-    # offline fallback packet must surface the workbench heading and embed the
+    # offline fallback packet must surface the Trust Home heading and embed the
     # current assessment payload for the auditor downstream of the export.
-    assert "Assessment workbench" in html
+    assert "Trust Home" in html
     assert "TrustOps" in html
     assert "SOC2-CC6.1" in html
     assert "container:rag-api@sha256:91ab" in html
