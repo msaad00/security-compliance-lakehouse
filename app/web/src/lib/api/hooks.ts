@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -636,4 +637,28 @@ export function useCaptureMetricMutation() {
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["insights", "timeseries"] }),
   });
+}
+
+// Continuous-eval: push posture updates via SSE into the query cache so the
+// console is live (poll stays as the fallback when EventSource is unavailable).
+export function usePostureStream(): { connected: boolean } {
+  const qc = useQueryClient();
+  const [connected, setConnected] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof EventSource === "undefined")
+      return;
+    const es = new EventSource("/api/v1/stream", { withCredentials: true });
+    es.addEventListener("posture", (event) => {
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as Assessment;
+        qc.setQueryData(["posture", "current"], data);
+      } catch {
+        /* ignore malformed frame */
+      }
+    });
+    es.onopen = () => setConnected(true);
+    es.onerror = () => setConnected(false);
+    return () => es.close();
+  }, [qc]);
+  return { connected };
 }
