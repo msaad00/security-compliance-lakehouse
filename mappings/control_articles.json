@@ -60,6 +60,62 @@
       ]
     },
     {
+      "control_id": "NIST-AI-RMF-GOVERN-1.1",
+      "framework_id": "nist-ai-rmf",
+      "articles": [
+        {
+          "article_id": "GOVERN-1.1",
+          "title": "Legal, regulatory, and policy requirements are understood",
+          "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "Reviewed mapping to NIST AI RMF 1.0 GOVERN-1.1 for documenting applicable legal, regulatory, and policy context for AI risk management."
+        }
+      ]
+    },
+    {
+      "control_id": "NIST-AI-RMF-GOVERN-1.6",
+      "framework_id": "nist-ai-rmf",
+      "articles": [
+        {
+          "article_id": "GOVERN-1.6",
+          "title": "AI system inventory and risk prioritization are defined",
+          "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "Reviewed mapping to NIST AI RMF 1.0 GOVERN-1.6 for maintaining AI system inventory context and risk prioritization evidence."
+        }
+      ]
+    },
+    {
+      "control_id": "NIST-AI-RMF-MEASURE-2.4",
+      "framework_id": "nist-ai-rmf",
+      "articles": [
+        {
+          "article_id": "MEASURE-2.4",
+          "title": "AI system monitoring and measurement are performed",
+          "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "Reviewed mapping to NIST AI RMF 1.0 MEASURE-2.4 for ongoing measurement and monitoring evidence over AI system behavior."
+        }
+      ]
+    },
+    {
+      "control_id": "NIST-AI-RMF-MANAGE-4.3",
+      "framework_id": "nist-ai-rmf",
+      "articles": [
+        {
+          "article_id": "MANAGE-4.3",
+          "title": "AI incidents, errors, and risks are managed",
+          "official_source_url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "Reviewed mapping to NIST AI RMF 1.0 MANAGE-4.3 for tracking AI incidents, errors, risk responses, and communication evidence."
+        }
+      ]
+    },
+    {
       "control_id": "ISO27001-A.5.15",
       "framework_id": "iso-27001-2022",
       "articles": [
@@ -140,6 +196,48 @@
           "reviewed_by": "internal-trust-team",
           "reviewed_at": "2026-05-24T00:00:00Z",
           "rationale": "45 CFR §164.312(e) — Guard against unauthorized access to ePHI transmitted over an electronic communications network."
+        }
+      ]
+    },
+    {
+      "control_id": "HIPAA-164.308(a)(1)(ii)(A)",
+      "framework_id": "hipaa-security-rule",
+      "articles": [
+        {
+          "article_id": "164.308(a)(1)(ii)(A)",
+          "title": "Risk analysis",
+          "official_source_url": "https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C/section-164.308",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "45 CFR §164.308(a)(1)(ii)(A) is mapped for risk-analysis evidence over electronic-PHI systems."
+        }
+      ]
+    },
+    {
+      "control_id": "HIPAA-164.308(a)(1)(ii)(B)",
+      "framework_id": "hipaa-security-rule",
+      "articles": [
+        {
+          "article_id": "164.308(a)(1)(ii)(B)",
+          "title": "Risk management",
+          "official_source_url": "https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C/section-164.308",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "45 CFR §164.308(a)(1)(ii)(B) is mapped for remediation and risk-reduction evidence after ePHI risks are identified."
+        }
+      ]
+    },
+    {
+      "control_id": "HIPAA-164.312(a)(2)(iv)",
+      "framework_id": "hipaa-security-rule",
+      "articles": [
+        {
+          "article_id": "164.312(a)(2)(iv)",
+          "title": "Encryption and decryption",
+          "official_source_url": "https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C/section-164.312",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "45 CFR §164.312(a)(2)(iv) is mapped for encryption and decryption evidence over electronic-PHI systems."
         }
       ]
     },
@@ -228,6 +326,48 @@
       ]
     },
     {
+      "control_id": "GDPR-Art.25",
+      "framework_id": "gdpr-2016-679",
+      "articles": [
+        {
+          "article_id": "Art.25",
+          "title": "Data protection by design and by default",
+          "official_source_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "GDPR Article 25 is mapped for evidence that privacy controls and default settings are designed into personal-data systems."
+        }
+      ]
+    },
+    {
+      "control_id": "GDPR-Art.28",
+      "framework_id": "gdpr-2016-679",
+      "articles": [
+        {
+          "article_id": "Art.28",
+          "title": "Processor",
+          "official_source_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "GDPR Article 28 is mapped for processor inventory, agreement, and vendor-review evidence for personal-data processing."
+        }
+      ]
+    },
+    {
+      "control_id": "GDPR-Art.35",
+      "framework_id": "gdpr-2016-679",
+      "articles": [
+        {
+          "article_id": "Art.35",
+          "title": "Data protection impact assessment",
+          "official_source_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "GDPR Article 35 is mapped for DPIA evidence over high-risk processing activities and related remediation findings."
+        }
+      ]
+    },
+    {
       "control_id": "EU-AI-ACT-Art.9",
       "framework_id": "eu-ai-act-2024-1689",
       "articles": [
@@ -266,6 +406,48 @@
           "reviewed_by": "internal-trust-team",
           "reviewed_at": "2026-05-24T00:00:00Z",
           "rationale": "EU AI Act Art. 12 — High-risk AI systems shall technically allow automatic recording of events (logs) over the lifetime of the system."
+        }
+      ]
+    },
+    {
+      "control_id": "EU-AI-ACT-Art.13",
+      "framework_id": "eu-ai-act-2024-1689",
+      "articles": [
+        {
+          "article_id": "Art.13",
+          "title": "Transparency and provision of information to deployers",
+          "official_source_url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "EU AI Act Article 13 is mapped for instructions, intended-use, limitation, and transparency evidence for high-risk AI systems."
+        }
+      ]
+    },
+    {
+      "control_id": "EU-AI-ACT-Art.14",
+      "framework_id": "eu-ai-act-2024-1689",
+      "articles": [
+        {
+          "article_id": "Art.14",
+          "title": "Human oversight",
+          "official_source_url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "EU AI Act Article 14 is mapped for human oversight, escalation, and operator-review evidence for high-risk AI systems."
+        }
+      ]
+    },
+    {
+      "control_id": "EU-AI-ACT-Art.15",
+      "framework_id": "eu-ai-act-2024-1689",
+      "articles": [
+        {
+          "article_id": "Art.15",
+          "title": "Accuracy, robustness and cybersecurity",
+          "official_source_url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
+          "reviewed_by": "internal-trust-team",
+          "reviewed_at": "2026-05-26T00:00:00Z",
+          "rationale": "EU AI Act Article 15 is mapped for model evaluation, robustness, cybersecurity, and runtime-monitoring evidence."
         }
       ]
     },
