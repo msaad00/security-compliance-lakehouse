@@ -144,7 +144,7 @@ jobs:
       - name: Render dashboard
         run: uv run security-lakehouse dashboard --lake build/lakehouse --out build/dashboard/index.html
       - name: Verify dashboard artifact
-        run: test -s build/dashboard/index.html && grep -q "Assessment workbench" build/dashboard/index.html
+        run: test -s build/dashboard/index.html && grep -q "Trust Home" build/dashboard/index.html
       - name: Run live API smoke
         run: uv run python tools/api_smoke.py
       - name: Run tests

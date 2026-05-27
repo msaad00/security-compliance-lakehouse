@@ -144,7 +144,7 @@ def _fallback_html(app_data: dict[str, Any]) -> str:
     """Minimal HTML packet used when the React bundle is not packaged.
 
     Contains the same data payload so the file is still grep-able and the
-    `Verify dashboard artifact` CI step keeps passing.
+    dashboard artifact CI step keeps passing.
     """
     payload = html.escape(json.dumps(app_data, sort_keys=True, default=str), quote=False)
     posture = app_data.get("posture", {}).get("posture", {})
@@ -158,7 +158,7 @@ _FALLBACK_TEMPLATE = """<!doctype html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TrustOps Assessment workbench (offline export)</title>
+  <title>TrustOps Trust Home (offline export)</title>
   <style>
     body{{font-family:Inter,system-ui,sans-serif;margin:0;background:#0b1218;color:#f8fafc}}
     main{{max-width:760px;margin:64px auto;padding:32px;background:#fff;color:#101623;border-radius:16px;box-shadow:0 24px 65px rgba(2,6,23,.22)}}
@@ -172,7 +172,7 @@ _FALLBACK_TEMPLATE = """<!doctype html>
 <script id="app-data" type="application/json">{payload}</script>
 <main>
   <div class="pill">offline evidence packet</div>
-  <h1>Assessment workbench</h1>
+  <h1>Trust Home</h1>
   <p>This file ships a frozen assessment payload for offline review. The full interactive workbench is available by running:</p>
   <code>security-lakehouse serve --lake build/lakehouse</code>
   <p>The packet below holds the posture, controls, evidence, and snapshots for the lake this export was built from.</p>
