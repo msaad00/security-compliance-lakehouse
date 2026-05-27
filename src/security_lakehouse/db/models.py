@@ -236,3 +236,87 @@ class ControlException(Base):
         if self.status != "active" or self.revoked_at is not None:
             return False
         return self.expires_at is None or _as_aware(self.expires_at) > (now or _utcnow())
+
+
+# ---------------------------------------------------------------------------
+# Tags + saved views (cross-entity labelling and filter persistence)
+# ---------------------------------------------------------------------------
+
+
+class Tag(Base):
+    """A tenant-scoped label that can be attached to any entity type."""
+
+    __tablename__ = "tags"
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_tags_tenant_name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    color: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+
+
+class EntityTag(Base):
+    """A many-to-many join between a tag and any entity (control, violation, task...)."""
+
+    __tablename__ = "entity_tags"
+    __table_args__ = (UniqueConstraint("tag_id", "entity_type", "entity_id", name="uq_entity_tags_tag_entity"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    tag_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tags.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    entity_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+
+
+class SavedView(Base):
+    """A named, persisted filter set for a UI surface."""
+
+    __tablename__ = "saved_views"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    surface: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    filters: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+
+
+class PostureMetricPoint(Base):
+    """A time-series snapshot of tenant posture captured at a point in time.
+
+    Rows are append-only; derived aggregates (MTTR, SLA attainment) are
+    computed at read time from ``remediation_tasks`` rather than stored here.
+    """
+
+    __tablename__ = "posture_metric_points"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_utcnow, index=True)
+    posture_score: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    control_pass_rate: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    open_violations: Mapped[int] = mapped_column(nullable=False, default=0)
+    critical_violations: Mapped[int] = mapped_column(nullable=False, default=0)
+    stale_controls: Mapped[int] = mapped_column(nullable=False, default=0)
+    evidence_fresh_pct: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    remediation_open: Mapped[int] = mapped_column(nullable=False, default=0)
+    remediation_overdue: Mapped[int] = mapped_column(nullable=False, default=0)

@@ -489,3 +489,80 @@ export interface ControlExceptionItem {
   created_at: string | null;
   revoked_at: string | null;
 }
+
+// --- Tags + saved views -----------------------------------------------------
+
+export interface Tag {
+  id: string;
+  tenant_id: string;
+  name: string;
+  color: string;
+  created_at: string | null;
+}
+
+export interface EntityTag {
+  id: string;
+  tenant_id: string;
+  tag_id: string;
+  entity_type: string;
+  entity_id: string;
+  created_at: string | null;
+}
+
+export interface SavedView {
+  id: string;
+  tenant_id: string;
+  surface: string;
+  name: string;
+  filters: Record<string, unknown>;
+  created_by: string;
+  created_at: string | null;
+}
+
+export interface PostureMetricPoint {
+  id: string;
+  tenant_id: string;
+  captured_at: string;
+  posture_score: number;
+  control_pass_rate: number;
+  open_violations: number;
+  critical_violations: number;
+  stale_controls: number;
+  evidence_fresh_pct: number;
+  remediation_open: number;
+  remediation_overdue: number;
+}
+
+export interface RemediationInsights {
+  open: number;
+  overdue: number;
+  mttr_hours: number | null;
+  sla_attainment_pct: number | null;
+  resolved_count: number;
+  sla_eligible_count: number;
+}
+
+// --- Metrics & insights (populated by migration 0006_metrics) ---------------
+
+export interface PostureMetricPoint {
+  id: string;
+  tenant_id: string;
+  captured_at: string;
+  posture_score: number;
+  control_pass_rate: number;
+  open_violations: number;
+  critical_violations: number;
+  stale_controls: number;
+  evidence_fresh_pct: number;
+  remediation_open: number;
+  remediation_overdue: number;
+}
+
+export interface RemediationInsights {
+  open: number;
+  overdue: number;
+  mttr_hours: number | null;
+  sla_attainment_pct: number | null;
+  resolved_count: number;
+  sla_eligible_count: number;
+}

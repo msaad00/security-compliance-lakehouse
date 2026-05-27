@@ -12,6 +12,7 @@ import {
   FileSearch,
   Layers,
   LayoutDashboard,
+  LineChart,
   ListChecks,
   Network,
   Plug,
@@ -55,6 +56,7 @@ const ITEMS: RailItem[] = [
   { href: "/evidence", label: "Evidence", Icon: FileSearch, group: "Operate" },
   { href: "/automation", label: "Workflows", Icon: Zap, group: "Operate" },
   { href: "/graph", label: "Graph", Icon: Network, group: "Operate" },
+  { href: "/insights", label: "Insights", Icon: LineChart, group: "Operate" },
   { href: "/audit-log", label: "Audit log", Icon: Activity, group: "Operate" },
   { href: "/connectors", label: "Connectors", Icon: Plug, group: "Configure" },
   {
