@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutTemplate, X } from "lucide-react";
+import { ArrowRight, Cpu, GitFork, LayoutTemplate, X, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -9,6 +9,69 @@ import {
   WORKFLOW_TEMPLATES,
   type WorkflowTemplate,
 } from "@/lib/workflow/templates";
+import { cn } from "@/lib/utils";
+import type { ActionKind } from "@/lib/api/types";
+
+// ---------------------------------------------------------------------------
+// Mini node chip for the template flow preview
+// ---------------------------------------------------------------------------
+
+const KIND_CHIP: Record<
+  ActionKind,
+  { bg: string; fg: string; Icon: React.ElementType }
+> = {
+  trigger: { bg: "bg-blue-50", fg: "text-blue-700", Icon: Zap },
+  check: { bg: "bg-amber-50", fg: "text-amber-700", Icon: GitFork },
+  action: { bg: "bg-emerald-50", fg: "text-emerald-700", Icon: Cpu },
+};
+
+function guessKind(node_type: string): ActionKind {
+  if (node_type.startsWith("trigger.")) return "trigger";
+  if (node_type.startsWith("check.")) return "check";
+  return "action";
+}
+
+function FlowPreview({ template }: { template: WorkflowTemplate }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {template.nodes.map((node, idx) => {
+        const kind = guessKind(node.node_type);
+        const chip = KIND_CHIP[kind];
+        const Icon = chip.Icon;
+        const edgeAfter = template.edges.find((e) => e.source === node.id);
+        return (
+          <span key={node.id} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black",
+                chip.bg,
+                chip.fg,
+                "border-transparent",
+              )}
+            >
+              <Icon className="h-2.5 w-2.5" aria-hidden />
+              {node.node_type.split(".").slice(1).join(".")}
+            </span>
+            {idx < template.nodes.length - 1 && edgeAfter && (
+              <span className="flex items-center gap-0.5 text-[9px] text-muted">
+                <ArrowRight className="h-3 w-3" />
+                {edgeAfter.condition && edgeAfter.condition !== "always" && (
+                  <span className="rounded bg-slate-100 px-1 py-px font-mono">
+                    {edgeAfter.condition}
+                  </span>
+                )}
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Props + component
+// ---------------------------------------------------------------------------
 
 interface Props {
   open: boolean;
@@ -28,11 +91,11 @@ export function TemplateGallery({ open, onClose, onPick }: Props) {
       open={open}
       onOpenChange={(o) => !o && onClose()}
       title="Workflow templates"
-      description="Start from a vetted story instead of an empty canvas. Each template is editable after you load it."
+      description="Start from a vetted story instead of an empty canvas. Each template is fully editable after loading."
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button variant="default" onClick={onClose}>
-            <X className="h-4 w-4" /> Close
+            <X className="h-4 w-4" /> Cancel
           </Button>
           {active && (
             <Button
@@ -50,54 +113,71 @@ export function TemplateGallery({ open, onClose, onPick }: Props) {
       }
     >
       <div className="grid grid-cols-[200px_minmax(0,1fr)] gap-3">
-        <div className="grid gap-1.5">
+        {/* Sidebar list */}
+        <nav aria-label="Template list" className="grid gap-1.5">
           {WORKFLOW_TEMPLATES.map((template) => (
             <button
               key={template.id}
               type="button"
               onClick={() => setSelected(template.id)}
-              className={[
+              className={cn(
                 "rounded-lg border px-3 py-2 text-left text-xs font-extrabold transition-colors",
                 template.id === selected
                   ? "border-ink bg-ink text-white"
                   : "border-line bg-white text-ink hover:border-brand",
-              ].join(" ")}
+              )}
             >
               {template.name}
             </button>
           ))}
-        </div>
+        </nav>
+
+        {/* Detail panel */}
         {active && (
-          <div className="grid gap-3 rounded-xl border border-line bg-slate-50/60 p-3 text-sm">
+          <div className="grid gap-4 rounded-xl border border-line bg-slate-50/60 p-4 text-sm">
             <div>
               <div className="text-xs font-black uppercase tracking-wide text-muted">
                 Name
               </div>
-              <div className="font-black text-ink">{active.name}</div>
+              <div className="mt-0.5 font-black text-ink">{active.name}</div>
             </div>
+
             <div>
               <div className="text-xs font-black uppercase tracking-wide text-muted">
                 Description
               </div>
-              <div className="text-ink">{active.description}</div>
+              <div className="mt-0.5 text-xs text-ink">
+                {active.description}
+              </div>
             </div>
+
             <div className="flex flex-wrap gap-1.5">
               {active.tags.map((tag) => (
                 <Badge key={tag}>{tag}</Badge>
               ))}
             </div>
+
             <div>
-              <div className="text-xs font-black uppercase tracking-wide text-muted">
+              <div className="mb-2 text-xs font-black uppercase tracking-wide text-muted">
+                Flow preview
+              </div>
+              <div className="rounded-lg border border-line bg-white p-3">
+                <FlowPreview template={active} />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1.5 text-xs font-black uppercase tracking-wide text-muted">
                 Composition
               </div>
-              <div className="mt-1 grid gap-1 font-mono text-[11px] text-ink">
+              <div className="grid gap-1 font-mono text-[11px] text-ink">
                 {active.nodes.map((node) => (
                   <div
                     key={node.id}
                     className="rounded border border-line bg-white px-2 py-1"
                   >
-                    <span className="text-muted">{node.id}</span> →{" "}
-                    {node.node_type}
+                    <span className="text-muted">{node.id}</span>{" "}
+                    <span className="text-muted">&rarr;</span> {node.node_type}
                   </div>
                 ))}
                 {active.edges.map((edge, idx) => (
@@ -105,8 +185,8 @@ export function TemplateGallery({ open, onClose, onPick }: Props) {
                     key={idx}
                     className="rounded border border-line bg-white px-2 py-1 text-muted"
                   >
-                    {edge.source} ──{edge.condition ?? "always"}──▶{" "}
-                    {edge.target}
+                    {edge.source} &mdash;{edge.condition ?? "always"}
+                    &mdash;&rarr; {edge.target}
                   </div>
                 ))}
               </div>
