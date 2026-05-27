@@ -265,6 +265,10 @@ def _parser() -> argparse.ArgumentParser:
     policy_rules = policy_sub.add_parser("rules", help="list the built-in named rules")
     policy_rules.set_defaults(func=_policy_rules)
 
+    openapi = sub.add_parser("openapi", help="export the server-mode OpenAPI schema (requires the 'server' extra)")
+    openapi.add_argument("--out", default=None, help="write JSON to this path (default stdout)")
+    openapi.set_defaults(func=_openapi)
+
     return parser
 
 
@@ -765,6 +769,26 @@ def _policy_rules(args: argparse.Namespace) -> int:
     from security_lakehouse.policy import NAMED_RULES
 
     print(json.dumps(NAMED_RULES, indent=2, sort_keys=True))
+    return 0
+
+
+def _openapi(args: argparse.Namespace) -> int:
+    import tempfile
+
+    try:
+        from security_lakehouse.server_app import create_app
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "the openapi command requires the 'server' extra: pip install 'trustops-security-data-lake[server]'"
+        ) from exc
+    with tempfile.TemporaryDirectory() as tmp:
+        spec = create_app(tmp, require_auth=False).openapi()
+    text = json.dumps(spec, indent=2, sort_keys=True)
+    if args.out:
+        Path(args.out).write_text(text + "\n", encoding="utf-8")
+        print(f"wrote OpenAPI schema ({len(spec.get('paths', {}))} paths): {args.out}")
+    else:
+        print(text)
     return 0
 
 
