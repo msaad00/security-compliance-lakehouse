@@ -44,7 +44,7 @@ from security_lakehouse.auth.saml import (
 )
 from security_lakehouse.auth.sessions import SESSION_COOKIE
 from security_lakehouse.dashboard import render_dashboard
-from security_lakehouse.db import migrate, repository
+from security_lakehouse.db import migrate, remediation, repository
 from security_lakehouse.db.base import create_engine_for, session_factory
 from security_lakehouse.web import web_dist_dir, web_dist_index
 
@@ -59,8 +59,11 @@ _LEGACY_ERROR_REASONS = {
 
 # Scope dependencies are built once (module-level) and reused as route defaults.
 _require_read = require_scope("read")
+_require_write = require_scope("write")
 _require_snapshot = require_scope("snapshot")
 _require_admin = require_scope("auth_admin")
+_require_evidence_request = require_scope("evidence_request")
+_require_control_manage = require_scope("control_manage")
 _REDACTED_FIELDS = {"owner", "asset_owner", "actor", "assignee", "note", "credentials"}
 
 
@@ -68,6 +71,52 @@ class CreateKeyRequest(BaseModel):
     user_email: str
     name: str = ""
     expires_in_days: int | None = None
+
+
+class CreateTaskRequest(BaseModel):
+    title: str
+    description: str = ""
+    control_id: str | None = None
+    violation_id: str | None = None
+    owner: str = ""
+    priority: str = "medium"
+    due_at: str | None = None
+
+
+class UpdateTaskRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    owner: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    due_at: str | None = None
+
+
+class CreateEvidenceRequestRequest(BaseModel):
+    control_id: str
+    requested_from: str = ""
+    note: str = ""
+    due_at: str | None = None
+
+
+class EvidenceRequestStatusRequest(BaseModel):
+    status: str
+
+
+class CreateExceptionRequest(BaseModel):
+    control_id: str
+    reason: str = ""
+    approved_by: str = ""
+    expires_at: str | None = None
+
+
+def _parse_dt(value: str | None) -> datetime | None:
+    if value is None or value == "":
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"invalid datetime: {value!r}") from exc
 
 
 def _params(request: Request) -> dict[str, list[str]]:
@@ -391,6 +440,185 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="key not found or already revoked")
         session.commit()
         return JSONResponse(api_v1.envelope("auth.keys", {"id": key_id, "revoked": True}))
+
+    # --- remediation workflow (tasks, evidence requests, exceptions) ---
+    @app.get("/api/v1/remediation/tasks")
+    def list_tasks(
+        request: Request, identity: Identity = Depends(_require_read), session: Session = Depends(get_session)
+    ) -> JSONResponse:
+        params = _params(request)
+        overdue_raw = (params.get("overdue") or [None])[0]
+        overdue = None if overdue_raw is None else overdue_raw.lower() in {"1", "true", "yes"}
+        tasks = remediation.list_tasks(
+            session,
+            tenant_id=identity.tenant_id,
+            status=(params.get("status") or [None])[0],
+            owner=(params.get("owner") or [None])[0],
+            overdue=overdue,
+        )
+        rows = [remediation.task_to_dict(task) for task in tasks]
+        return JSONResponse(
+            api_v1.envelope("remediation.tasks", _redact_payload(rows, identity), meta={"count": len(rows)})
+        )
+
+    @app.post("/api/v1/remediation/tasks", status_code=status.HTTP_201_CREATED)
+    def create_task(
+        body: CreateTaskRequest, identity: Identity = Depends(_require_write), session: Session = Depends(get_session)
+    ) -> JSONResponse:
+        try:
+            task = remediation.create_task(
+                session,
+                tenant_id=identity.tenant_id,
+                title=body.title,
+                description=body.description,
+                control_id=body.control_id,
+                violation_id=body.violation_id,
+                owner=body.owner,
+                priority=body.priority,
+                due_at=_parse_dt(body.due_at),
+                created_by=identity.email,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope("remediation.tasks", remediation.task_to_dict(task)), status_code=status.HTTP_201_CREATED
+        )
+
+    @app.get("/api/v1/remediation/tasks/{task_id}")
+    def get_task(
+        task_id: str, identity: Identity = Depends(_require_read), session: Session = Depends(get_session)
+    ) -> JSONResponse:
+        task = remediation.get_task(session, tenant_id=identity.tenant_id, task_id=task_id)
+        if task is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="task not found")
+        return JSONResponse(
+            api_v1.envelope("remediation.tasks", _redact_payload(remediation.task_to_dict(task), identity))
+        )
+
+    @app.patch("/api/v1/remediation/tasks/{task_id}")
+    def update_task(
+        task_id: str,
+        body: UpdateTaskRequest,
+        identity: Identity = Depends(_require_write),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        changes = body.model_dump(exclude_unset=True)
+        if "due_at" in changes:
+            changes["due_at"] = _parse_dt(changes["due_at"])
+        try:
+            task = remediation.update_task(session, tenant_id=identity.tenant_id, task_id=task_id, changes=changes)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if task is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="task not found")
+        session.commit()
+        return JSONResponse(api_v1.envelope("remediation.tasks", remediation.task_to_dict(task)))
+
+    @app.get("/api/v1/remediation/evidence-requests")
+    def list_evidence_requests(
+        request: Request, identity: Identity = Depends(_require_read), session: Session = Depends(get_session)
+    ) -> JSONResponse:
+        rows = remediation.list_evidence_requests(
+            session, tenant_id=identity.tenant_id, status=(_params(request).get("status") or [None])[0]
+        )
+        data = [remediation.evidence_request_to_dict(row) for row in rows]
+        return JSONResponse(
+            api_v1.envelope("remediation.evidence_requests", _redact_payload(data, identity), meta={"count": len(data)})
+        )
+
+    @app.post("/api/v1/remediation/evidence-requests", status_code=status.HTTP_201_CREATED)
+    def create_evidence_request(
+        body: CreateEvidenceRequestRequest,
+        identity: Identity = Depends(_require_evidence_request),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            req = remediation.create_evidence_request(
+                session,
+                tenant_id=identity.tenant_id,
+                control_id=body.control_id,
+                requested_from=body.requested_from,
+                note=body.note,
+                due_at=_parse_dt(body.due_at),
+                created_by=identity.email,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope("remediation.evidence_requests", remediation.evidence_request_to_dict(req)),
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    @app.patch("/api/v1/remediation/evidence-requests/{request_id}")
+    def update_evidence_request(
+        request_id: str,
+        body: EvidenceRequestStatusRequest,
+        identity: Identity = Depends(_require_evidence_request),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            req = remediation.set_evidence_request_status(
+                session, tenant_id=identity.tenant_id, request_id=request_id, status=body.status
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if req is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="evidence request not found")
+        session.commit()
+        return JSONResponse(api_v1.envelope("remediation.evidence_requests", remediation.evidence_request_to_dict(req)))
+
+    @app.get("/api/v1/remediation/exceptions")
+    def list_exceptions(
+        request: Request, identity: Identity = Depends(_require_read), session: Session = Depends(get_session)
+    ) -> JSONResponse:
+        active_raw = (_params(request).get("active") or [None])[0]
+        rows = remediation.list_exceptions(
+            session,
+            tenant_id=identity.tenant_id,
+            active_only=bool(active_raw and active_raw.lower() in {"1", "true", "yes"}),
+        )
+        data = [remediation.exception_to_dict(row) for row in rows]
+        return JSONResponse(
+            api_v1.envelope("remediation.exceptions", _redact_payload(data, identity), meta={"count": len(data)})
+        )
+
+    @app.post("/api/v1/remediation/exceptions", status_code=status.HTTP_201_CREATED)
+    def create_exception(
+        body: CreateExceptionRequest,
+        identity: Identity = Depends(_require_control_manage),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        try:
+            exc_row = remediation.create_exception(
+                session,
+                tenant_id=identity.tenant_id,
+                control_id=body.control_id,
+                reason=body.reason,
+                approved_by=body.approved_by or identity.email,
+                expires_at=_parse_dt(body.expires_at),
+                created_by=identity.email,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        session.commit()
+        return JSONResponse(
+            api_v1.envelope("remediation.exceptions", remediation.exception_to_dict(exc_row)),
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    @app.delete("/api/v1/remediation/exceptions/{exception_id}")
+    def revoke_exception(
+        exception_id: str,
+        identity: Identity = Depends(_require_control_manage),
+        session: Session = Depends(get_session),
+    ) -> JSONResponse:
+        revoked = remediation.revoke_exception(session, tenant_id=identity.tenant_id, exception_id=exception_id)
+        if revoked is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="exception not found or not active")
+        session.commit()
+        return JSONResponse(api_v1.envelope("remediation.exceptions", remediation.exception_to_dict(revoked)))
 
     # --- versioned data surface (authenticated) ---
     @app.get("/api/v1/{rest:path}")
