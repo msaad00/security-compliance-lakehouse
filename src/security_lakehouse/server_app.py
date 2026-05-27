@@ -15,15 +15,18 @@ Import this module only when the ``server`` extra is installed.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 import secrets
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -192,6 +195,23 @@ def _legacy_post_response(path: str, body: dict[str, object], lake: Path, identi
     return JSONResponse(payload, status_code=int(status_code))
 
 
+async def posture_event_stream(lake: Path, request: Request, *, interval: float = 10.0) -> AsyncIterator[str]:
+    """SSE frames for continuous eval: a ``posture`` event on change, else a keep-alive ping.
+
+    Stops when the client disconnects. Module-level (not a closure) so it is unit-testable.
+    """
+    last = ""
+    while not await request.is_disconnected():
+        _status, body = api_v1.handle_get("/api/v1/posture/current", {}, lake)
+        payload = json.dumps(body.get("data", {}), default=str)
+        if payload != last:
+            last = payload
+            yield f"event: posture\ndata: {payload}\n\n"
+        else:
+            yield ": ping\n\n"
+        await asyncio.sleep(interval)
+
+
 def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     """Build the server-mode ASGI app bound to a security data lake directory."""
     lake = Path(lake_dir)
@@ -256,6 +276,18 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
     def v1_healthz() -> JSONResponse:
         _status, body = api_v1.handle_get("/api/v1/healthz", {}, lake)
         return JSONResponse(body, status_code=int(_status))
+
+    # --- continuous-eval live stream (SSE) ---
+    # Pushes posture updates so the console is live without client polling.
+    # EventSource carries only cookies, so this is the session-authenticated
+    # (human app) surface; headless agents poll /api/v1/posture/current instead.
+    @app.get("/api/v1/stream")
+    async def stream(request: Request, _identity: Identity = Depends(_require_read)) -> StreamingResponse:
+        return StreamingResponse(
+            posture_event_stream(lake, request),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
 
     # --- SSO (OIDC) ---
     @app.get("/api/v1/auth/login")

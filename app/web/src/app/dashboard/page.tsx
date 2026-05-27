@@ -1,6 +1,6 @@
 "use client";
 
-import { useControlTests, usePosture } from "@/lib/api/hooks";
+import { useControlTests, usePosture, usePostureStream } from "@/lib/api/hooks";
 import { PostureRing } from "@/components/dashboard/PostureRing";
 import { ReadinessGrid } from "@/components/dashboard/ReadinessGrid";
 import { FixNext } from "@/components/dashboard/FixNext";
@@ -36,6 +36,7 @@ function Stat({
 export default function DashboardPage() {
   const posture = usePosture();
   const tests = useControlTests();
+  const { connected } = usePostureStream();
   const data = posture.data;
   const p = data?.posture;
 
@@ -53,9 +54,13 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-emerald-600">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            Live
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black ${connected ? "text-emerald-600" : "text-amber-600"}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${connected ? "animate-pulse bg-emerald-500" : "bg-amber-500"}`}
+            />
+            {connected ? "Live" : "Polling"}
           </span>
           {data?.evaluated_at && (
             <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-black text-slate-500">
