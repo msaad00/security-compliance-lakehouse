@@ -23,9 +23,16 @@ from test_api_v1 import _seed_lake  # noqa: E402
 def test_resource_catalog_lists_core_resources() -> None:
     catalog = api_v1.resource_catalog()
     paths = {row["path"] for row in catalog}
-    assert {"/api/v1/posture/current", "/api/v1/controls", "/api/v1/snapshots"} <= paths
+    assert {
+        "/api/v1/posture/current",
+        "/api/v1/controls",
+        "/api/v1/snapshots",
+        "/api/v1/frameworks/{framework_id}/detail",
+    } <= paths
     snapshots = next(row for row in catalog if row["path"] == "/api/v1/snapshots")
     assert "POST" in snapshots["methods"]
+    detail = next(row for row in catalog if row["resource"] == "framework.detail")
+    assert detail["path_params"] == ["framework_id"]
 
 
 def test_v1_index_requires_auth(tmp_path: Path) -> None:
@@ -55,5 +62,10 @@ def test_openapi_schema_documents_surface(tmp_path: Path) -> None:
     spec = create_app(tmp_path, require_auth=False).openapi()
     assert spec["info"]["title"] == "TrustOps Security Data Lake"
     paths = spec["paths"]
-    for documented in ("/api/v1", "/api/v1/auth/methods", "/api/v1/remediation/tasks"):
+    for documented in (
+        "/api/v1",
+        "/api/v1/auth/methods",
+        "/api/v1/frameworks/{framework_id}/detail",
+        "/api/v1/remediation/tasks",
+    ):
         assert documented in paths, documented

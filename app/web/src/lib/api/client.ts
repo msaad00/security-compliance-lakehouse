@@ -20,6 +20,7 @@ import type {
   Crosswalk,
   EntityTag,
   FrameworkReadiness,
+  FrameworkDetail,
   FrameworkView,
   ReviewedCrosswalk,
   Health,
@@ -205,6 +206,8 @@ export const api = {
     ),
   listFrameworks: () =>
     get<{ count: number; frameworks: FrameworkView[] }>("/frameworks"),
+  frameworkDetail: (id: string) =>
+    get<FrameworkDetail>(`/frameworks/${encodeURIComponent(id)}/detail`),
   listWorkflows: () =>
     get<{ count: number; workflows: Workflow[] }>("/workflows"),
   getWorkflow: (id: string) =>

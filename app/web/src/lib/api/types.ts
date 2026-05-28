@@ -223,6 +223,76 @@ export interface FrameworkView {
   next_pull_due: string | null;
 }
 
+export interface FrameworkControlArticle {
+  article_id: string;
+  title: string;
+  official_source_url: string;
+  reviewed_by: string;
+  reviewed_at: string;
+  rationale: string;
+}
+
+export interface FrameworkSourceRollup {
+  source: string;
+  event_count: number;
+  fresh_count: number;
+  stale_count: number;
+  expired_count: number;
+  latest_evidence_at: string | null;
+}
+
+export interface FrameworkControlDetail {
+  control_id: string;
+  title: string;
+  owner: string;
+  risk_domain: string;
+  frequency: string;
+  implementation_status: string;
+  evidence_requirement: string;
+  evaluation_rule: string;
+  official_source_ref: string;
+  articles: FrameworkControlArticle[];
+  posture: {
+    status: "pass" | "fail" | "not_evaluated";
+    risk_score: number | null;
+    evidence_coverage: number | null;
+    open_event_count: number;
+    rule_reasons: string[];
+  };
+  test: {
+    result: "pass" | "fail" | "not_run";
+    confidence_score: number | null;
+    freshness_status: string | null;
+    required_evidence_types: string[];
+    observed_evidence_types: string[];
+    next_action: string | null;
+  };
+  evidence: {
+    count: number;
+    latest_evidence_at: string | null;
+    freshness: {
+      fresh: number;
+      stale: number;
+      expired: number;
+    };
+    sources: FrameworkSourceRollup[];
+  };
+}
+
+export interface FrameworkDetail {
+  framework: FrameworkView;
+  summary: {
+    control_count: number;
+    mapped_control_count: number;
+    passing_control_count: number;
+    failing_control_count: number;
+    evidence_count: number;
+    source_count: number;
+  };
+  controls: FrameworkControlDetail[];
+  sources: FrameworkSourceRollup[];
+}
+
 // --- Workflows --------------------------------------------------------------
 
 export type ActionKind = "trigger" | "check" | "action";
