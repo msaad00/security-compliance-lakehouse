@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
+from security_lakehouse.framework_detail import build_framework_detail
 from security_lakehouse.io import read_jsonl
 
 API_VERSION = "v1"
@@ -93,6 +94,15 @@ _WRITABLE = {"/api/v1/snapshots": ["POST"]}
 def resource_catalog() -> list[JsonObject]:
     """Self-describing list of v1 resources, for headless/agent discovery."""
     catalog: list[JsonObject] = []
+    catalog.append(
+        {
+            "resource": "framework.detail",
+            "path": "/api/v1/frameworks/{framework_id}/detail",
+            "kind": "singleton",
+            "methods": ["GET"],
+            "path_params": ["framework_id"],
+        }
+    )
     for path, (name, _loader) in SINGLETON_LOADERS.items():
         catalog.append({"resource": name, "path": path, "kind": "singleton", "methods": ["GET"]})
     for path, (name, _loader) in COLLECTION_LOADERS.items():
@@ -192,6 +202,12 @@ def collection_response(resource: str, rows: list[JsonObject], params: Params) -
 def handle_get(path: str, params: Params, lake_dir: str | Path) -> tuple[HTTPStatus, JsonObject]:
     """Resolve a v1 GET into an ``(status, body)`` pair."""
     lake = Path(lake_dir)
+    if path.startswith("/api/v1/frameworks/") and path.endswith("/detail"):
+        framework_id = path[len("/api/v1/frameworks/") : -len("/detail")]
+        detail = build_framework_detail(framework_id, lake)
+        if detail is None:
+            return HTTPStatus.NOT_FOUND, error_envelope("not_found", "unknown framework", resource="framework.detail")
+        return HTTPStatus.OK, envelope("framework.detail", detail)
     singleton = SINGLETON_LOADERS.get(path)
     if singleton is not None:
         resource, loader = singleton

@@ -888,6 +888,11 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             status_code=status.HTTP_201_CREATED,
         )
 
+    @app.get("/api/v1/frameworks/{framework_id}/detail", tags=["data"])
+    def v1_framework_detail(framework_id: str, identity: Identity = Depends(_require_read)) -> JSONResponse:
+        _status, body = api_v1.handle_get(f"/api/v1/frameworks/{framework_id}/detail", {}, lake)
+        return JSONResponse(_redact_payload(body, identity), status_code=int(_status))
+
     # --- versioned data surface (authenticated) ---
     @app.get("/api/v1/{rest:path}")
     def v1_get(rest: str, request: Request, identity: Identity = Depends(_require_read)) -> JSONResponse:

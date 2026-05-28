@@ -20,6 +20,7 @@ from security_lakehouse import api_v1
 from security_lakehouse.assessment import build_current_posture, write_assessment_snapshot
 from security_lakehouse.audit_log import build_audit_log
 from security_lakehouse.connector_state import append_config_event, build_catalog_view, list_runs, run_probe
+from security_lakehouse.framework_detail import build_framework_detail
 from security_lakehouse.framework_provenance import build_framework_view
 from security_lakehouse.graph import build_compliance_graph, build_framework_crosswalk, build_repository_graph
 from security_lakehouse.io import read_jsonl
@@ -145,6 +146,12 @@ def handle_get(path: str, query: Query, lake_dir: str | Path) -> tuple[HTTPStatu
     if path == "/api/frameworks":
         view = build_framework_view()
         return HTTPStatus.OK, {"count": len(view), "frameworks": view}
+    framework_detail = _suffix_match(path, "/api/frameworks/", "/detail")
+    if framework_detail is not None:
+        detail = build_framework_detail(framework_detail, lake)
+        if detail is None:
+            return HTTPStatus.NOT_FOUND, {"error": "not_found"}
+        return HTTPStatus.OK, detail
     if path == "/api/graph":
         return HTTPStatus.OK, build_compliance_graph(lake)
     if path == "/api/repo-graph":
