@@ -15,11 +15,7 @@ _EXCLUDED_DIRS = ("node_modules", ".next", "web/dist", "__pycache__")
 def _is_copy_artifact(path: Path) -> bool:
     name = path.name
     stem = path.stem
-    return (
-        " copy" in name
-        or path.suffix in {".bak", ".orig"}
-        or any(f" {i}" in stem for i in range(2, 10))
-    )
+    return " copy" in name or path.suffix in {".bak", ".orig"} or any(f" {i}" in stem for i in range(2, 10))
 
 
 def test_source_tree_has_no_editor_copy_artifacts() -> None:
