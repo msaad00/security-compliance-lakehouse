@@ -26,6 +26,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -202,7 +203,9 @@ async def posture_event_stream(lake: Path, request: Request, *, interval: float 
     """
     last = ""
     while not await request.is_disconnected():
-        _status, body = api_v1.handle_get("/api/v1/posture/current", {}, lake)
+        # Posture is rebuilt from lake files; offload so the per-tick read does
+        # not block the event loop for other connections.
+        _status, body = await run_in_threadpool(api_v1.handle_get, "/api/v1/posture/current", {}, lake)
         payload = json.dumps(body.get("data", {}), default=str)
         if payload != last:
             last = payload
@@ -280,7 +283,10 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
         path = request.url.path
         # Audit authorization decisions on the secured API surfaces only; health is open.
         if path.startswith("/api/") and path not in {"/api/healthz", "/api/v1/healthz"}:
-            append_request_audit(
+            # Offload the synchronous append so the audit write never blocks the
+            # event loop on every authenticated request.
+            await run_in_threadpool(
+                append_request_audit,
                 lake,
                 method=request.method,
                 route=path,
@@ -918,7 +924,9 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
             body = await request.json()
         except Exception:  # noqa: BLE001 - empty/invalid body is treated as no body
             body = {}
-        _status, payload = api_v1.handle_post(f"/api/v1/{rest}", body, lake_for(identity))
+        # handle_post rebuilds posture and writes a snapshot; offload so it does
+        # not block the event loop.
+        _status, payload = await run_in_threadpool(api_v1.handle_post, f"/api/v1/{rest}", body, lake_for(identity))
         return JSONResponse(payload, status_code=int(_status))
 
     # --- legacy console surface (authenticated; same handlers as local mode) ---
@@ -941,7 +949,9 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"requires scope: {required_scope}",
             )
-        return _legacy_post_response(legacy_path, body, lake_for(identity), identity)
+        # Legacy POSTs run workflows, connector syncs (full pipeline + network),
+        # and scheduler ticks; offload so they do not block the event loop.
+        return await run_in_threadpool(_legacy_post_response, legacy_path, body, lake_for(identity), identity)
 
     @app.get("/", response_class=HTMLResponse)
     @app.get("/console", response_class=HTMLResponse)
