@@ -257,9 +257,7 @@ def create_app(lake_dir: str | Path, *, require_auth: bool = True) -> FastAPI:
                 tenant_ids = repository.list_tenant_ids(session)
         else:
             tenant_ids = []
-        bound = tenancy.resolve_bound_tenant(
-            lake, require_auth=app.state.require_auth, tenant_ids=tenant_ids
-        )
+        bound = tenancy.resolve_bound_tenant(lake, require_auth=app.state.require_auth, tenant_ids=tenant_ids)
         return tenancy.tenant_lake(lake, identity.tenant_id, bound_tenant=bound)
 
     # OIDC SSO is optional; the OAuth client + signed session middleware are only

@@ -92,12 +92,12 @@ method, decision, status, and timestamp.
 
 ## Tenant data isolation
 
-Server mode binds to a lake *root*. Each tenant's bronze/silver/gold evidence
+Server mode binds to a lake _root_. Each tenant's bronze/silver/gold evidence
 lives under `<root>/tenants/<tenant_id>`, and every data route resolves its lake
 from the authenticated identity, so one tenant can never read another tenant's
 posture, controls, evidence, violations, or connector configuration.
 
-A *flat* lake written directly at the root — the layout the CLI `pipeline` and
+A _flat_ lake written directly at the root — the layout the CLI `pipeline` and
 `fixtures` commands produce — is served, for backward compatibility, only to a
 single-tenant deployment (the sole tenant in the database) or to the synthetic
 tenant of `--allow-insecure-no-auth` local mode. When a second tenant exists,
