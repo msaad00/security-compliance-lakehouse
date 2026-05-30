@@ -7,16 +7,30 @@ instead of repeating long caveats in the hero.
 
 ## Current Coverage
 
-| Framework                     | Official source                                                                                                                                                                                     | Seeded controls | Reviewed mappings | Mapping coverage | Current scope                                                                             |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------: | ----------------: | ---------------: | ----------------------------------------------------------------------------------------- |
-| SOC 2 Trust Services Criteria | [AICPA & CIMA TSC](https://www.aicpa.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022)                                                                         |               2 |                 2 |             100% | security access and monitoring seed controls                                              |
-| NIST AI RMF 1.0               | [NIST AI RMF 1.0](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10)                                                                                    |               6 |                 6 |             100% | AI governance, inventory, measurement, monitoring, and incident-response controls         |
-| ISO/IEC 27001:2022            | [ISO/IEC 27001:2022](https://www.iso.org/standard/27001)                                                                                                                                            |               3 |                 3 |             100% | access, monitoring, and ICT readiness seed controls                                       |
-| HIPAA Security Rule           | [HHS Security Rule](https://www.hhs.gov/hipaa/for-professionals/security/index.html), [45 CFR Part 164 Subpart C](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C) |               6 |                 6 |             100% | administrative and technical safeguards for ePHI evidence                                 |
-| PCI DSS v4.0                  | [PCI SSC Document Library](https://www.pcisecuritystandards.org/document_library/?category=pcidss)                                                                                                  |               3 |                 3 |             100% | access, logging, and testing seed requirements                                            |
-| GDPR 2016/679                 | [EUR-Lex Regulation 2016/679](https://eur-lex.europa.eu/eli/reg/2016/679/oj)                                                                                                                        |               6 |                 6 |             100% | security, processing records, breach notification, privacy design, processors, DPIA       |
-| EU AI Act 2024/1689           | [EUR-Lex Regulation 2024/1689](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)                                                                                                                      |               6 |                 6 |             100% | high-risk AI risk management, data governance, logging, transparency, oversight, security |
-| ISO/IEC 42001:2023            | [ISO/IEC 42001:2023](https://www.iso.org/standard/42001)                                                                                                                                            |               2 |                 2 |             100% | AI management-system risk treatment and operations seed controls                          |
+This is the generated seeded-control ledger. Regenerate it with:
+
+```bash
+security-lakehouse frameworks coverage --format markdown
+```
+
+The coverage percentage below means **reviewed mappings for controls seeded in
+this repo**. It does not mean full framework, audit, or certification coverage.
+
+Frameworks: 8
+Seeded controls: 34
+Reviewed mappings: 34
+Seeded mapping coverage: 100.0%
+
+| Framework                                                  | Official source                                                                                                                                                                            | Seeded controls | Reviewed mappings | Seeded mapping coverage | Source state | Source policy                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------: | ----------------: | ----------------------: | ------------ | ----------------------------- |
+| EU AI Act - Regulation (EU) 2024/1689                      | [EUR-Lex - Regulation (EU) 2024/1689](https://eur-lex.europa.eu/eli/reg/2024/1689/oj)                                                                                                      |               6 |                 6 |                  100.0% | never pulled | public-source citation        |
+| GDPR - EU General Data Protection Regulation (2016/679)    | [EUR-Lex - Regulation (EU) 2016/679](https://eur-lex.europa.eu/eli/reg/2016/679/oj)                                                                                                        |               6 |                 6 |                  100.0% | never pulled | public-source citation        |
+| HIPAA Security Rule (45 CFR Parts 160, 162, 164)           | [U.S. HHS HIPAA Security Rule](https://www.hhs.gov/hipaa/for-professionals/security/index.html)                                                                                            |               6 |                 6 |                  100.0% | never pulled | public-source citation        |
+| ISO/IEC 27001:2022 Information security management systems | [ISO/IEC 27001:2022](https://www.iso.org/standard/27001)                                                                                                                                   |               3 |                 3 |                  100.0% | never pulled | source-linked identifier only |
+| ISO/IEC 42001:2023 AI management system                    | [ISO/IEC 42001:2023](https://www.iso.org/standard/42001)                                                                                                                                   |               2 |                 2 |                  100.0% | never pulled | source-linked identifier only |
+| NIST AI Risk Management Framework                          | [NIST Artificial Intelligence Risk Management Framework (AI RMF 1.0)](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10)                       |               6 |                 6 |                  100.0% | never pulled | public-source citation        |
+| PCI DSS v4.0 Payment Card Industry Data Security Standard  | [PCI Security Standards Council - PCI DSS v4.0](https://www.pcisecuritystandards.org/document_library/?category=pcidss)                                                                    |               3 |                 3 |                  100.0% | never pulled | source-linked identifier only |
+| SOC 2 Trust Services Criteria                              | [AICPA & CIMA 2017 Trust Services Criteria (With Revised Points of Focus - 2022)](https://www.aicpa.com/resources/download/2017-trust-services-criteria-with-revised-points-of-focus-2022) |               2 |                 2 |                  100.0% | never pulled | source-linked identifier only |
 
 ## Readiness Gates
 

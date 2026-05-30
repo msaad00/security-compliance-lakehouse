@@ -190,6 +190,9 @@ def _parser() -> argparse.ArgumentParser:
     frameworks_sync.set_defaults(func=_frameworks_sync)
     frameworks_readiness = frameworks_sub.add_parser("readiness", help="show staged readiness gates per framework")
     frameworks_readiness.set_defaults(func=_frameworks_readiness)
+    frameworks_coverage = frameworks_sub.add_parser("coverage", help="show the source-linked framework coverage ledger")
+    frameworks_coverage.add_argument("--format", choices=["json", "markdown"], default="json", help="output format")
+    frameworks_coverage.set_defaults(func=_frameworks_coverage)
 
     scheduler = sub.add_parser("scheduler", help="trigger.cron workflow scheduler")
     scheduler_sub = scheduler.add_subparsers(dest="scheduler_command", required=True)
@@ -703,6 +706,27 @@ def _frameworks_readiness(_args: argparse.Namespace) -> int:
 
     rows = build_readiness_view()
     print(json.dumps({"count": len(rows), "frameworks": rows}, indent=2, sort_keys=True))
+    return 0
+
+
+def _frameworks_coverage(args: argparse.Namespace) -> int:
+    from security_lakehouse.framework_coverage import (
+        build_framework_coverage,
+        framework_coverage_summary,
+        render_framework_coverage_markdown,
+    )
+
+    rows = build_framework_coverage()
+    if args.format == "markdown":
+        print(render_framework_coverage_markdown(rows))
+    else:
+        print(
+            json.dumps(
+                {"summary": framework_coverage_summary(rows), "frameworks": rows},
+                indent=2,
+                sort_keys=True,
+            )
+        )
     return 0
 
 
