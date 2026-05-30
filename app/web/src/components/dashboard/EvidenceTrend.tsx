@@ -28,7 +28,7 @@ export function EvidenceTrend() {
   const points = timeseries.data ?? [];
   const data = points.map((p) => ({
     date: fmtDate(p.captured_at),
-    score: +(p.posture_score * 100).toFixed(1),
+    score: +p.posture_score.toFixed(1),
   }));
 
   return (
@@ -42,7 +42,7 @@ export function EvidenceTrend() {
       {data.length < 2 ? (
         <CardContent className="flex h-[230px] items-center justify-center text-center text-sm text-muted">
           {timeseries.isLoading
-            ? "Loading trend…"
+            ? "Loading trend..."
             : timeseries.isError
               ? "Trend is unavailable right now."
               : "Posture trend appears once daily snapshots accumulate. Capture one from Insights or schedule POST /api/v1/insights/capture."}

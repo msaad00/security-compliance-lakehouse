@@ -4,14 +4,14 @@ TrustOps runs in two modes that share one assessment engine:
 
 - **Local mode** (this diagram): zero-dependency, file-backed Bronze/Silver/Gold
   zones with a SQLite analytics mart and a static dashboard. No cloud account or
-  database required — `pip install` and run.
+  database required; `pip install` and run.
 - **Server / warehouse mode**: the same engine behind a FastAPI server with an
   application-state database, RBAC, SSO, the Next.js console, and governed
   evidence in Snowflake or ClickHouse. See
   [`trustops-assessment-architecture.svg`](../images/trustops-assessment-architecture.svg)
   and [`dual-lakehouse.md`](dual-lakehouse.md).
 
-The two are not alternatives to reconcile — local mode is the embedded
+The two are not alternatives to reconcile: local mode is the embedded
 single-file path; server mode is the multi-tenant deployment path.
 
 ```mermaid
