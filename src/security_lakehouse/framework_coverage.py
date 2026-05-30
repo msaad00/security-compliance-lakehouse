@@ -21,7 +21,6 @@ from security_lakehouse.catalog import (
 from security_lakehouse.framework_provenance import build_framework_view
 from security_lakehouse.mappings import DEFAULT_MAPPINGS, load_control_article_mappings
 
-
 JsonObject = dict[str, Any]
 
 
@@ -113,13 +112,7 @@ def framework_coverage_summary(rows: list[JsonObject]) -> JsonObject:
 
 
 def _markdown_text(value: object) -> str:
-    return (
-        str(value)
-        .replace("|", "\\|")
-        .replace("—", "-")
-        .replace("–", "-")
-        .replace("≥", ">=")
-    )
+    return str(value).replace("|", "\\|").replace("—", "-").replace("–", "-").replace("≥", ">=")
 
 
 def render_framework_coverage_markdown(rows: list[JsonObject]) -> str:

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 
+from security_lakehouse.cli import main
 from security_lakehouse.framework_coverage import (
     build_framework_coverage,
     framework_coverage_summary,
     render_framework_coverage_markdown,
 )
-from security_lakehouse.cli import main
 
 
 def test_framework_coverage_ledger_counts_seeded_mappings(capsys) -> None:
