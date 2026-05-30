@@ -1,0 +1,146 @@
+"""Framework coverage ledger.
+
+Coverage is intentionally computed from the registry, control catalog, and
+reviewed source mappings instead of hand-written README numbers. The ledger is
+about seeded-control coverage, not a claim that TrustOps fully implements a
+licensed or certification framework.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from pathlib import Path
+from typing import Any
+
+from security_lakehouse.catalog import (
+    DEFAULT_CONTROL_CATALOG,
+    DEFAULT_FRAMEWORK_REGISTRY,
+    load_control_catalog,
+    load_framework_registry,
+)
+from security_lakehouse.framework_provenance import build_framework_view
+from security_lakehouse.mappings import DEFAULT_MAPPINGS, load_control_article_mappings
+
+JsonObject = dict[str, Any]
+
+
+def _source_policy(framework: JsonObject) -> str:
+    guardrail = str(framework.get("copyright_guardrail") or "").lower()
+    if "public domain" in guardrail or "public nist guidance" in guardrail:
+        return "public-source citation"
+    return "source-linked identifier only"
+
+
+def build_framework_coverage(
+    registry_path: str | Path | None = None,
+    controls_path: str | Path | None = None,
+    mappings_path: str | Path | None = None,
+) -> list[JsonObject]:
+    """Return one coverage row per framework.
+
+    ``mapping_coverage_pct`` means "reviewed source mappings for the seeded
+    controls in this repo." It does not mean full standard coverage.
+    """
+    registry = load_framework_registry(registry_path or DEFAULT_FRAMEWORK_REGISTRY)
+    controls = load_control_catalog(controls_path or DEFAULT_CONTROL_CATALOG)
+    mappings = load_control_article_mappings(mappings_path or DEFAULT_MAPPINGS)
+    provenance = {
+        str(row.get("framework_id") or ""): row
+        for row in build_framework_view(
+            registry_path=registry_path or DEFAULT_FRAMEWORK_REGISTRY,
+            controls_path=controls_path or DEFAULT_CONTROL_CATALOG,
+        )
+    }
+
+    controls_by_framework: dict[str, list[JsonObject]] = defaultdict(list)
+    mappings_by_framework: dict[str, list[JsonObject]] = defaultdict(list)
+    for control in controls.values():
+        controls_by_framework[str(control.get("framework_id") or "")].append(control)
+    for control_id, mapping in mappings.items():
+        framework_id = str(mapping.get("framework_id") or "")
+        if control_id in controls and framework_id:
+            mappings_by_framework[framework_id].append(mapping)
+
+    rows: list[JsonObject] = []
+    for framework_id, framework in registry.items():
+        seeded_controls = controls_by_framework.get(framework_id, [])
+        mapped = mappings_by_framework.get(framework_id, [])
+        seeded_count = len(seeded_controls)
+        mapped_count = len(mapped)
+        missing = sorted(
+            str(control.get("control_id") or "")
+            for control in seeded_controls
+            if str(control.get("control_id") or "") not in mappings
+        )
+        source = provenance.get(framework_id, {})
+        rows.append(
+            {
+                "framework_id": framework_id,
+                "name": framework["name"],
+                "version": framework["version"],
+                "official_source_name": framework["official_source_name"],
+                "official_source_url": framework["official_source_url"],
+                "effective_date": framework.get("effective_date"),
+                "source_sha256": framework.get("source_sha256"),
+                "pulled_at": framework.get("pulled_at"),
+                "freshness_state": source.get("freshness_state", "never_pulled"),
+                "seeded_control_count": seeded_count,
+                "reviewed_mapping_count": mapped_count,
+                "missing_mapping_count": len(missing),
+                "missing_mapping_control_ids": missing,
+                "seeded_mapping_coverage_pct": round(mapped_count / seeded_count * 100, 1) if seeded_count else 0.0,
+                "source_policy": _source_policy(framework),
+                "asset_policy": "neutral label; no official logo or certification seal bundled",
+            }
+        )
+    return sorted(rows, key=lambda row: str(row["framework_id"]))
+
+
+def framework_coverage_summary(rows: list[JsonObject]) -> JsonObject:
+    seeded = sum(int(row["seeded_control_count"]) for row in rows)
+    mapped = sum(int(row["reviewed_mapping_count"]) for row in rows)
+    missing = sum(int(row["missing_mapping_count"]) for row in rows)
+    return {
+        "framework_count": len(rows),
+        "seeded_control_count": seeded,
+        "reviewed_mapping_count": mapped,
+        "missing_mapping_count": missing,
+        "seeded_mapping_coverage_pct": round(mapped / seeded * 100, 1) if seeded else 0.0,
+        "official_logo_count": 0,
+        "certification_seal_count": 0,
+    }
+
+
+def _markdown_text(value: object) -> str:
+    return str(value).replace("|", "\\|").replace("—", "-").replace("–", "-").replace("≥", ">=")
+
+
+def render_framework_coverage_markdown(rows: list[JsonObject]) -> str:
+    summary = framework_coverage_summary(rows)
+    lines = [
+        "| Framework | Official source | Seeded controls | Reviewed mappings | Seeded mapping coverage | Source state | Source policy |",
+        "| --- | --- | ---: | ---: | ---: | --- | --- |",
+    ]
+    for row in rows:
+        lines.append(
+            "| {name} | [{source}]({url}) | {controls} | {mappings} | {coverage}% | {freshness} | {policy} |".format(
+                name=_markdown_text(row["name"]),
+                source=_markdown_text(row["official_source_name"]),
+                url=_markdown_text(row["official_source_url"]),
+                controls=row["seeded_control_count"],
+                mappings=row["reviewed_mapping_count"],
+                coverage=row["seeded_mapping_coverage_pct"],
+                freshness=str(row["freshness_state"]).replace("_", " "),
+                policy=row["source_policy"],
+            )
+        )
+    return "\n".join(
+        [
+            f"Frameworks: {summary['framework_count']}",
+            f"Seeded controls: {summary['seeded_control_count']}",
+            f"Reviewed mappings: {summary['reviewed_mapping_count']}",
+            f"Seeded mapping coverage: {summary['seeded_mapping_coverage_pct']}%",
+            "",
+            *lines,
+        ]
+    )
