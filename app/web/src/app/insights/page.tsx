@@ -75,7 +75,7 @@ export default function InsightsPage() {
 
   const chartData = points.map((p) => ({
     date: fmtDate(p.captured_at),
-    posture: +(p.posture_score * 100).toFixed(1),
+    posture: +p.posture_score.toFixed(1),
     pass_rate: +(p.control_pass_rate * 100).toFixed(1),
     open: p.open_violations,
   }));

@@ -1,4 +1,11 @@
-# Data Model
+# Data Model — analytics lake (local mode)
+
+This models the file-backed Bronze/Silver/Gold analytics lake and its SQLite
+mart (see [`architecture.md`](architecture.md)). Server mode adds an
+application-state database: tenants, users, API keys, sessions, remediation
+tasks, evidence requests, exceptions, tags, saved views, and posture metric
+points — documented in [`../DATA_MODEL.md`](../DATA_MODEL.md) and
+[`../SERVER_AUTH.md`](../SERVER_AUTH.md).
 
 ```mermaid
 erDiagram

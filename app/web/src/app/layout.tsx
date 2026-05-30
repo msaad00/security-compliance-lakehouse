@@ -4,10 +4,24 @@ import { Providers } from "./providers";
 import { Shell } from "@/components/shell/Shell";
 import "./globals.css";
 
+const DESCRIPTION =
+  "Continuous compliance assessment for security data lakes — SOC 2, NIST AI RMF, and beyond.";
+
 export const metadata: Metadata = {
-  title: "TrustOps Assessment Console",
-  description:
-    "Continuous compliance assessment for security data lakes — SOC 2, NIST AI RMF, and beyond.",
+  title: { default: "TrustOps Assessment Console", template: "%s · TrustOps" },
+  description: DESCRIPTION,
+  applicationName: "TrustOps",
+  openGraph: {
+    title: "TrustOps Assessment Console",
+    description: DESCRIPTION,
+    siteName: "TrustOps",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "TrustOps Assessment Console",
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
