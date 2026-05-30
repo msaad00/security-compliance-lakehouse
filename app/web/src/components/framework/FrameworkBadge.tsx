@@ -50,7 +50,7 @@ export function FrameworkBadge({
     <span
       style={styleFor(size)}
       className={[
-        "rounded-md border border-border bg-muted/50 px-2 text-center text-[11px] font-semibold leading-tight text-foreground",
+        "rounded-md border border-line bg-panel px-2 text-center text-[11px] font-semibold leading-tight text-ink",
         className,
       ]
         .filter(Boolean)

@@ -104,7 +104,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <FixNext violations={data?.violations ?? []} />
-        <EvidenceTrend currentScore={Math.round(p?.score ?? 0)} />
+        <EvidenceTrend />
       </div>
 
       <ControlTestTable rows={tests.data ?? []} />
